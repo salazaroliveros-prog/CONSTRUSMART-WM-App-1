@@ -59,7 +59,7 @@ const FinancieroScreen: React.FC = () => {
   };
 
   const handleExportCSV = () => {
-    const rows: any[] = [
+    const rows: (string | number)[][] = [
       ['Control Financiero - CONSTRUCTORA WM/M&S'],
       [`Fecha: ${new Date().toLocaleDateString('es-GT')}`],
       [],
@@ -109,7 +109,7 @@ const FinancieroScreen: React.FC = () => {
             <h3 className="font-bold text-sm text-slate-800 mb-2">Gastos por Categoría</h3>
             <ResponsiveContainer width="100%" height={240}>
               <PieChart>
-                <Pie data={porCategoria} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40} label={(e: any) => `${((e.value / stats.gastos) * 100).toFixed(0)}%`} labelLine={false}>
+                <Pie data={porCategoria} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40} label={(e: { value: number }) => `${((e.value / stats.gastos) * 100).toFixed(0)}%`} labelLine={false}>
                   {porCategoria.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
                 <Tooltip formatter={(v: number) => fmtQ(v)} />
@@ -136,7 +136,7 @@ const FinancieroScreen: React.FC = () => {
         {/* Filtros */}
         <div className="bg-white rounded-xl shadow-md p-3 flex flex-wrap items-center gap-2">
           <Filter className="w-4 h-4 text-slate-500" />
-          <select value={filterTipo} onChange={e => setFilterTipo(e.target.value as any)} className="px-2 py-1.5 text-xs border rounded">
+          <select value={filterTipo} onChange={e => setFilterTipo(e.target.value as 'todos' | 'ingreso' | 'gasto')} className="px-2 py-1.5 text-xs border rounded">
             <option value="todos">Todos los tipos</option>
             <option value="ingreso">Ingresos</option>
             <option value="gasto">Gastos</option>
@@ -203,7 +203,7 @@ const FinancieroScreen: React.FC = () => {
   );
 };
 
-const KPICard: React.FC<{ icon: any; label: string; value: string; color: string }> = ({ icon: Icon, label, value, color }) => (
+const KPICard: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: string; value: string; color: string }> = ({ icon: Icon, label, value, color }) => (
   <div className={`bg-gradient-to-br ${color} text-white p-3 rounded-xl shadow-md`}>
     <div className="flex items-center justify-between mb-1">
       <Icon className="w-4 h-4 opacity-80" />

@@ -49,7 +49,7 @@ const PresupuestoScreen: React.FC = () => {
   const toggleExpand = (id: string) => {
     setExpanded(prev => {
       const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) n.delete(id); else n.add(id);
       return n;
     });
   };
@@ -71,26 +71,26 @@ const PresupuestoScreen: React.FC = () => {
   }, [lineas, meta]);
 
   const handleExportCSV = () => {
-    const rows: any[] = [
+    const rows: (string | number)[][] = [
       ['CONSTRUCTORA WM/M&S - Edificando el Futuro'],
       [`Presupuesto: ${meta.proyecto}`, `Cliente: ${meta.cliente}`, `Ubicación: ${meta.ubicacion}`, `Fecha: ${new Date().toLocaleDateString('es-GT')}`],
       [],
       ['RESUMEN DE RENGLONES'],
       ['Código', 'Descripción', 'Unidad', 'Cantidad', 'Costo Unitario (Q)', 'Subtotal (Q)'],
-      ...totales.direct.map(l => [l.codigo, l.descripcion, l.unidad, l.cantidad, l.costoUnitario.toFixed(2), l.subtotal.toFixed(2)]),
+      ...totales.direct.map(l => [l.codigo, l.descripcion, l.unidad, l.cantidad, Number(l.costoUnitario.toFixed(2)), Number(l.subtotal.toFixed(2))]),
       [],
       ['DESGLOSE UNITARIO POR RENGLÓN'],
       ['Código', 'Descripción', 'Material (Q)', 'Mano de Obra (Q)', 'Herramienta (Q)', 'Rendimiento'],
-      ...lineas.map(l => [l.codigo, l.descripcion, l.costoMaterial.toFixed(2), l.costoManoObra.toFixed(2), l.costoHerramienta.toFixed(2), `${l.rendimiento} ${l.unidad}/día`]),
+      ...lineas.map(l => [l.codigo, l.descripcion, Number(l.costoMaterial.toFixed(2)), Number(l.costoManoObra.toFixed(2)), Number(l.costoHerramienta.toFixed(2)), `${l.rendimiento} ${l.unidad}/día`]),
       [],
       ['RESUMEN FINANCIERO'],
-      ['Costo Directo', totales.costoDirecto.toFixed(2)],
-      [`Costos Indirectos (${meta.factorIndirectos}%)`, totales.indirectos.toFixed(2)],
-      [`Costos Administrativos (${meta.factorAdministrativos}%)`, totales.administrativos.toFixed(2)],
-      [`Imprevistos (${meta.factorImprevistos}%)`, totales.imprevistos.toFixed(2)],
-      ['Subtotal', totales.subtotal.toFixed(2)],
-      [`Utilidad (${meta.factorUtilidad}%)`, totales.utilidad.toFixed(2)],
-      ['TOTAL DEL PROYECTO', totales.total.toFixed(2)],
+      ['Costo Directo', Number(totales.costoDirecto.toFixed(2))],
+      [`Costos Indirectos (${meta.factorIndirectos}%)`, Number(totales.indirectos.toFixed(2))],
+      [`Costos Administrativos (${meta.factorAdministrativos}%)`, Number(totales.administrativos.toFixed(2))],
+      [`Imprevistos (${meta.factorImprevistos}%)`, Number(totales.imprevistos.toFixed(2))],
+      ['Subtotal', Number(totales.subtotal.toFixed(2))],
+      [`Utilidad (${meta.factorUtilidad}%)`, Number(totales.utilidad.toFixed(2))],
+      ['TOTAL DEL PROYECTO', Number(totales.total.toFixed(2))],
       [`Tiempo estimado: ${totales.tiempo.toFixed(1)} días`],
     ];
     downloadCSV(`presupuesto_${meta.proyecto.replace(/\s+/g, '_')}.csv`, rows);

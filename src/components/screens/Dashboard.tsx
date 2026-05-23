@@ -33,7 +33,7 @@ const Dashboard: React.FC = () => {
     { name: 'Avance', value: Math.round(stats.avancePromedio), fill: '#10B981' },
   ];
 
-  const modules = [
+  const modules: { id: string; label: string; icon: React.ComponentType<{ className?: string }>; color: string; desc: string }[] = [
     { id: 'clientes', label: 'Clientes', icon: Users, color: 'from-purple-600 to-purple-800', desc: `${clientes.length} registrados` },
     { id: 'presupuesto', label: 'Presupuestos', icon: Calculator, color: 'from-blue-600 to-blue-800', desc: 'Motor APU' },
     { id: 'seguimiento', label: 'Seguimiento', icon: LineChart, color: 'from-emerald-600 to-emerald-800', desc: `${stats.activos} en ejecución` },
@@ -60,7 +60,7 @@ const Dashboard: React.FC = () => {
           {modules.map(m => (
             <button
               key={m.id}
-              onClick={() => setView(m.id as any)}
+              onClick={() => setView(m.id)}
               className={`bg-gradient-to-br ${m.color} text-white p-4 rounded-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-left group`}
             >
               <m.icon className="w-7 h-7 mb-2 opacity-90 group-hover:scale-110 transition" />
@@ -111,7 +111,7 @@ const Dashboard: React.FC = () => {
   );
 };
 
-const KPI: React.FC<{ icon: any; label: string; value: string; color: string }> = ({ icon: Icon, label, value, color }) => {
+const KPI: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: string; value: string; color: string }> = ({ icon: Icon, label, value, color }) => {
   const colors: Record<string, string> = {
     emerald: 'from-emerald-500 to-emerald-600 text-emerald-50',
     red: 'from-red-500 to-red-600 text-red-50',

@@ -95,7 +95,7 @@ const ClientesScreen: React.FC = () => {
               <select value={form.tipoProyecto} onChange={e => setForm({ ...form, tipoProyecto: e.target.value })} className="px-3 py-2 text-sm border rounded-lg bg-white">
                 <option>Residencial</option><option>Comercial</option><option>Industrial</option><option>Civil</option><option>Pública</option>
               </select>
-              <select value={form.estado} onChange={e => setForm({ ...form, estado: e.target.value as any })} className="px-3 py-2 text-sm border rounded-lg bg-white">
+               <select value={form.estado} onChange={e => setForm({ ...form, estado: e.target.value as 'Potencial' | 'Activo' | 'Cerrado' })} className="px-3 py-2 text-sm border rounded-lg bg-white">
                 <option>Potencial</option><option>Activo</option><option>Cerrado</option>
               </select>
               <textarea placeholder="Notas y observaciones" value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} className="md:col-span-2 px-3 py-2 text-sm border rounded-lg" rows={2} />

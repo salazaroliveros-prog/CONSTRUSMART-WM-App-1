@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useAppContext } from '@/contexts/AppContext';
+import { useAppContext, Proyecto } from '@/contexts/AppContext';
 import Header from '@/components/shared/Header';
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
 import { Download, FileText, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
@@ -29,7 +29,7 @@ const SeguimientoScreen: React.FC = () => {
   }));
 
   const handleExportCSV = () => {
-    const rows: any[] = [
+    const rows: (string | number)[][] = [
       ['Seguimiento de Proyectos - CONSTRUCTORA WM/M&S'],
       [`Fecha: ${new Date().toLocaleDateString('es-GT')}`],
       [],
@@ -122,7 +122,7 @@ const SeguimientoScreen: React.FC = () => {
   );
 };
 
-const ProyectosTabla: React.FC<{ titulo: string; proyectos: any[]; color: string }> = ({ titulo, proyectos, color }) => {
+const ProyectosTabla: React.FC<{ titulo: string; proyectos: Proyecto[]; color: string }> = ({ titulo, proyectos, color }) => {
   const colors: Record<string, string> = {
     emerald: 'from-emerald-600 to-emerald-700',
     amber: 'from-amber-600 to-amber-700',
