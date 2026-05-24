@@ -137,76 +137,76 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
-    return () => {
-      // Limpiar suscripciones
-      sub.subscription.unsubscribe();
-      // Limpiar listeners realtime
-      if (realtimeClientes) realtimeClientes.unsubscribe();
-      if (realtimeProyectos) realtimeProyectos.unsubscribe();
-      if (realtimeTransacciones) realtimeTransacciones.unsubscribe();
-      if (realtimeActividades) realtimeActividades.unsubscribe();
-    };
+return () => {
+       // Limpiar suscripciones
+       sub.subscription.unsubscribe();
+       // Limpiar listeners realtime
+       if (realtimeClientes.current) realtimeClientes.current.unsubscribe();
+       if (realtimeProyectos.current) realtimeProyectos.current.unsubscribe();
+       if (realtimeTransacciones.current) realtimeTransacciones.current.unsubscribe();
+       if (realtimeActividades.current) realtimeActividades.current.unsubscribe();
+     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Setup realtime listeners para todas las tablas
-  const setupRealtimeListeners = (userId: string) => {
-    // Clientes realtime
-    if (realtimeClientes) realtimeClientes.unsubscribe();
-    realtimeClientes = supabase
-      .channel('clientes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'clientes',
-        filter: `user_id=eq.${userId}`
-      }, (payload) => {
-        handleRealtimeChange('clientes', payload);
-      })
-      .subscribe();
+// Setup realtime listeners para todas las tablas
+   const setupRealtimeListeners = (userId: string) => {
+     // Clientes realtime
+     if (realtimeClientes.current) realtimeClientes.current.unsubscribe();
+     realtimeClientes.current = supabase
+       .channel('clientes')
+       .on('postgres_changes', {
+         event: '*',
+         schema: 'public',
+         table: 'clientes',
+         filter: `user_id=eq.${userId}`
+       }, (payload) => {
+         handleRealtimeChange('clientes', payload);
+       })
+       .subscribe();
 
-    // Proyectos realtime
-    if (realtimeProyectos) realtimeProyectos.unsubscribe();
-    realtimeProyectos = supabase
-      .channel('proyectos')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'proyectos',
-        filter: `user_id=eq.${userId}`
-      }, (payload) => {
-        handleRealtimeChange('proyectos', payload);
-      })
-      .subscribe();
+     // Proyectos realtime
+     if (realtimeProyectos.current) realtimeProyectos.current.unsubscribe();
+     realtimeProyectos.current = supabase
+       .channel('proyectos')
+       .on('postgres_changes', {
+         event: '*',
+         schema: 'public',
+         table: 'proyectos',
+         filter: `user_id=eq.${userId}`
+       }, (payload) => {
+         handleRealtimeChange('proyectos', payload);
+       })
+       .subscribe();
 
-    // Transacciones realtime
-    if (realtimeTransacciones) realtimeTransacciones.unsubscribe();
-    realtimeTransacciones = supabase
-      .channel('transacciones')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'transacciones',
-        filter: `user_id=eq.${userId}`
-      }, (payload) => {
-        handleRealtimeChange('transacciones', payload);
-      })
-      .subscribe();
+     // Transacciones realtime
+     if (realtimeTransacciones.current) realtimeTransacciones.current.unsubscribe();
+     realtimeTransacciones.current = supabase
+       .channel('transacciones')
+       .on('postgres_changes', {
+         event: '*',
+         schema: 'public',
+         table: 'transacciones',
+         filter: `user_id=eq.${userId}`
+       }, (payload) => {
+         handleRealtimeChange('transacciones', payload);
+       })
+       .subscribe();
 
-    // Actividades realtime
-    if (realtimeActividades) realtimeActividades.unsubscribe();
-    realtimeActividades = supabase
-      .channel('actividades')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'actividades',
-        filter: `user_id=eq.${userId}`
-      }, (payload) => {
-        handleRealtimeChange('actividades', payload);
-      })
-      .subscribe();
-  };
+     // Actividades realtime
+     if (realtimeActividades.current) realtimeActividades.current.unsubscribe();
+     realtimeActividades.current = supabase
+       .channel('actividades')
+       .on('postgres_changes', {
+         event: '*',
+         schema: 'public',
+         table: 'actividades',
+         filter: `user_id=eq.${userId}`
+       }, (payload) => {
+         handleRealtimeChange('actividades', payload);
+       })
+       .subscribe();
+   };
 
   // Manejar cambios realtime
   const handleRealtimeChange = (table: string, payload: unknown) => {
