@@ -60,53 +60,64 @@ export const useAppContext = () => {
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [view, setView] = useState<ViewType>('login');
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+   const [view, setView] = useState<ViewType>('login');
+   const [session, setSession] = useState<Session | null>(null);
+   const [loading, setLoading] = useState(true);
+   const [authError, setAuthError] = useState<string | null>(null);
+   const [sidebarOpen, setSidebarOpen] = useState(false);
+   const loadingRef = useRef(false);
 
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [proyectos, setProyectos] = useState<Proyecto[]>([]);
-  const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
-  const [actividades, setActividades] = useState<Actividad[]>([]);
-  const realtimeClientes = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
-  const realtimeProyectos = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
-  const realtimeTransacciones = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
-  const realtimeActividades = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
+   const [clientes, setClientes] = useState<Cliente[]>([]);
+   const [proyectos, setProyectos] = useState<Proyecto[]>([]);
+   const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
+   const [actividades, setActividades] = useState<Actividad[]>([]);
+   const realtimeClientes = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
+   const realtimeProyectos = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
+   const realtimeTransacciones = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
+   const realtimeActividades = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
 
-  const user = {
-    nombre: session?.user?.user_metadata?.nombre || session?.user?.email?.split('@')[0] || 'Usuario',
-    empresa: 'CONSTRUCTORA WM/M&S',
-    avatar: 'https://d64gsuwffb70l.cloudfront.net/6a106c672819eb11ecba36f6_1779461651195_cb50cf4b.png',
-  };
+   const user = {
+     nombre: session?.user?.user_metadata?.nombre || session?.user?.email?.split('@')[0] || 'Usuario',
+     empresa: 'CONSTRUCTORA WM/M&S',
+     avatar: 'https://d64gsuwffb70l.cloudfront.net/6a106c672819eb11ecba36f6_1779461651195_cb50cf4b.png',
+   };
 
-  const loadAll = useCallback(async (userId?: string) => {
-    if (!userId) return;
-    let cR, pR, tR, aR;
-    try { [cR] = await Promise.all([supabase.from('clientes').select('*').order('created_at', { ascending: false })]); } catch (e) { console.error('Error cargando clientes:', e); }
-    try { [pR] = await Promise.all([supabase.from('proyectos').select('*').order('created_at', { ascending: false })]); } catch (e) { console.error('Error cargando proyectos:', e); }
-    try { [tR] = await Promise.all([supabase.from('transacciones').select('*').order('fecha', { ascending: false })]); } catch (e) { console.error('Error cargando transacciones:', e); }
-    try { [aR] = await Promise.all([supabase.from('actividades').select('*').order('fecha', { ascending: false })]); } catch (e) { console.error('Error cargando actividades:', e); }
-    setClientes((cR?.data || []).map(dbToCliente));
-    setProyectos((pR?.data || []).map(dbToProyecto));
-    setTransacciones((tR?.data || []).map(dbToTransaccion));
-    setActividades((aR?.data || []).map(dbToActividad));
+   const loadAll = useCallback(async (userId?: string) => {
+     if (!userId) return;
+     
+     // Evitar múltiples ejecuciones simultáneas
+     if (loadingRef.current) return;
+     loadingRef.current = true;
+     
+     try {
+       let cR, pR, tR, aR;
+       try { [cR] = await Promise.all([supabase.from('clientes').select('*').order('created_at', { ascending: false })]); } catch (e) { console.error('Error cargando clientes:', e); }
+       try { [pR] = await Promise.all([supabase.from('proyectos').select('*').order('created_at', { ascending: false })]); } catch (e) { console.error('Error cargando proyectos:', e); }
+       try { [tR] = await Promise.all([supabase.from('transacciones').select('*').order('fecha', { ascending: false })]); } catch (e) { console.error('Error cargando transacciones:', e); }
+       try { [aR] = await Promise.all([supabase.from('actividades').select('*').order('fecha', { ascending: false })]); } catch (e) { console.error('Error cargando actividades:', e); }
+       
+       setClientes((cR?.data || []).map(dbToCliente));
+       setProyectos((pR?.data || []).map(dbToProyecto));
+       setTransacciones((tR?.data || []).map(dbToTransaccion));
+       setActividades((aR?.data || []).map(dbToActividad));
 
-    // Seed si está vacío
-    if ((cR?.data?.length || 0) === 0 && (pR?.data?.length || 0) === 0) {
-      try { await seedDatabase(userId); } catch (e) { console.error('Error en seedDatabase:', e); return; }
-      let c2, p2, t2, a2;
-      try { [c2] = await Promise.all([supabase.from('clientes').select('*')]); } catch (e) { console.error('Error recargando clientes:', e); }
-      try { [p2] = await Promise.all([supabase.from('proyectos').select('*')]); } catch (e) { console.error('Error recargando proyectos:', e); }
-      try { [t2] = await Promise.all([supabase.from('transacciones').select('*')]); } catch (e) { console.error('Error recargando transacciones:', e); }
-      try { [a2] = await Promise.all([supabase.from('actividades').select('*')]); } catch (e) { console.error('Error recargando actividades:', e); }
-      setClientes((c2?.data || []).map(dbToCliente));
-      setProyectos((p2?.data || []).map(dbToProyecto));
-      setTransacciones((t2?.data || []).map(dbToTransaccion));
-      setActividades((a2?.data || []).map(dbToActividad));
-    }
-  }, []);
+       // Seed si está vacío
+       if ((cR?.data?.length || 0) === 0 && (pR?.data?.length || 0) === 0) {
+         try { await seedDatabase(userId); } catch (e) { console.error('Error en seedDatabase:', e); }
+         let c2, p2, t2, a2;
+         try { [c2] = await Promise.all([supabase.from('clientes').select('*')]); } catch (e) { console.error('Error recargando clientes:', e); }
+         try { [p2] = await Promise.all([supabase.from('proyectos').select('*')]); } catch (e) { console.error('Error recargando proyectos:', e); }
+         try { [t2] = await Promise.all([supabase.from('transacciones').select('*')]); } catch (e) { console.error('Error recargando transacciones:', e); }
+         try { [a2] = await Promise.all([supabase.from('actividades').select('*')]); } catch (e) { console.error('Error recargando actividades:', e); }
+         setClientes((c2?.data || []).map(dbToCliente));
+         setProyectos((p2?.data || []).map(dbToProyecto));
+         setTransacciones((t2?.data || []).map(dbToTransaccion));
+         setActividades((a2?.data || []).map(dbToActividad));
+       }
+     } finally {
+       loadingRef.current = false;
+     }
+   }, []);
 
   // Inicialización de sesión y realtime listeners
   useEffect(() => {
@@ -152,9 +163,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        if (realtimeActividades.current) realtimeActividades.current.unsubscribe();
      };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+   }, []);
 
-// Setup realtime listeners para todas las tablas
+   // Evitar que la pantalla de carga se quede infinita
+   useEffect(() => {
+     let timer: ReturnType<typeof setTimeout>;
+     if (loading) {
+       timer = setTimeout(() => {
+         console.warn('Tiempo de carga máximo alcanzado. Forzando salida de pantalla de carga.');
+         setLoading(false);
+       }, 10000);
+     }
+     return () => {
+       if (timer) clearTimeout(timer);
+     };
+   }, [loading]);
+
+ // Setup realtime listeners para todas las tablas
    const setupRealtimeListeners = (userId: string) => {
      // Clientes realtime
      if (realtimeClientes.current) realtimeClientes.current.unsubscribe();

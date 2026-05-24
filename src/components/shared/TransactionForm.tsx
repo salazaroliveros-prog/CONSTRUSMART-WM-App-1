@@ -60,13 +60,13 @@ const TransactionForm: React.FC<{ compact?: boolean }> = ({ compact = false }) =
           <option value="personal">— Gasto Personal —</option>
           {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
         </select>
-        <input placeholder="Descripción" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg" required />
-        <input type="number" placeholder="Cantidad" value={form.cantidad} onChange={e => setForm({ ...form, cantidad: parseFloat(e.target.value) || 0 })} className="px-2 py-1.5 text-xs border rounded-lg" />
-        <input placeholder="Unidad" value={form.unidad} onChange={e => setForm({ ...form, unidad: e.target.value })} className="px-2 py-1.5 text-xs border rounded-lg" />
+         <input placeholder="Descripción de la transacción" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg" required />
+         <input type="number" placeholder="Ingrese la cantidad" value={form.cantidad} onChange={e => setForm({ ...form, cantidad: parseFloat(e.target.value) || 0 })} className="px-2 py-1.5 text-xs border rounded-lg" />
+         <input placeholder="Ingrese la unidad (ej: m², kg, unidad)" value={form.unidad} onChange={e => setForm({ ...form, unidad: e.target.value })} className="px-2 py-1.5 text-xs border rounded-lg" />
         <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value as CategoriaTransaccion })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg bg-slate-50">
           {categorias.map(c => <option key={c.v} value={c.v}>{c.label}</option>)}
         </select>
-        <input type="number" placeholder="Costo Unit." value={form.costoUnitario} onChange={e => setForm({ ...form, costoUnitario: parseFloat(e.target.value) || 0 })} className="px-2 py-1.5 text-xs border rounded-lg" />
+         <input type="number" placeholder="Ingrese el costo unitario" value={form.costoUnitario} onChange={e => setForm({ ...form, costoUnitario: parseFloat(e.target.value) || 0 })} className="px-2 py-1.5 text-xs border rounded-lg" />
         <input type="date" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} className="px-2 py-1.5 text-xs border rounded-lg" />
         <div className="col-span-2 bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-900 text-right">
           Total: Q {total.toLocaleString('es-GT', { minimumFractionDigits: 2 })}

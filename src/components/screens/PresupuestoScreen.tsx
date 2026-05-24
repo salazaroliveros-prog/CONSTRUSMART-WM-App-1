@@ -203,19 +203,19 @@ const PresupuestoScreen: React.FC = () => {
               <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t">
                 <div>
                   <label className="text-[10px] font-semibold text-slate-600">Indirectos %</label>
-                  <input type="number" value={meta.factorIndirectos} onChange={e => setMeta({ ...meta, factorIndirectos: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 text-xs border rounded" />
+                  <input type="number" placeholder="Indirectos %" value={meta.factorIndirectos} onChange={e => setMeta({ ...meta, factorIndirectos: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 text-xs border rounded" />
                 </div>
                 <div>
                   <label className="text-[10px] font-semibold text-slate-600">Administrativos %</label>
-                  <input type="number" value={meta.factorAdministrativos} onChange={e => setMeta({ ...meta, factorAdministrativos: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 text-xs border rounded" />
+                  <input type="number" placeholder="Administrativos %" value={meta.factorAdministrativos} onChange={e => setMeta({ ...meta, factorAdministrativos: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 text-xs border rounded" />
                 </div>
                 <div>
                   <label className="text-[10px] font-semibold text-slate-600">Imprevistos %</label>
-                  <input type="number" value={meta.factorImprevistos} onChange={e => setMeta({ ...meta, factorImprevistos: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 text-xs border rounded" />
+                  <input type="number" placeholder="Imprevistos %" value={meta.factorImprevistos} onChange={e => setMeta({ ...meta, factorImprevistos: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 text-xs border rounded" />
                 </div>
                 <div>
                   <label className="text-[10px] font-semibold text-slate-600">Utilidad %</label>
-                  <input type="number" value={meta.factorUtilidad} onChange={e => setMeta({ ...meta, factorUtilidad: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 text-xs border rounded" />
+                  <input type="number" placeholder="Utilidad %" value={meta.factorUtilidad} onChange={e => setMeta({ ...meta, factorUtilidad: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 text-xs border rounded" />
                 </div>
               </div>
             </div>
@@ -282,7 +282,7 @@ const PresupuestoScreen: React.FC = () => {
                           <div className="text-xs font-semibold text-slate-800 truncate">{l.codigo} · {l.descripcion}</div>
                           <div className="text-[10px] text-slate-500">{l.unidad} · {fmtQ(costoUnit)} c/u</div>
                         </div>
-                        <input type="number" value={l.cantidad} onChange={e => updateLinea(l.id, 'cantidad', parseFloat(e.target.value) || 0)} className="w-20 px-2 py-1 text-xs border rounded text-right" />
+                         <input type="number" placeholder="Cantidad" value={l.cantidad} onChange={e => updateLinea(l.id, 'cantidad', parseFloat(e.target.value) || 0)} className="w-20 px-2 py-1 text-xs border rounded text-right" />
                         <div className="w-24 text-right text-xs font-bold text-blue-900">{fmtQ(subtotal)}</div>
                         <button onClick={() => removeLinea(l.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
@@ -333,7 +333,7 @@ const PresupuestoScreen: React.FC = () => {
 const Field: React.FC<{ label: string; value: number; onChange: (v: number) => void }> = ({ label, value, onChange }) => (
   <div>
     <label className="text-[10px] text-slate-600 font-semibold">{label}</label>
-    <input type="number" value={value} onChange={e => onChange(parseFloat(e.target.value) || 0)} className="w-full px-2 py-1 text-xs border rounded" />
+    <input type="number" placeholder={label} value={value} onChange={e => onChange(parseFloat(e.target.value) || 0)} className="w-full px-2 py-1 text-xs border rounded" />
   </div>
 );
 
