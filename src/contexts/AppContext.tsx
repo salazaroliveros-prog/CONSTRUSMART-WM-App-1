@@ -4,12 +4,12 @@ import { seedDatabase } from '@/utils/seedDatabase';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { 
-  Cliente, Proyecto, Transaccion, Actividad,
-  CreateCliente, CreateProyecto, CreateTransaccion, CreateActividad,
-  UpdateCliente, UpdateProyecto, UpdateTransaccion, UpdateActividad,
-  validateCliente, validateProyecto, validateTransaccion, validateActividad,
+  Cliente, Proyecto, Transaccion, Actividad, Presupuesto,
+  CreateCliente, CreateProyecto, CreateTransaccion, CreateActividad, CreatePresupuesto,
+  UpdateCliente, UpdateProyecto, UpdateTransaccion, UpdateActividad, UpdatePresupuesto,
+  validateCliente, validateProyecto, validateTransaccion, validateActividad, validatePresupuesto,
   dbToCliente, clienteToDb, dbToProyecto, proyectoToDb,
-  dbToTransaccion, transaccionToDb, dbToActividad, actividadToDb
+  dbToTransaccion, transaccionToDb, dbToActividad, actividadToDb, dbToPresupuesto, presupuestoToDb
 } from '@/types/supabase';
 
 export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero';
