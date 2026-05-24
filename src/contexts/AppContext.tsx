@@ -81,54 +81,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     avatar: 'https://d64gsuwffb70l.cloudfront.net/6a106c672819eb11ecba36f6_1779461651195_cb50cf4b.png',
   };
 
-  const loadAll = useCallback(async (userId: string) => {
-    const [cR, pR, tR, aR] = await Promise.all([
-      supabase.from('clientes').select('*').order('created_at', { ascending: false }),
-      supabase.from('proyectos').select('*').order('created_at', { ascending: false }),
-      supabase.from('transacciones').select('*').order('fecha', { ascending: false }),
-      supabase.from('actividades').select('*').order('fecha', { ascending: false }),
-    ]);
-    setClientes((cR.data || []).map(dbToCliente));
-    setProyectos((pR.data || []).map(dbToProyecto));
-    setTransacciones((tR.data || []).map(dbToTransaccion));
-    setActividades((aR.data || []).map(dbToActividad));
+  const loadAll = useCallback(async (userId?: string) => {
+    if (!userId) return;
+    let cR, pR, tR, aR;
+    try { [cR] = await Promise.all([supabase.from('clientes').select('*').order('created_at', { ascending: false })]); } catch (e) { console.error('Error cargando clientes:', e); }
+    try { [pR] = await Promise.all([supabase.from('proyectos').select('*').order('created_at', { ascending: false })]); } catch (e) { console.error('Error cargando proyectos:', e); }
+    try { [tR] = await Promise.all([supabase.from('transacciones').select('*').order('fecha', { ascending: false })]); } catch (e) { console.error('Error cargando transacciones:', e); }
+    try { [aR] = await Promise.all([supabase.from('actividades').select('*').order('fecha', { ascending: false })]); } catch (e) { console.error('Error cargando actividades:', e); }
+    setClientes((cR?.data || []).map(dbToCliente));
+    setProyectos((pR?.data || []).map(dbToProyecto));
+    setTransacciones((tR?.data || []).map(dbToTransaccion));
+    setActividades((aR?.data || []).map(dbToActividad));
 
     // Seed si está vacío
-    if ((cR.data?.length || 0) === 0 && (pR.data?.length || 0) === 0) {
-      await seedDatabase(userId);
-      const [c2, p2, t2, a2] = await Promise.all([
-        supabase.from('clientes').select('*'),
-        supabase.from('proyectos').select('*'),
-        supabase.from('transacciones').select('*'),
-        supabase.from('actividades').select('*'),
-      ]);
-      setClientes((c2.data || []).map(dbToCliente));
-      setProyectos((p2.data || []).map(dbToProyecto));
-      setTransacciones((t2.data || []).map(dbToTransaccion));
-      setActividades((a2.data || []).map(dbToActividad));
+    if ((cR?.data?.length || 0) === 0 && (pR?.data?.length || 0) === 0) {
+      try { await seedDatabase(userId); } catch (e) { console.error('Error en seedDatabase:', e); return; }
+      let c2, p2, t2, a2;
+      try { [c2] = await Promise.all([supabase.from('clientes').select('*')]); } catch (e) { console.error('Error recargando clientes:', e); }
+      try { [p2] = await Promise.all([supabase.from('proyectos').select('*')]); } catch (e) { console.error('Error recargando proyectos:', e); }
+      try { [t2] = await Promise.all([supabase.from('transacciones').select('*')]); } catch (e) { console.error('Error recargando transacciones:', e); }
+      try { [a2] = await Promise.all([supabase.from('actividades').select('*')]); } catch (e) { console.error('Error recargando actividades:', e); }
+      setClientes((c2?.data || []).map(dbToCliente));
+      setProyectos((p2?.data || []).map(dbToProyecto));
+      setTransacciones((t2?.data || []).map(dbToTransaccion));
+      setActividades((a2?.data || []).map(dbToActividad));
     }
   }, []);
 
   // Inicialización de sesión y realtime listeners
   useEffect(() => {
-    // Cargar sesión inicial
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      if (data.session) {
-        loadAll(data.session.user.id).finally(() => setLoading(false));
-        setView('dashboard');
-        setupRealtimeListeners(data.session.user.id);
-      } else {
-        setLoading(false);
+    const initSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        setSession(data.session);
+        if (data.session) {
+          await loadAll(data.session.user.id);
+          setView('dashboard');
+          setupRealtimeListeners(data.session.user.id);
+        } else {
+          setView('login');
+        }
+      } catch (err) {
+        console.error('Error al recuperar sesión:', err);
+        setAuthError('No se pudo recuperar la sesión. Por favor, inicia sesión nuevamente.');
         setView('login');
+      } finally {
+        setLoading(false);
       }
-    });
+    };
+    initSession();
 
     // Escuchar cambios de autenticación
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s);
       if (s) {
-        await loadAll(s.user.id);
+        try { await loadAll(s.user.id); } catch (err) { console.error('Error en loadAll:', err); }
         setupRealtimeListeners(s.user.id);
         if (view === 'login') setView('dashboard');
       } else {
@@ -137,10 +144,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
-return () => {
-       // Limpiar suscripciones
-       sub.subscription.unsubscribe();
-       // Limpiar listeners realtime
+   return () => {
+       if (sub?.subscription) sub.subscription.unsubscribe();
        if (realtimeClientes.current) realtimeClientes.current.unsubscribe();
        if (realtimeProyectos.current) realtimeProyectos.current.unsubscribe();
        if (realtimeTransacciones.current) realtimeTransacciones.current.unsubscribe();

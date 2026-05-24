@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { Building2, Lock, User, Mail, ArrowRight, AlertCircle } from 'lucide-react';
+import { Lock, User, Mail, ArrowRight, AlertCircle } from 'lucide-react';
 
 const LoginScreen: React.FC = () => {
   const { signIn, signUp, authError } = useAppContext();
@@ -38,10 +38,10 @@ const LoginScreen: React.FC = () => {
       </div>
       <div className="relative z-10 w-full max-w-md">
         <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20">
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-800 to-blue-600 mb-4 shadow-lg">
-              <Building2 className="w-10 h-10 text-white" />
-            </div>
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-800 to-blue-600 mb-4 shadow-lg">
+                <img src="/logo.png" alt="Logo CONSTRUCTORA WM/M&S" className="w-20 h-20 object-contain mb-4" />
+              </div>
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">CONSTRUCTORA WM/M&S</h1>
             <p className="text-sm text-emerald-600 italic mt-1">Edificando el Futuro</p>
             <p className="text-xs text-slate-500 mt-3">Plataforma de Gestión Arquitectónica</p>
