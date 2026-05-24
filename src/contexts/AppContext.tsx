@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { PostgresChangesPayload } from '@supabase/supabase-js';
+import { seedDatabase } from '@/utils/seedDatabase';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { 
@@ -68,6 +70,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [proyectos, setProyectos] = useState<Proyecto[]>([]);
   const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
   const [actividades, setActividades] = useState<Actividad[]>([]);
+  const realtimeClientes = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
+  const realtimeProyectos = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
+  const realtimeTransacciones = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
+  const realtimeActividades = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
 
   const user = {
     nombre: session?.user?.user_metadata?.nombre || session?.user?.email?.split('@')[0] || 'Usuario',
@@ -103,32 +109,151 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // Inicialización de sesión
+  // Inicialización de sesión y realtime listeners
   useEffect(() => {
+    // Cargar sesión inicial
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       if (data.session) {
         loadAll(data.session.user.id).finally(() => setLoading(false));
         setView('dashboard');
+        setupRealtimeListeners(data.session.user.id);
       } else {
         setLoading(false);
         setView('login');
       }
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    // Escuchar cambios de autenticación
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s);
       if (s) {
-        loadAll(s.user.id);
+        await loadAll(s.user.id);
+        setupRealtimeListeners(s.user.id);
         if (view === 'login') setView('dashboard');
       } else {
         setClientes([]); setProyectos([]); setTransacciones([]); setActividades([]);
         setView('login');
       }
     });
-    return () => sub.subscription.unsubscribe();
+
+    return () => {
+      // Limpiar suscripciones
+      sub.subscription.unsubscribe();
+      // Limpiar listeners realtime
+      if (realtimeClientes) realtimeClientes.unsubscribe();
+      if (realtimeProyectos) realtimeProyectos.unsubscribe();
+      if (realtimeTransacciones) realtimeTransacciones.unsubscribe();
+      if (realtimeActividades) realtimeActividades.unsubscribe();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Setup realtime listeners para todas las tablas
+  const setupRealtimeListeners = (userId: string) => {
+    // Clientes realtime
+    if (realtimeClientes) realtimeClientes.unsubscribe();
+    realtimeClientes = supabase
+      .channel('clientes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'clientes',
+        filter: `user_id=eq.${userId}`
+      }, (payload) => {
+        handleRealtimeChange('clientes', payload);
+      })
+      .subscribe();
+
+    // Proyectos realtime
+    if (realtimeProyectos) realtimeProyectos.unsubscribe();
+    realtimeProyectos = supabase
+      .channel('proyectos')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'proyectos',
+        filter: `user_id=eq.${userId}`
+      }, (payload) => {
+        handleRealtimeChange('proyectos', payload);
+      })
+      .subscribe();
+
+    // Transacciones realtime
+    if (realtimeTransacciones) realtimeTransacciones.unsubscribe();
+    realtimeTransacciones = supabase
+      .channel('transacciones')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'transacciones',
+        filter: `user_id=eq.${userId}`
+      }, (payload) => {
+        handleRealtimeChange('transacciones', payload);
+      })
+      .subscribe();
+
+    // Actividades realtime
+    if (realtimeActividades) realtimeActividades.unsubscribe();
+    realtimeActividades = supabase
+      .channel('actividades')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'actividades',
+        filter: `user_id=eq.${userId}`
+      }, (payload) => {
+        handleRealtimeChange('actividades', payload);
+      })
+      .subscribe();
+  };
+
+  // Manejar cambios realtime
+  const handleRealtimeChange = (table: string, payload: unknown) => {
+    const realPayload = payload as {
+      eventType: string;
+      new?: Record<string, unknown>;
+      old?: Record<string, unknown>;
+  };
+    switch (table) {
+      case 'clientes':
+        if (realPayload.eventType === 'INSERT') {
+          setClientes(prev => [dbToCliente(realPayload.new), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE') {
+          setClientes(prev => prev.map(x => x.id === realPayload.new.id ? dbToCliente(realPayload.new) : x));
+        } else if (realPayload.eventType === 'DELETE') {
+          setClientes(prev => prev.filter(x => x.id !== realPayload.old.id));
+        }
+        break;
+      case 'proyectos':
+        if (realPayload.eventType === 'INSERT') {
+          setProyectos(prev => [dbToProyecto(realPayload.new), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE') {
+          setProyectos(prev => prev.map(x => x.id === realPayload.new.id ? dbToProyecto(realPayload.new) : x));
+        } else if (realPayload.eventType === 'DELETE') {
+          setProyectos(prev => prev.filter(x => x.id !== realPayload.old.id));
+        }
+        break;
+      case 'transacciones':
+        if (realPayload.eventType === 'INSERT') {
+          setTransacciones(prev => [dbToTransaccion(realPayload.new), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE') {
+          setTransacciones(prev => prev.map(x => x.id === realPayload.new.id ? dbToTransaccion(realPayload.new) : x));
+        } else if (realPayload.eventType === 'DELETE') {
+          setTransacciones(prev => prev.filter(x => x.id !== realPayload.old.id));
+        }
+        break;
+      case 'actividades':
+        if (realPayload.eventType === 'INSERT') {
+          setActividades(prev => [dbToActividad(realPayload.new), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE') {
+          setActividades(prev => prev.map(x => x.id === realPayload.new.id ? dbToActividad(realPayload.new) : x));
+        } else if (realPayload.eventType === 'DELETE') {
+          setActividades(prev => prev.filter(x => x.id !== realPayload.old.id));
+        }
+        break;
+    }
+  };
 
   // ---------- Auth ----------
   const signIn = async (email: string, password: string) => {
