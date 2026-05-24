@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
+import { ViewType } from '@/types/supabase';
 import Header from '@/components/shared/Header';
 import Calendar from '@/components/shared/Calendar';
 import TransactionForm from '@/components/shared/TransactionForm';
-import { Users, FolderKanban, Calculator, LineChart, Wallet, TrendingUp, TrendingDown, AlertCircle, Briefcase, DollarSign } from 'lucide-react';
+import { Users, FolderKanban, Calculator, LineChart, Wallet, TrendingUp, TrendingDown, AlertCircle, Briefcase, DollarSign, Folder } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 
@@ -36,7 +37,8 @@ const Dashboard: React.FC = () => {
   const modules: { id: string; label: string; icon: React.ComponentType<{ className?: string }>; color: string; desc: string }[] = [
     { id: 'clientes', label: 'Clientes', icon: Users, color: 'from-purple-600 to-purple-800', desc: `${clientes.length} registrados` },
     { id: 'presupuesto', label: 'Presupuestos', icon: Calculator, color: 'from-blue-600 to-blue-800', desc: 'Motor APU' },
-    { id: 'seguimiento', label: 'Seguimiento', icon: LineChart, color: 'from-emerald-600 to-emerald-800', desc: `${stats.activos} en ejecución` },
+    { id: 'proyectos', label: 'Proyectos', icon: Folder, color: 'from-cyan-600 to-cyan-800', desc: `${stats.activos} activos` },
+    { id: 'seguimiento', label: 'Seguimiento', icon: LineChart, color: 'from-emerald-600 to-emerald-800', desc: 'Cashflow' },
     { id: 'financiero', label: 'Control Financiero', icon: Wallet, color: 'from-amber-600 to-amber-800', desc: 'Planilla y gastos' },
   ];
 
@@ -56,11 +58,11 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Module buttons */}
-        <div className="col-span-12 lg:col-span-8 grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="col-span-12 lg:col-span-8 grid grid-cols-2 lg:grid-cols-5 gap-3">
           {modules.map(m => (
             <button
               key={m.id}
-              onClick={() => setView(m.id)}
+              onClick={() => setView(m.id as ViewType)}
               className={`bg-gradient-to-br ${m.color} text-white p-4 rounded-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-left group`}
             >
               <m.icon className="w-7 h-7 mb-2 opacity-90 group-hover:scale-110 transition" />

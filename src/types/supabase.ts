@@ -25,7 +25,7 @@ const ProyectoSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido'),
   cliente: z.string().optional(),
   tipo: z.string().optional(),
-  estado: z.enum(['Planeación', 'Ejecución']).default('Planeación'),
+  estado: z.enum(['Planeación', 'Ejecución', 'Finalizado', 'Evaluación', 'Parado']).default('Planeación'),
   presupuesto_total: z.number().default(0),
   avance_fisico: z.number().min(0).max(100).default(0),
   avance_financiero: z.number().min(0).max(100).default(0),
@@ -107,7 +107,7 @@ export interface Proyecto {
   nombre: string;
   cliente: string;
   tipo: string;
-  estado: 'Planeación' | 'Ejecución';
+  estado: 'Planeación' | 'Ejecución' | 'Finalizado' | 'Evaluación' | 'Parado';
   presupuestoTotal: number;
   avanceFisico: number;
   avanceFinanciero: number;
@@ -172,7 +172,7 @@ export type UpdateActividad = Partial<CreateActividad>;
 export type UpdatePresupuesto = Partial<CreatePresupuesto>;
 
 // ====== Tipos de vista y contexto ======
-export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero';
+export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos';
 
 export interface User {
   nombre: string;
@@ -325,6 +325,10 @@ export const actividadToDb = (actividad: UpdateActividad): Partial<DBActividad> 
   hora: actividad.hora,
   descripcion: actividad.descripcion,
 });
+
+export const validatePresupuesto = (data: unknown): DBPresupuesto => {
+  return PresupuestoSchema.parse(data);
+};
 
 export const dbToPresupuesto = (db: DBPresupuesto): Presupuesto => ({
   id: db.id || '',

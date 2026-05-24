@@ -11,7 +11,7 @@ interface LineaPresupuesto extends Renglon {
 }
 
 const PresupuestoScreen: React.FC = () => {
-  const { clientes, session } = useAppContext();
+  const { clientes, session, addProyecto } = useAppContext();
   const [tipologia, setTipologia] = useState<Tipologia>('general');
   const [search, setSearch] = useState('');
   const [lineas, setLineas] = useState<LineaPresupuesto[]>([]);
@@ -148,6 +148,19 @@ const PresupuestoScreen: React.FC = () => {
     }
     setSaving(true);
     try {
+      // Calcular total del presupuesto
+      const direct = lineas.map(l => {
+        const cu = l.costoMaterial + l.costoManoObra + l.costoHerramienta;
+        return { ...l, costoUnitario: cu, subtotal: cu * l.cantidad };
+      });
+      const costoDirecto = direct.reduce((s, l) => s + l.subtotal, 0);
+      const indirectos = costoDirecto * (meta.factorIndirectos / 100);
+      const administrativos = costoDirecto * (meta.factorAdministrativos / 100);
+      const imprevistos = costoDirecto * (meta.factorImprevistos / 100);
+      const subtotal = costoDirecto + indirectos + administrativos + imprevistos;
+      const utilidad = subtotal * (meta.factorUtilidad / 100);
+      const total = subtotal + utilidad;
+
       const payload = {
         proyecto: meta.proyecto,
         cliente: meta.cliente,
@@ -160,6 +173,7 @@ const PresupuestoScreen: React.FC = () => {
         lineas,
         updated_at: new Date().toISOString(),
       };
+
       if (savedPresupuestoId) {
         const { error } = await supabase.from('presupuestos').update(payload).eq('id', savedPresupuestoId);
         if (error) throw error;
@@ -170,6 +184,26 @@ const PresupuestoScreen: React.FC = () => {
           .single();
         if (error) throw error;
         if (data) setSavedPresupuestoId(data.id);
+
+        // ===== CREAR PROYECTO AUTOMÁTICAMENTE =====
+        try {
+          await addProyecto({
+            nombre: meta.proyecto,
+            cliente: meta.cliente,
+            tipo: tipologia,
+            estado: 'Planeación',
+            presupuestoTotal: total,
+            avanceFisico: 0,
+            avanceFinanciero: 0,
+            ingresos: 0,
+            gastos: 0,
+            pendienteAportar: total,
+            fechaInicio: new Date().toISOString().split('T')[0],
+            fechaFin: '',
+          });
+        } catch (projError) {
+          console.warn('Presupuesto guardado pero error creando proyecto:', projError);
+        }
       }
     } catch (err) {
       console.error('Error al guardar presupuesto:', err);

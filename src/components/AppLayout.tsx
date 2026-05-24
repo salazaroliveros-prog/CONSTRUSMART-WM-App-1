@@ -4,6 +4,7 @@ import LoginScreen from '@/components/screens/LoginScreen';
 import Dashboard from '@/components/screens/Dashboard';
 import ClientesScreen from '@/components/screens/ClientesScreen';
 import PresupuestoScreen from '@/components/screens/PresupuestoScreen';
+import ProyectosScreen from '@/components/screens/ProyectosScreen';
 import SeguimientoScreen from '@/components/screens/SeguimientoScreen';
 import FinancieroScreen from '@/components/screens/FinancieroScreen';
 import { Building2, Loader2 } from 'lucide-react';
@@ -34,6 +35,7 @@ const AppLayout: React.FC = () => {
       case 'dashboard': return <Dashboard />;
       case 'clientes': return <ClientesScreen />;
       case 'presupuesto': return <PresupuestoScreen />;
+      case 'proyectos': return <ProyectosScreen />;
       case 'seguimiento': return <SeguimientoScreen />;
       case 'financiero': return <FinancieroScreen />;
       default: return <Dashboard />;
