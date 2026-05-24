@@ -284,7 +284,7 @@ return () => {
     try {
       // Validar datos antes de enviar a Supabase
       const validated = validateCliente({ ...c, user_id: session.user.id });
-      const { data, error } = await supabase.from('clientes').insert(clienteToDb(validated)).select().single();
+      const { data, error } = await supabase.from('clientes').insert({ ...clienteToDb(validated), user_id: session.user.id }).select().single();
       if (!error && data) setClientes(p => [dbToCliente(data), ...p]);
     } catch (error) {
       console.error('Error al agregar cliente:', error);
@@ -316,7 +316,7 @@ return () => {
     try {
       // Validar datos antes de enviar a Supabase
       const validated = validateProyecto({ ...p, user_id: session.user.id });
-      const { data, error } = await supabase.from('proyectos').insert(proyectoToDb(validated)).select().single();
+      const { data, error } = await supabase.from('proyectos').insert({ ...proyectoToDb(validated), user_id: session.user.id }).select().single();
       if (!error && data) setProyectos(prev => [dbToProyecto(data), ...prev]);
     } catch (error) {
       console.error('Error al agregar proyecto:', error);
@@ -342,7 +342,7 @@ return () => {
     try {
       // Validar datos antes de enviar a Supabase
       const validated = validateTransaccion({ ...t, user_id: session.user.id });
-      const { data, error } = await supabase.from('transacciones').insert(transaccionToDb(validated)).select().single();
+      const { data, error } = await supabase.from('transacciones').insert({ ...transaccionToDb(validated), user_id: session.user.id }).select().single();
       if (!error && data) setTransacciones(p => [dbToTransaccion(data), ...p]);
     } catch (error) {
       console.error('Error al agregar transacción:', error);
@@ -362,7 +362,7 @@ return () => {
     try {
       // Validar datos antes de enviar a Supabase
       const validated = validateActividad({ ...a, user_id: session.user.id });
-      const { data, error } = await supabase.from('actividades').insert(actividadToDb(validated)).select().single();
+      const { data, error } = await supabase.from('actividades').insert({ ...actividadToDb(validated), user_id: session.user.id }).select().single();
       if (!error && data) setActividades(p => [dbToActividad(data), ...p]);
     } catch (error) {
       console.error('Error al agregar actividad:', error);

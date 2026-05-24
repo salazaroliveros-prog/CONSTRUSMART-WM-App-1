@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 // ====== Esquemas de validación Zod ======
 const ClienteSchema = z.object({
-  id: z.string(),
+  id: z.string().optional(),
   user_id: z.string(),
   nombre: z.string().min(1, 'El nombre es requerido'),
   telefono: z.string().optional(),
@@ -16,11 +16,11 @@ const ClienteSchema = z.object({
   estado: z.enum(['Potencial', 'Activo', 'Cerrado']).default('Potencial'),
   notas: z.string().optional(),
   fecha: z.string().default(new Date().toISOString().split('T')[0]),
-  created_at: z.string(),
+  created_at: z.string().optional(),
 });
 
 const ProyectoSchema = z.object({
-  id: z.string(),
+  id: z.string().optional(),
   user_id: z.string(),
   nombre: z.string().min(1, 'El nombre es requerido'),
   cliente: z.string().optional(),
@@ -34,11 +34,11 @@ const ProyectoSchema = z.object({
   pendiente_aportar: z.number().default(0),
   fecha_inicio: z.string().optional(),
   fecha_fin: z.string().optional(),
-  created_at: z.string(),
+  created_at: z.string().optional(),
 });
 
 const TransaccionSchema = z.object({
-  id: z.string(),
+  id: z.string().optional(),
   user_id: z.string(),
   tipo: z.enum(['ingreso', 'gasto']),
   descripcion: z.string().optional(),
@@ -53,17 +53,17 @@ const TransaccionSchema = z.object({
   costo_total: z.number().min(0).default(0),
   fecha: z.string().default(new Date().toISOString().split('T')[0]),
   proyecto_id: z.string().default('admin'),
-  created_at: z.string(),
+  created_at: z.string().optional(),
 });
 
 const ActividadSchema = z.object({
-  id: z.string(),
+  id: z.string().optional(),
   user_id: z.string(),
   titulo: z.string().min(1, 'El título es requerido'),
   fecha: z.string(),
   hora: z.string().optional(),
   descripcion: z.string().optional(),
-  created_at: z.string(),
+  created_at: z.string().optional(),
 });
 
 // ====== Tipos TypeScript inferidos de Zod ======
@@ -197,7 +197,7 @@ export const validateActividad = (data: unknown): DBActividad => {
 
 // ====== Funciones de transformación DB <-> App ======
 export const dbToCliente = (db: DBCliente): Cliente => ({
-  id: db.id,
+  id: db.id || '',
   nombre: db.nombre || '',
   telefono: db.telefono || '',
   email: db.email || '',
@@ -220,8 +220,8 @@ export const clienteToDb = (cliente: UpdateCliente): Partial<DBCliente> => ({
 });
 
 export const dbToProyecto = (db: DBProyecto): Proyecto => ({
-  id: db.id,
-  nombre: db.nombre,
+  id: db.id || '',
+  nombre: db.nombre || '',
   cliente: db.cliente || '',
   tipo: db.tipo || '',
   estado: db.estado || 'Planeación',
@@ -251,7 +251,7 @@ export const proyectoToDb = (proyecto: UpdateProyecto): Partial<DBProyecto> => (
 });
 
 export const dbToTransaccion = (db: DBTransaccion): Transaccion => ({
-  id: db.id,
+  id: db.id || '',
   tipo: db.tipo,
   descripcion: db.descripcion || '',
   cantidad: Number(db.cantidad) || 0,
@@ -276,7 +276,7 @@ export const transaccionToDb = (transaccion: UpdateTransaccion): Partial<DBTrans
 });
 
 export const dbToActividad = (db: DBActividad): Actividad => ({
-  id: db.id,
+  id: db.id || '',
   titulo: db.titulo,
   fecha: db.fecha,
   hora: db.hora || '',
