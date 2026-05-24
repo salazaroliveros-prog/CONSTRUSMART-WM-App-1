@@ -3,19 +3,19 @@ import { useAppContext } from '@/contexts/AppContext';
 import Header from '@/components/shared/Header';
 import { renglonesPorTipologia, Tipologia, tipologiaLabels, Renglon } from '@/data/renglones';
 import { downloadCSV, printPDF, fmtQ } from '@/lib/exporters';
-import { Plus, Trash2, ChevronDown, ChevronRight, Download, FileText, Calculator, Search } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { Plus, Trash2, ChevronDown, ChevronRight, Download, FileText, Calculator, Search, Save } from 'lucide-react';
 
 interface LineaPresupuesto extends Renglon {
   cantidad: number;
 }
 
 const PresupuestoScreen: React.FC = () => {
-  const { clientes } = useAppContext();
+  const { clientes, session } = useAppContext();
   const [tipologia, setTipologia] = useState<Tipologia>('general');
   const [search, setSearch] = useState('');
   const [lineas, setLineas] = useState<LineaPresupuesto[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
   const [meta, setMeta] = useState({
     proyecto: 'Proyecto sin nombre',
     cliente: '',
@@ -25,6 +25,8 @@ const PresupuestoScreen: React.FC = () => {
     factorImprevistos: 5,
     factorUtilidad: 15,
   });
+  const [saving, setSaving] = useState(false);
+  const [savedPresupuestoId, setSavedPresupuestoId] = useState<string | null>(null);
 
   const catalogo = renglonesPorTipologia[tipologia];
   const catalogoFiltrado = catalogo.filter(r =>
@@ -139,6 +141,43 @@ const PresupuestoScreen: React.FC = () => {
     printPDF(`Presupuesto - ${meta.proyecto}`, resumenHTML);
   };
 
+  const handleSave = async () => {
+    if (!session) {
+      console.warn('No hay sesión activa');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        proyecto: meta.proyecto,
+        cliente: meta.cliente,
+        ubicacion: meta.ubicacion,
+        tipologia,
+        factor_indirectos: meta.factorIndirectos,
+        factor_administrativos: meta.factorAdministrativos,
+        factor_imprevistos: meta.factorImprevistos,
+        factor_utilidad: meta.factorUtilidad,
+        lineas,
+        updated_at: new Date().toISOString(),
+      };
+      if (savedPresupuestoId) {
+        const { error } = await supabase.from('presupuestos').update(payload).eq('id', savedPresupuestoId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('presupuestos')
+          .insert({ ...payload, user_id: session.user.id })
+          .select('id')
+          .single();
+        if (error) throw error;
+        if (data) setSavedPresupuestoId(data.id);
+      }
+    } catch (err) {
+      console.error('Error al guardar presupuesto:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 animate-fadeIn">
       <Header title="Motor de Presupuestos APU" />
@@ -215,10 +254,11 @@ const PresupuestoScreen: React.FC = () => {
           <div className="bg-white rounded-xl shadow-md overflow-hidden">
             <div className="bg-gradient-to-r from-blue-800 to-blue-700 text-white p-3 flex items-center justify-between flex-wrap gap-2">
               <h3 className="font-bold text-sm flex items-center gap-2"><Calculator className="w-4 h-4" />Renglones del Presupuesto ({lineas.length})</h3>
-              <div className="flex gap-2">
-                <button onClick={handleExportCSV} disabled={!lineas.length} className="flex items-center gap-1 bg-white/20 hover:bg-white/30 px-2.5 py-1 rounded text-[11px] font-semibold disabled:opacity-40"><Download className="w-3 h-3" />CSV</button>
-                <button onClick={handleExportPDF} disabled={!lineas.length} className="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 px-2.5 py-1 rounded text-[11px] font-semibold disabled:opacity-40"><FileText className="w-3 h-3" />PDF</button>
-              </div>
+               <div className="flex gap-2">
+                 <button onClick={handleSave} disabled={saving} className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 px-2.5 py-1 rounded text-[11px] font-semibold text-white disabled:opacity-40"><Save className="w-3 h-3" />{saving ? 'Guardando...' : 'Guardar'}</button>
+                 <button onClick={handleExportCSV} disabled={!lineas.length} className="flex items-center gap-1 bg-white/20 hover:bg-white/30 px-2.5 py-1 rounded text-[11px] font-semibold disabled:opacity-40"><Download className="w-3 h-3" />CSV</button>
+                 <button onClick={handleExportPDF} disabled={!lineas.length} className="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 px-2.5 py-1 rounded text-[11px] font-semibold disabled:opacity-40"><FileText className="w-3 h-3" />PDF</button>
+               </div>
             </div>
 
             {lineas.length === 0 ? (

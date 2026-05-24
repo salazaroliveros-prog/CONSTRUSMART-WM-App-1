@@ -66,11 +66,28 @@ const ActividadSchema = z.object({
   created_at: z.string().optional(),
 });
 
+const PresupuestoSchema = z.object({
+  id: z.string().optional(),
+  user_id: z.string(),
+  proyecto: z.string().min(1, 'El nombre del proyecto es requerido'),
+  cliente: z.string().optional(),
+  ubicacion: z.string().optional(),
+  tipologia: z.string().optional(),
+  factor_indirectos: z.number().min(0).default(0),
+  factor_administrativos: z.number().min(0).default(0),
+  factor_imprevistos: z.number().min(0).default(0),
+  factor_utilidad: z.number().min(0).default(0),
+  lineas: z.array(z.any()).default([]),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
+
 // ====== Tipos TypeScript inferidos de Zod ======
 export type DBCliente = z.infer<typeof ClienteSchema>;
 export type DBProyecto = z.infer<typeof ProyectoSchema>;
 export type DBTransaccion = z.infer<typeof TransaccionSchema>;
 export type DBActividad = z.infer<typeof ActividadSchema>;
+export type DBPresupuesto = z.infer<typeof PresupuestoSchema>;
 
 // ====== Tipos de interfaz para la aplicación (transformados) ======
 export interface Cliente {
@@ -124,16 +141,35 @@ export interface Actividad {
   descripcion: string;
 }
 
+export interface Presupuesto {
+  id: string;
+  user_id: string;
+  proyecto: string;
+  cliente?: string;
+  ubicacion?: string;
+  tipologia?: string;
+  factor_indirectos: number;
+  factor_administrativos: number;
+  factor_imprevistos: number;
+  factor_utilidad: number;
+  lineas: unknown[];
+  created_at?: string;
+  updated_at?: string;
+}
+
 // ====== Tipos de formulario (sin ID) ======
+
 export type CreateCliente = Omit<Cliente, 'id'>;
 export type CreateProyecto = Omit<Proyecto, 'id'>;
 export type CreateTransaccion = Omit<Transaccion, 'id'>;
 export type CreateActividad = Omit<Actividad, 'id'>;
+export type CreatePresupuesto = Omit<Presupuesto, 'id'>;
 
 export type UpdateCliente = Partial<CreateCliente>;
 export type UpdateProyecto = Partial<CreateProyecto>;
 export type UpdateTransaccion = Partial<CreateTransaccion>;
 export type UpdateActividad = Partial<CreateActividad>;
+export type UpdatePresupuesto = Partial<CreatePresupuesto>;
 
 // ====== Tipos de vista y contexto ======
 export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero';
@@ -288,4 +324,32 @@ export const actividadToDb = (actividad: UpdateActividad): Partial<DBActividad> 
   fecha: actividad.fecha,
   hora: actividad.hora,
   descripcion: actividad.descripcion,
+});
+
+export const dbToPresupuesto = (db: DBPresupuesto): Presupuesto => ({
+  id: db.id || '',
+  user_id: db.user_id,
+  proyecto: db.proyecto,
+  cliente: db.cliente || '',
+  ubicacion: db.ubicacion || '',
+  tipologia: db.tipologia || '',
+  factor_indirectos: Number(db.factor_indirectos) || 0,
+  factor_administrativos: Number(db.factor_administrativos) || 0,
+  factor_imprevistos: Number(db.factor_imprevistos) || 0,
+  factor_utilidad: Number(db.factor_utilidad) || 0,
+  lineas: db.lineas || [],
+  created_at: db.created_at || '',
+  updated_at: db.updated_at || '',
+});
+
+export const presupuestoToDb = (presupuesto: UpdatePresupuesto): Partial<DBPresupuesto> => ({
+  proyecto: presupuesto.proyecto,
+  cliente: presupuesto.cliente,
+  ubicacion: presupuesto.ubicacion,
+  tipologia: presupuesto.tipologia,
+  factor_indirectos: presupuesto.factor_indirectos,
+  factor_administrativos: presupuesto.factor_administrativos,
+  factor_imprevistos: presupuesto.factor_imprevistos,
+  factor_utilidad: presupuesto.factor_utilidad,
+  lineas: presupuesto.lineas,
 });
