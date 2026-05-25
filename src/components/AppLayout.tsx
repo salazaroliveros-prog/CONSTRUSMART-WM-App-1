@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import LoginScreen from '@/components/screens/LoginScreen';
 import Dashboard from '@/components/screens/Dashboard';
@@ -11,8 +11,14 @@ import TeamsScreen from '@/components/screens/TeamsScreen';
 import CommandPalette from '@/components/shared/CommandPalette';
 import { Building2, Loader2 } from 'lucide-react';
 
+const viewOrder = ['login', 'dashboard', 'clientes', 'presupuesto', 'proyectos', 'seguimiento', 'financiero', 'equipos'];
+
 const AppLayout: React.FC = () => {
   const { view, session, loading } = useAppContext();
+  const prevView = useRef(view);
+
+  const dir = viewOrder.indexOf(prevView.current) <= viewOrder.indexOf(view) ? 'right' : 'left';
+  prevView.current = view;
 
   if (loading) {
     return (
@@ -46,7 +52,7 @@ const AppLayout: React.FC = () => {
   };
 
   return (
-    <div key={view} className="transition-all duration-300">
+    <div key={view} className={`animate-${dir === 'right' ? 'slide-right' : 'slide-left'}`}>
       <CommandPalette />
       {renderView()}
     </div>

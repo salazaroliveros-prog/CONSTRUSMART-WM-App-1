@@ -60,7 +60,7 @@ const Dashboard: React.FC = () => {
 
       <div className="flex-1 p-3 sm:p-4 grid grid-cols-12 gap-3 max-w-[1600px] mx-auto w-full">
         {/* KPIs */}
-        <div className="col-span-12 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+        <div className="col-span-12 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 stagger-children">
           <KPI icon={TrendingUp} label="Ingresos" value={`Q ${(stats.ingresos / 1000).toFixed(1)}K`} color="emerald" />
           <KPI icon={TrendingDown} label="Gastos" value={`Q ${(stats.gastos / 1000).toFixed(1)}K`} color="red" />
           <KPI icon={DollarSign} label="Margen" value={`Q ${(stats.margen / 1000).toFixed(1)}K`} color="blue" />
@@ -75,19 +75,19 @@ const Dashboard: React.FC = () => {
         <div className="col-span-12 flex justify-end">
           <button
             onClick={() => exportCompleto(presupuestos, transacciones, clientes)}
-            className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition shadow-sm"
+            className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition shadow-sm btn-press"
           >
             <FileDown className="w-3.5 h-3.5" /> Exportar Todo
           </button>
         </div>
 
         {/* Module buttons */}
-        <div className="col-span-12 lg:col-span-8 grid grid-cols-2 lg:grid-cols-6 gap-3">
+        <div className="col-span-12 lg:col-span-8 grid grid-cols-2 lg:grid-cols-6 gap-3 stagger-children">
           {modules.map(m => (
             <button
               key={m.id}
               onClick={() => setView(m.id as ViewType)}
-              className={`bg-gradient-to-br ${m.color} text-white p-4 rounded-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-left group`}
+              className={`bg-gradient-to-br ${m.color} text-white p-4 rounded-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-left group btn-press`}
             >
               <m.icon className="w-7 h-7 mb-2 opacity-90 group-hover:scale-110 transition" />
               <div className="font-bold text-sm">{m.label}</div>
@@ -102,7 +102,7 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Charts row */}
-        <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-md border border-slate-200 p-3">
+        <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-md border border-slate-200 p-3 card-hover animate-scale-in">
           <h3 className="text-xs font-bold text-slate-700 mb-1">Distribución de Presupuestos</h3>
           <ResponsiveContainer width="100%" height={150}>
             <PieChart>
@@ -114,7 +114,7 @@ const Dashboard: React.FC = () => {
           </ResponsiveContainer>
         </div>
 
-        <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-md border border-slate-200 p-3">
+        <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-md border border-slate-200 p-3 card-hover animate-scale-in" style={{ animationDelay: '0.05s' }}>
           <h3 className="text-xs font-bold text-slate-700 mb-1">Avance por Proyecto (%)</h3>
           <ResponsiveContainer width="100%" height={150}>
             <BarChart data={barData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
@@ -128,7 +128,7 @@ const Dashboard: React.FC = () => {
           </ResponsiveContainer>
         </div>
 
-        <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-md border border-slate-200 p-3">
+        <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-md border border-slate-200 p-3 card-hover animate-scale-in" style={{ animationDelay: '0.1s' }}>
           <h3 className="text-xs font-bold text-slate-700 mb-1">Rentabilidad por Proyecto (%)</h3>
           <ResponsiveContainer width="100%" height={150}>
             <BarChart data={rentabilidadData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
@@ -161,7 +161,7 @@ const KPI: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: 
     teal: 'from-teal-500 to-teal-600 text-teal-50',
   };
   return (
-    <div className={`bg-gradient-to-br ${colors[color]} rounded-xl p-3 shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5`}>
+    <div className={`bg-gradient-to-br ${colors[color]} rounded-xl p-3 shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 btn-press-sm`}>
       <div className="flex items-center justify-between mb-1">
         <Icon className="w-4 h-4 opacity-80" />
         <div className="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse"></div>

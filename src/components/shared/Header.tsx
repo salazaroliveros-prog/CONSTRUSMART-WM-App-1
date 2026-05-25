@@ -48,7 +48,7 @@ const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = t
           </div>
           <button
             onClick={() => document.dispatchEvent(new CustomEvent('toggle:commandpalette'))}
-            className="hidden sm:flex items-center gap-1.5 bg-white/10 hover:bg-white/20 transition px-2 py-1.5 rounded-lg text-xs shadow-md border border-white/10"
+            className="hidden sm:flex items-center gap-1.5 bg-white/10 hover:bg-white/20 transition px-2 py-1.5 rounded-lg text-xs shadow-md border border-white/10 btn-press"
             title="Buscar (⌘K)"
           >
             <Search className="w-3.5 h-3.5" />
@@ -57,7 +57,7 @@ const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = t
           {showHome ? (
             <button
               onClick={() => setView('dashboard')}
-              className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 transition px-3 py-1.5 rounded-lg text-xs font-semibold shadow-md"
+              className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 transition px-3 py-1.5 rounded-lg text-xs font-semibold shadow-md btn-press"
               title="Tablero principal"
             >
               <Home className="w-4 h-4" /> <span className="hidden sm:inline">Inicio</span>
@@ -66,7 +66,7 @@ const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = t
             <button
               onClick={() => signOut()}
 
-              className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 transition px-3 py-1.5 rounded-lg text-xs font-semibold shadow-md"
+              className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 transition px-3 py-1.5 rounded-lg text-xs font-semibold shadow-md btn-press"
               title="Salir"
             >
               <LogOut className="w-4 h-4" /> <span className="hidden sm:inline">Salir</span>
