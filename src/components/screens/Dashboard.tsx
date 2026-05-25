@@ -7,25 +7,26 @@ import TransactionForm from '@/components/shared/TransactionForm';
 import { Users, FolderKanban, Calculator, LineChart, Wallet, TrendingUp, TrendingDown, AlertCircle, Briefcase, DollarSign, Folder } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
-
 const Dashboard: React.FC = () => {
-  const { setView, proyectos, transacciones, clientes } = useAppContext();
+  const { setView, presupuestos, transacciones, clientes } = useAppContext();
 
   const stats = useMemo(() => {
     const ingresos = transacciones.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
     const gastos = transacciones.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
-    const activos = proyectos.filter(p => p.estado === 'Ejecución').length;
-    const planeacion = proyectos.filter(p => p.estado === 'Planeación').length;
-    const avancePromedio = proyectos.filter(p => p.estado === 'Ejecución').reduce((s, p) => s + p.avanceFisico, 0) / (activos || 1);
-    const pendiente = proyectos.reduce((s, p) => s + p.pendienteAportar, 0);
-    return { ingresos, gastos, activos, planeacion, avancePromedio, pendiente, margen: ingresos - gastos };
-  }, [transacciones, proyectos]);
+    const activos = presupuestos.filter(p => p.fase === 'ejecución').length;
+    const planeacion = presupuestos.filter(p => p.fase === 'planeación').length;
+    const finalizados = presupuestos.filter(p => p.fase === 'finalizado').length;
+    const avancePromedio = presupuestos.filter(p => p.fase === 'ejecución').reduce((s, p) => s + p.avanceFisico, 0) / (activos || 1);
+    const pendiente = presupuestos.reduce((s, p) => s + p.pendienteAportar, 0);
+    const totalPresupuestos = presupuestos.reduce((s, p) => s + p.total, 0);
+    return { ingresos, gastos, activos, planeacion, finalizados, avancePromedio, pendiente, margen: ingresos - gastos, totalPresupuestos };
+  }, [transacciones, presupuestos]);
 
-  const pieData = proyectos.filter(p => p.estado === 'Ejecución').map(p => ({ name: p.nombre.slice(0, 18), value: p.presupuestoTotal }));
+  const pieData = presupuestos.filter(p => p.fase === 'ejecución').map(p => ({ name: p.proyecto.slice(0, 18), value: p.total }));
   const COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
-  const barData = proyectos.map(p => ({
-    name: p.nombre.split(' ').slice(0, 2).join(' '),
+  const barData = presupuestos.map(p => ({
+    name: p.proyecto.split(' ').slice(0, 2).join(' '),
     Avance: p.avanceFisico,
     Financiero: p.avanceFinanciero,
   }));

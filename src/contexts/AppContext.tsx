@@ -12,7 +12,7 @@ import {
   dbToTransaccion, transaccionToDb, dbToActividad, actividadToDb, dbToPresupuesto, presupuestoToDb
 } from '@/types/supabase';
 
-export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero';
+export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos';
 
 export interface User {
   nombre: string;
@@ -79,6 +79,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    const [actividades, setActividades] = useState<Actividad[]>([]);
    const realtimeClientes = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
    const realtimeProyectos = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
+   const realtimePresupuestos = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
    const realtimeTransacciones = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
    const realtimeActividades = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
    const initDoneRef = useRef(false);
@@ -177,8 +178,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        if (realtimeClientes.current) realtimeClientes.current.unsubscribe();
        if (realtimeProyectos.current) realtimeProyectos.current.unsubscribe();
        if (realtimeTransacciones.current) realtimeTransacciones.current.unsubscribe();
-       if (realtimeActividades.current) realtimeActividades.current.unsubscribe();
-     };
+        if (realtimeActividades.current) realtimeActividades.current.unsubscribe();
+        if (realtimePresupuestos.current) realtimePresupuestos.current.unsubscribe();
+      };
     // eslint-disable-next-line react-hooks/exhaustive-deps
    }, []);
 
@@ -212,8 +214,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        })
        .subscribe();
 
-     // Transacciones realtime
-     if (realtimeTransacciones.current) realtimeTransacciones.current.unsubscribe();
+      // Presupuestos realtime
+      if (realtimePresupuestos.current) realtimePresupuestos.current.unsubscribe();
+      realtimePresupuestos.current = supabase
+        .channel('presupuestos')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'presupuestos',
+          filter: `user_id=eq.${userId}`
+        }, (payload) => {
+          handleRealtimeChange('presupuestos', payload);
+        })
+        .subscribe();
+
+      // Transacciones realtime
+      if (realtimeTransacciones.current) realtimeTransacciones.current.unsubscribe();
      realtimeTransacciones.current = supabase
        .channel('transacciones')
        .on('postgres_changes', {
@@ -274,6 +290,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setTransacciones(prev => prev.map(x => x.id === realPayload.new.id ? dbToTransaccion(realPayload.new) : x));
         } else if (realPayload.eventType === 'DELETE') {
           setTransacciones(prev => prev.filter(x => x.id !== realPayload.old.id));
+        }
+        break;
+      case 'presupuestos':
+        if (realPayload.eventType === 'INSERT') {
+          setPresupuestos(prev => [dbToPresupuesto(realPayload.new), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE') {
+          setPresupuestos(prev => prev.map(x => x.id === realPayload.new.id ? dbToPresupuesto(realPayload.new) : x));
+        } else if (realPayload.eventType === 'DELETE') {
+          setPresupuestos(prev => prev.filter(x => x.id !== realPayload.old.id));
         }
         break;
       case 'actividades':
@@ -445,6 +470,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const transicionFase = async (id: string, nuevaFase: Presupuesto['fase']) => {
     if (!session) return;
+    const original = presupuestos.find(p => p.id === id)?.fase;
     try {
       setPresupuestos(prev => prev.map(p => p.id === id ? { ...p, fase: nuevaFase } : p));
       const { data, error } = await supabase.rpc('transicionar_fase', {
@@ -453,20 +479,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         p_user_id: session.user.id,
       });
       if (error) throw error;
-      const presupuestoActual = presupuestos.find(p => p.id === id);
-      if (presupuestoActual) {
-        const { data: refreshed } = await supabase.from('presupuestos').select('*').eq('id', id).single();
-        if (refreshed) setPresupuestos(prev => prev.map(p => p.id === id ? dbToPresupuesto(refreshed) : p));
-        const { data: projData } = await supabase.from('proyectos').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(1);
-        if (projData && projData.length > 0) setProyectos(prev => {
-          const exists = prev.find(x => x.id === projData[0].id);
-          if (exists) return prev.map(x => x.id === projData[0].id ? dbToProyecto(projData[0]) : x);
-          return [dbToProyecto(projData[0]), ...prev];
-        });
-      }
+      const { data: refreshed } = await supabase.from('presupuestos').select('*').eq('id', id).single();
+      if (refreshed) setPresupuestos(prev => prev.map(p => p.id === id ? dbToPresupuesto(refreshed) : p));
+      const { data: projData } = await supabase.from('proyectos').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(1);
+      if (projData && projData.length > 0) setProyectos(prev => {
+        const exists = prev.find(x => x.id === projData[0].id);
+        if (exists) return prev.map(x => x.id === projData[0].id ? dbToProyecto(projData[0]) : x);
+        return [dbToProyecto(projData[0]), ...prev];
+      });
     } catch (error) {
       console.error('Error en transicionFase:', error);
-      setPresupuestos(prev => prev.map(p => p.id === id ? { ...p, fase: p.fase } : p));
+      if (original) setPresupuestos(prev => prev.map(p => p.id === id ? { ...p, fase: original } : p));
       throw error;
     }
   };

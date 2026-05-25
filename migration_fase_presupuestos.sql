@@ -39,7 +39,33 @@ ALTER TABLE public.presupuestos ADD COLUMN IF NOT EXISTS fecha_inicio date;
 ALTER TABLE public.presupuestos ADD COLUMN IF NOT EXISTS fecha_fin date;
 ALTER TABLE public.presupuestos ADD COLUMN IF NOT EXISTS total numeric DEFAULT 0;
 
--- 2. Sincronizar presupuestos existentes desde proyectos
+-- 2. Insertar presupuestos desde proyectos existentes (si no hay matching)
+INSERT INTO public.presupuestos (user_id, proyecto, cliente, tipologia, fase, total, avance_fisico, avance_financiero, ingresos, gastos, pendiente_aportar, fecha_inicio, fecha_fin)
+SELECT
+  p.user_id,
+  p.nombre,
+  p.cliente,
+  p.tipo,
+  CASE p.estado
+    WHEN 'Ejecución' THEN 'ejecución'
+    WHEN 'Finalizado' THEN 'finalizado'
+    WHEN 'Parado' THEN 'pausa'
+    WHEN 'Evaluación' THEN 'ejecución'
+    ELSE 'planeación'
+  END,
+  p.presupuesto_total,
+  p.avance_fisico,
+  p.avance_financiero,
+  p.ingresos,
+  p.gastos,
+  p.pendiente_aportar,
+  p.fecha_inicio,
+  p.fecha_fin
+FROM public.proyectos p
+LEFT JOIN public.presupuestos pr ON pr.proyecto = p.nombre
+WHERE pr.id IS NULL;
+
+-- 3. Sincronizar presupuestos existentes desde proyectos
 UPDATE public.presupuestos p
 SET
   avance_fisico = COALESCE((SELECT pr.avance_fisico FROM public.proyectos pr WHERE pr.nombre = p.proyecto LIMIT 1), 0),
@@ -48,20 +74,16 @@ SET
   gastos = COALESCE((SELECT pr.gastos FROM public.proyectos pr WHERE pr.nombre = p.proyecto LIMIT 1), 0),
   pendiente_aportar = COALESCE((SELECT pr.pendiente_aportar FROM public.proyectos pr WHERE pr.nombre = p.proyecto LIMIT 1), 0),
   fecha_inicio = (SELECT pr.fecha_inicio FROM public.proyectos pr WHERE pr.nombre = p.proyecto LIMIT 1),
-  fecha_fin = (SELECT pr.fecha_fin FROM public.proyectos pr WHERE pr.nombre = p.proyecto LIMIT 1)
+  fecha_fin = (SELECT pr.fecha_fin FROM public.proyectos pr WHERE pr.nombre = p.proyecto LIMIT 1),
+  fase =
+    CASE
+      WHEN (SELECT pr.estado FROM public.proyectos pr WHERE pr.nombre = p.proyecto LIMIT 1) = 'Ejecución' THEN 'ejecución'
+      WHEN (SELECT pr.estado FROM public.proyectos pr WHERE pr.nombre = p.proyecto LIMIT 1) = 'Finalizado' THEN 'finalizado'
+      WHEN (SELECT pr.estado FROM public.proyectos pr WHERE pr.nombre = p.proyecto LIMIT 1) = 'Parado' THEN 'pausa'
+      WHEN (SELECT pr.estado FROM public.proyectos pr WHERE pr.nombre = p.proyecto LIMIT 1) = 'Evaluación' THEN 'ejecución'
+      ELSE 'planeación'
+    END
 WHERE EXISTS (SELECT 1 FROM public.proyectos pr WHERE pr.nombre = p.proyecto);
-
--- 3. Mapear estados de proyectos a fases en presupuestos
-UPDATE public.presupuestos
-SET fase =
-  CASE
-    WHEN (SELECT pr.estado FROM public.proyectos pr WHERE pr.nombre = presupuestos.proyecto LIMIT 1) = 'Ejecución' THEN 'ejecución'
-    WHEN (SELECT pr.estado FROM public.proyectos pr WHERE pr.nombre = presupuestos.proyecto LIMIT 1) = 'Finalizado' THEN 'finalizado'
-    WHEN (SELECT pr.estado FROM public.proyectos pr WHERE pr.nombre = presupuestos.proyecto LIMIT 1) = 'Parado' THEN 'pausa'
-    WHEN (SELECT pr.estado FROM public.proyectos pr WHERE pr.nombre = presupuestos.proyecto LIMIT 1) = 'Evaluación' THEN 'ejecución'
-    ELSE 'planeación'
-  END
-WHERE EXISTS (SELECT 1 FROM public.proyectos pr WHERE pr.nombre = presupuestos.proyecto);
 
 -- 4. RLS para presupuestos
 ALTER TABLE public.presupuestos ENABLE ROW LEVEL SECURITY;
