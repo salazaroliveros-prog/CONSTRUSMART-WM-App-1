@@ -56,115 +56,65 @@ const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
       <Header showHome={false} title="Tablero Ejecutivo" />
 
-      <div className="flex-1 p-2 sm:p-3 grid grid-cols-12 gap-2 max-w-[1600px] mx-auto w-full">
-        {/* Fila 1: Salud + KPIs compactos */}
-        <div className="col-span-12 grid grid-cols-12 gap-2">
-          <div className="col-span-12 sm:col-span-3">
-            <HealthIndicator rentabilidad={stats.rentabilidadGeneral} proyectosActivos={stats.activos} deuda={stats.gastos - stats.ingresos} />
-          </div>
+      <div className="flex-1 p-2 grid grid-cols-12 gap-2 max-w-[1600px] mx-auto w-full overflow-hidden">
+        {/* Fila 1: KPIs compactos */}
+        <div className="col-span-12 grid grid-cols-8 gap-1 h-16">
           {[
             { icon: TrendingUp, label: 'Ingresos', value: `Q${(stats.ingresos / 1000).toFixed(1)}K`, color: 'emerald' },
             { icon: TrendingDown, label: 'Gastos', value: `Q${(stats.gastos / 1000).toFixed(1)}K`, color: 'red' },
             { icon: DollarSign, label: 'Margen', value: `Q${(stats.margen / 1000).toFixed(1)}K`, color: stats.margen >= 0 ? 'blue' : 'red' },
-            { icon: Percent, label: 'Rentabilidad', value: `${stats.rentabilidadGeneral.toFixed(1)}%`, color: stats.rentabilidadGeneral >= 10 ? 'emerald' : stats.rentabilidadGeneral >= 0 ? 'amber' : 'red' },
+            { icon: Percent, label: 'Rentabilidad', value: `${stats.rentabilidadGeneral.toFixed(1)}%`, color: stats.rentabilidadGeneral >= 10 ? 'emerald' : 'amber' },
             { icon: FolderKanban, label: 'Activos', value: String(stats.activos), color: 'indigo' },
             { icon: FolderKanban, label: 'Planeación', value: String(stats.planeacion), color: 'purple' },
             { icon: FolderKanban, label: 'Finalizados', value: String(stats.finalizados), color: 'teal' },
             { icon: DollarSign, label: 'Pendiente', value: `Q${(stats.pendiente / 1000).toFixed(0)}K`, color: 'amber' },
           ].map((k, i) => (
-            <div key={i} className="col-span-3 sm:col-span-1">
-              <CompactKPI icon={k.icon} label={k.label} value={k.value} color={k.color as 'emerald' | 'red' | 'blue' | 'indigo' | 'purple' | 'amber' | 'teal'} />
+            <div key={i} className="col-span-1">
+              <CompactKPI icon={k.icon} label={k.label} value={k.value} color={k.color as any} />
             </div>
           ))}
         </div>
 
-        {/* Fila 2: Módulos + Calendario */}
-        <div className="col-span-12 lg:col-span-8 grid grid-cols-3 sm:grid-cols-6 gap-2">
-          {modules.map(m => (
-            <button key={m.id} onClick={() => setView(m.id as ViewType)}
-              className={`bg-gradient-to-br ${m.color} text-white p-3 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 text-left group btn-press`}>
-              <m.icon className="w-5 h-5 mb-1 opacity-90 group-hover:scale-110 transition" />
-              <div className="font-bold text-[11px] leading-tight">{m.label}</div>
-              <div className="text-[9px] opacity-70 mt-0.5">{m.desc}</div>
-            </button>
-          ))}
-          <button onClick={() => exportCompleto(presupuestos, transacciones, clientes)}
-            className="flex flex-col items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 p-3 rounded-xl shadow-sm btn-press transition">
-            <FileDown className="w-5 h-5 mb-1" />
-            <span className="text-[10px] font-semibold">Exportar</span>
-          </button>
-        </div>
-
-        <div className="col-span-12 lg:col-span-4 lg:row-span-4 space-y-2">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-2">
-            <Calendar />
+        {/* Fila 2: Área Principal de Gráficas e Interacción (sin scroll) */}
+        <div className="col-span-12 grid grid-cols-3 gap-2 flex-1 min-h-0">
+          <div className="col-span-2 grid grid-cols-2 gap-2">
+            <div className="bg-white rounded-lg shadow-sm p-2 flex flex-col min-h-0">
+              <h3 className="text-[10px] font-bold text-slate-600 uppercase">Distribución</h3>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={40} innerRadius={20} paddingAngle={2}>
+                    {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip formatter={(v: number) => `Q ${v.toLocaleString()}`} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm p-2 flex flex-col min-h-0">
+              <h3 className="text-[10px] font-bold text-slate-600 uppercase">Avance vs Financiero</h3>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 8 }} />
+                  <YAxis tick={{ fontSize: 8 }} />
+                  <Tooltip />
+                  <Bar dataKey="Avance" fill="#1E3A8A" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="Financiero" fill="#10B981" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="col-span-2 bg-white rounded-lg shadow-sm p-2 flex flex-col min-h-0">
+                <TransactionForm compact />
+            </div>
           </div>
-          <GanttView />
-        </div>
-
-        {/* Fila 3: Charts */}
-        <div className="col-span-12 lg:col-span-4">
-          <CashFlowProjection />
-        </div>
-
-        <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-sm border border-slate-200 p-2 card-hover">
-          <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">Distribución</h3>
-          <ResponsiveContainer width="100%" height={120}>
-            <PieChart>
-              <Pie data={pieData} dataKey="value" cx="50%" cy="50%" outerRadius={45} innerRadius={25} paddingAngle={2}>
-                {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-              </Pie>
-              <Tooltip formatter={(v: number) => `Q ${v.toLocaleString()}`} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-sm border border-slate-200 p-2 card-hover">
-          <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">Rentabilidad x Proyecto</h3>
-          <ResponsiveContainer width="100%" height={120}>
-            <BarChart data={rentabilidadData} margin={{ top: 2, right: 2, left: -20, bottom: 0 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 8 }} />
-              <YAxis tick={{ fontSize: 8 }} domain={[-100, 100]} />
-              <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
-              <Bar dataKey="Rentabilidad" fill="#8B5CF6" radius={[2, 2, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Fila 4: Heat Map + Timeline + Avance */}
-        <div className="col-span-12 lg:col-span-5 bg-white rounded-xl shadow-sm border border-slate-200 p-2 card-hover">
-          <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">Rentabilidad por Proyecto</h3>
-          <ProjectHeatMap />
-        </div>
-
-        <div className="col-span-12 lg:col-span-3 bg-white rounded-xl shadow-sm border border-slate-200 p-2 card-hover">
-          <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">Timeline</h3>
-          <ProjectTimeline />
-        </div>
-
-        <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-sm border border-slate-200 p-2 card-hover">
-          <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">Avance vs Financiero</h3>
-          <ResponsiveContainer width="100%" height={120}>
-            <BarChart data={barData} margin={{ top: 2, right: 2, left: -20, bottom: 0 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 8 }} />
-              <YAxis tick={{ fontSize: 8 }} />
-              <Tooltip />
-              <Legend wrapperStyle={{ fontSize: 9 }} />
-              <Bar dataKey="Avance" fill="#1E3A8A" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="Financiero" fill="#10B981" radius={[2, 2, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Fila 5: Actividad + Transaction form */}
-        <div className="col-span-12 lg:col-span-4">
-          <RealtimeFeed />
-        </div>
-        <div className="col-span-12 lg:col-span-8">
-          <TransactionForm />
+          
+          <div className="col-span-1 bg-white rounded-lg shadow-sm p-2 flex flex-col min-h-0">
+            <h3 className="text-[10px] font-bold text-slate-600 uppercase">Calendario</h3>
+            <div className="flex-1 overflow-hidden">
+                <Calendar />
+            </div>
+          </div>
         </div>
       </div>
     </div>
