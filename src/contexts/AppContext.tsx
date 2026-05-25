@@ -48,6 +48,11 @@ interface AppContextType {
   addActividad: (a: CreateActividad) => Promise<void>;
   deleteActividad: (id: string) => Promise<void>;
 
+  presupuestos: Presupuesto[];
+  addPresupuesto: (p: CreatePresupuesto) => Promise<string | null>;
+  updatePresupuesto: (id: string, p: UpdatePresupuesto) => Promise<void>;
+  transicionFase: (id: string, nuevaFase: Presupuesto['fase']) => Promise<void>;
+
   sidebarOpen: boolean;
   toggleSidebar: () => void;
 }
@@ -69,6 +74,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
    const [clientes, setClientes] = useState<Cliente[]>([]);
    const [proyectos, setProyectos] = useState<Proyecto[]>([]);
+   const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
    const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
    const [actividades, setActividades] = useState<Actividad[]>([]);
    const realtimeClientes = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
@@ -91,32 +97,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
      if (loadingRef.current) return;
      loadingRef.current = true;
      
-     try {
-       let cR, pR, tR, aR;
-       try { [cR] = await Promise.all([supabase.from('clientes').select('*').order('created_at', { ascending: false })]); } catch (e) { console.error('Error cargando clientes:', e); }
-       try { [pR] = await Promise.all([supabase.from('proyectos').select('*').order('created_at', { ascending: false })]); } catch (e) { console.error('Error cargando proyectos:', e); }
-       try { [tR] = await Promise.all([supabase.from('transacciones').select('*').order('fecha', { ascending: false })]); } catch (e) { console.error('Error cargando transacciones:', e); }
-       try { [aR] = await Promise.all([supabase.from('actividades').select('*').order('fecha', { ascending: false })]); } catch (e) { console.error('Error cargando actividades:', e); }
-       
-       setClientes((cR?.data || []).map(dbToCliente));
-       setProyectos((pR?.data || []).map(dbToProyecto));
-       setTransacciones((tR?.data || []).map(dbToTransaccion));
-       setActividades((aR?.data || []).map(dbToActividad));
-
-       // Seed si está vacío
-       if ((cR?.data?.length || 0) === 0 && (pR?.data?.length || 0) === 0) {
-         try { await seedDatabase(userId); } catch (e) { console.error('Error en seedDatabase:', e); }
-         let c2, p2, t2, a2;
-         try { [c2] = await Promise.all([supabase.from('clientes').select('*')]); } catch (e) { console.error('Error recargando clientes:', e); }
-         try { [p2] = await Promise.all([supabase.from('proyectos').select('*')]); } catch (e) { console.error('Error recargando proyectos:', e); }
-         try { [t2] = await Promise.all([supabase.from('transacciones').select('*')]); } catch (e) { console.error('Error recargando transacciones:', e); }
-         try { [a2] = await Promise.all([supabase.from('actividades').select('*')]); } catch (e) { console.error('Error recargando actividades:', e); }
-         setClientes((c2?.data || []).map(dbToCliente));
-         setProyectos((p2?.data || []).map(dbToProyecto));
-         setTransacciones((t2?.data || []).map(dbToTransaccion));
-         setActividades((a2?.data || []).map(dbToActividad));
-       }
-     } finally {
+      try {
+        let cR, pR, prR, tR, aR;
+        try { [cR] = await Promise.all([supabase.from('clientes').select('*').order('created_at', { ascending: false })]); } catch (e) { console.error('Error cargando clientes:', e); }
+        try { [pR] = await Promise.all([supabase.from('proyectos').select('*').order('created_at', { ascending: false })]); } catch (e) { console.error('Error cargando proyectos:', e); }
+        try { [prR] = await Promise.all([supabase.from('presupuestos').select('*').order('created_at', { ascending: false })]); } catch (e) { console.error('Error cargando presupuestos:', e); }
+        try { [tR] = await Promise.all([supabase.from('transacciones').select('*').order('fecha', { ascending: false })]); } catch (e) { console.error('Error cargando transacciones:', e); }
+        try { [aR] = await Promise.all([supabase.from('actividades').select('*').order('fecha', { ascending: false })]); } catch (e) { console.error('Error cargando actividades:', e); }
+        
+        setClientes((cR?.data || []).map(dbToCliente));
+        setProyectos((pR?.data || []).map(dbToProyecto));
+        setPresupuestos((prR?.data || []).map(dbToPresupuesto));
+        setTransacciones((tR?.data || []).map(dbToTransaccion));
+        setActividades((aR?.data || []).map(dbToActividad));
+      } finally {
        loadingRef.current = false;
      }
    }, []);
@@ -415,6 +409,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!error) setActividades(p => p.filter(x => x.id !== id));
   };
 
+  // ---------- CRUD Presupuestos (unificado con fase) ----------
+  const addPresupuesto = async (p: Record<string, unknown>): Promise<string | null> => {
+    if (!session) return null;
+    try {
+      const { data, error } = await supabase.from('presupuestos')
+        .insert({ ...p, user_id: session.user.id, created_at: new Date().toISOString() } as never)
+        .select()
+        .single();
+      if (error) throw error;
+      if (data) {
+        setPresupuestos(prev => [dbToPresupuesto(data), ...prev]);
+        return data.id;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error al agregar presupuesto:', error);
+      throw error;
+    }
+  };
+
+  const updatePresupuesto = async (id: string, p: Record<string, unknown>) => {
+    try {
+      const { data, error } = await supabase.from('presupuestos')
+        .update({ ...p, updated_at: new Date().toISOString() } as never)
+        .eq('id', id)
+        .select()
+        .single();
+      if (!error && data) setPresupuestos(prev => prev.map(x => x.id === id ? dbToPresupuesto(data) : x));
+    } catch (error) {
+      console.error('Error al actualizar presupuesto:', error);
+      throw error;
+    }
+  };
+
+  const transicionFase = async (id: string, nuevaFase: Presupuesto['fase']) => {
+    if (!session) return;
+    try {
+      setPresupuestos(prev => prev.map(p => p.id === id ? { ...p, fase: nuevaFase } : p));
+      const { data, error } = await supabase.rpc('transicionar_fase', {
+        p_presupuesto_id: id,
+        p_nueva_fase: nuevaFase,
+        p_user_id: session.user.id,
+      });
+      if (error) throw error;
+      const presupuestoActual = presupuestos.find(p => p.id === id);
+      if (presupuestoActual) {
+        const { data: refreshed } = await supabase.from('presupuestos').select('*').eq('id', id).single();
+        if (refreshed) setPresupuestos(prev => prev.map(p => p.id === id ? dbToPresupuesto(refreshed) : p));
+        const { data: projData } = await supabase.from('proyectos').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(1);
+        if (projData && projData.length > 0) setProyectos(prev => {
+          const exists = prev.find(x => x.id === projData[0].id);
+          if (exists) return prev.map(x => x.id === projData[0].id ? dbToProyecto(projData[0]) : x);
+          return [dbToProyecto(projData[0]), ...prev];
+        });
+      }
+    } catch (error) {
+      console.error('Error en transicionFase:', error);
+      setPresupuestos(prev => prev.map(p => p.id === id ? { ...p, fase: p.fase } : p));
+      throw error;
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       view, setView, session, loading, authError, signIn, signUp, signOut, user,
@@ -422,6 +478,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       proyectos, addProyecto, updateProyecto,
       transacciones, addTransaccion, deleteTransaccion,
       actividades, addActividad, deleteActividad,
+      presupuestos, addPresupuesto, updatePresupuesto, transicionFase,
       sidebarOpen, toggleSidebar: () => setSidebarOpen(p => !p),
     }}>
       {children}

@@ -3,19 +3,36 @@ import { useAppContext } from '@/contexts/AppContext';
 import Header from '@/components/shared/Header';
 import { renglonesPorTipologia, Tipologia, tipologiaLabels, Renglon } from '@/data/renglones';
 import { downloadCSV, printPDF, fmtQ } from '@/lib/exporters';
-import { supabase } from '@/lib/supabase';
-import { Plus, Trash2, ChevronDown, ChevronRight, Download, FileText, Calculator, Search, Save } from 'lucide-react';
+import { Play, PauseCircle, CheckCircle, Plus, Trash2, ChevronDown, ChevronRight, Download, FileText, Calculator, Search, Save, FolderOpen } from 'lucide-react';
 
 interface LineaPresupuesto extends Renglon {
   cantidad: number;
 }
 
+type TabFase = 'nuevo' | 'planeación' | 'ejecución' | 'pausa' | 'finalizado';
+
+const faseLabels: Record<string, string> = {
+  'nuevo': 'Nuevo Presupuesto',
+  'planeación': 'Planeación',
+  'ejecución': 'Ejecución',
+  'pausa': 'Pausa',
+  'finalizado': 'Finalizado',
+};
+const faseColors: Record<string, string> = {
+  'planeación': 'bg-purple-100 text-purple-800 border-purple-300',
+  'ejecución': 'bg-blue-100 text-blue-800 border-blue-300',
+  'pausa': 'bg-amber-100 text-amber-800 border-amber-300',
+  'finalizado': 'bg-emerald-100 text-emerald-800 border-emerald-300',
+};
+
 const PresupuestoScreen: React.FC = () => {
-  const { clientes, session, addProyecto } = useAppContext();
+  const { clientes, session, presupuestos, addPresupuesto, updatePresupuesto, transicionFase } = useAppContext();
+  const [tabFase, setTabFase] = useState<TabFase>('nuevo');
   const [tipologia, setTipologia] = useState<Tipologia>('general');
   const [search, setSearch] = useState('');
   const [lineas, setLineas] = useState<LineaPresupuesto[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [faseAlGuardar, setFaseAlGuardar] = useState<'planeación' | 'ejecución'>('planeación');
   const [meta, setMeta] = useState({
     proyecto: 'Proyecto sin nombre',
     cliente: '',
@@ -148,7 +165,6 @@ const PresupuestoScreen: React.FC = () => {
     }
     setSaving(true);
     try {
-      // Calcular total del presupuesto
       const direct = lineas.map(l => {
         const cu = l.costoMaterial + l.costoManoObra + l.costoHerramienta;
         return { ...l, costoUnitario: cu, subtotal: cu * l.cantidad };
@@ -166,43 +182,22 @@ const PresupuestoScreen: React.FC = () => {
         cliente: meta.cliente,
         ubicacion: meta.ubicacion,
         tipologia,
+        fase: faseAlGuardar,
         factor_indirectos: meta.factorIndirectos,
         factor_administrativos: meta.factorAdministrativos,
         factor_imprevistos: meta.factorImprevistos,
         factor_utilidad: meta.factorUtilidad,
         lineas,
-        updated_at: new Date().toISOString(),
+        total,
       };
 
       if (savedPresupuestoId) {
-        const { error } = await supabase.from('presupuestos').update(payload).eq('id', savedPresupuestoId);
-        if (error) throw error;
+        await updatePresupuesto(savedPresupuestoId, { ...payload, updated_at: new Date().toISOString() });
       } else {
-        const { data, error } = await supabase.from('presupuestos')
-          .insert({ ...payload, user_id: session.user.id })
-          .select('id')
-          .single();
-        if (error) throw error;
-        if (data) setSavedPresupuestoId(data.id);
-
-        // ===== CREAR PROYECTO AUTOMÁTICAMENTE =====
-        try {
-          await addProyecto({
-            nombre: meta.proyecto,
-            cliente: meta.cliente,
-            tipo: tipologia,
-            estado: 'Planeación',
-            presupuestoTotal: total,
-            avanceFisico: 0,
-            avanceFinanciero: 0,
-            ingresos: 0,
-            gastos: 0,
-            pendienteAportar: total,
-            fechaInicio: new Date().toISOString().split('T')[0],
-            fechaFin: '',
-          });
-        } catch (projError) {
-          console.warn('Presupuesto guardado pero error creando proyecto:', projError);
+        const newId = await addPresupuesto(payload);
+        if (newId) {
+          setSavedPresupuestoId(newId);
+          await transicionFase(newId, faseAlGuardar);
         }
       }
     } catch (err) {
@@ -256,6 +251,41 @@ const PresupuestoScreen: React.FC = () => {
           </div>
 
           <div className="bg-white rounded-xl shadow-md p-4">
+            <h3 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2"><FolderOpen className="w-4 h-4 text-blue-700" />Presupuestos Guardados</h3>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {(['planeación', 'ejecución', 'pausa', 'finalizado'] as const).map(f => {
+                const count = presupuestos.filter(p => p.fase === f).length;
+                return (
+                  <button key={f} onClick={() => { setTabFase(f); setSavedPresupuestoId(null); setLineas([]); }}
+                    className={`text-[10px] px-2 py-1 rounded-full border font-semibold transition ${tabFase === f ? faseColors[f] : 'bg-slate-100 text-slate-500 border-transparent'}`}>
+                    {faseLabels[f]} ({count})
+                  </button>
+                );
+              })}
+            </div>
+            {tabFase !== 'nuevo' && (
+              <div className="max-h-[200px] overflow-y-auto space-y-1">
+                {presupuestos.filter(p => p.fase === tabFase).map(p => (
+                  <button key={p.id} onClick={() => {
+                    setMeta(m => ({ ...m, proyecto: p.proyecto, cliente: p.cliente || '', ubicacion: p.ubicacion || '' }));
+                    setTipologia((p.tipologia || 'general') as Tipologia);
+                    setLineas((p.lineas as LineaPresupuesto[]) || []);
+                    setSavedPresupuestoId(p.id);
+                    setTabFase('nuevo');
+                  }}
+                    className="w-full text-left p-2 rounded text-[10px] bg-slate-50 hover:bg-blue-50 border border-transparent hover:border-blue-200 transition">
+                    <div className="font-semibold text-slate-800 truncate">{p.proyecto}</div>
+                    <div className="text-[9px] text-slate-500">{p.cliente || 'Sin cliente'} · Q {(p.total || 0).toLocaleString()}</div>
+                  </button>
+                ))}
+                {presupuestos.filter(p => p.fase === tabFase).length === 0 && (
+                  <div className="text-[10px] text-slate-400 text-center py-4">Sin presupuestos en esta fase</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl shadow-md p-4">
             <h3 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2"><Search className="w-4 h-4 text-blue-700" />Catálogo de Renglones</h3>
             <div className="text-[10px] text-slate-500 mb-2">{catalogo.length} renglones · Tipología: <strong>{tipologiaLabels[tipologia]}</strong></div>
             <input placeholder="Buscar renglón..." value={search} onChange={e => setSearch(e.target.value)} className="w-full px-2 py-1.5 text-xs border rounded mb-2" />
@@ -288,8 +318,13 @@ const PresupuestoScreen: React.FC = () => {
           <div className="bg-white rounded-xl shadow-md overflow-hidden">
             <div className="bg-gradient-to-r from-blue-800 to-blue-700 text-white p-3 flex items-center justify-between flex-wrap gap-2">
               <h3 className="font-bold text-sm flex items-center gap-2"><Calculator className="w-4 h-4" />Renglones del Presupuesto ({lineas.length})</h3>
-               <div className="flex gap-2">
-                 <button onClick={handleSave} disabled={saving} className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 px-2.5 py-1 rounded text-[11px] font-semibold text-white disabled:opacity-40"><Save className="w-3 h-3" />{saving ? 'Guardando...' : 'Guardar'}</button>
+               <div className="flex gap-2 items-center">
+                  <select value={faseAlGuardar} onChange={e => setFaseAlGuardar(e.target.value as 'planeación' | 'ejecución')}
+                    className="text-[10px] px-2 py-1 rounded bg-white/20 text-white border border-white/30 font-semibold">
+                    <option value="planeación">Fase: Planeación</option>
+                    <option value="ejecución">Fase: Ejecución</option>
+                  </select>
+                  <button onClick={handleSave} disabled={saving} className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 px-2.5 py-1 rounded text-[11px] font-semibold text-white disabled:opacity-40"><Save className="w-3 h-3" />{saving ? 'Guardando...' : 'Guardar'}</button>
                  <button onClick={handleExportCSV} disabled={!lineas.length} className="flex items-center gap-1 bg-white/20 hover:bg-white/30 px-2.5 py-1 rounded text-[11px] font-semibold disabled:opacity-40"><Download className="w-3 h-3" />CSV</button>
                  <button onClick={handleExportPDF} disabled={!lineas.length} className="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 px-2.5 py-1 rounded text-[11px] font-semibold disabled:opacity-40"><FileText className="w-3 h-3" />PDF</button>
                </div>

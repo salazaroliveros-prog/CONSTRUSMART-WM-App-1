@@ -73,11 +73,20 @@ const PresupuestoSchema = z.object({
   cliente: z.string().optional(),
   ubicacion: z.string().optional(),
   tipologia: z.string().optional(),
+  fase: z.enum(['planeación', 'ejecución', 'pausa', 'finalizado']).default('planeación'),
   factor_indirectos: z.number().min(0).default(0),
   factor_administrativos: z.number().min(0).default(0),
   factor_imprevistos: z.number().min(0).default(0),
   factor_utilidad: z.number().min(0).default(0),
   lineas: z.array(z.any()).default([]),
+  avance_fisico: z.number().min(0).max(100).default(0),
+  avance_financiero: z.number().min(0).max(100).default(0),
+  ingresos: z.number().default(0),
+  gastos: z.number().default(0),
+  pendiente_aportar: z.number().default(0),
+  total: z.number().default(0),
+  fecha_inicio: z.string().optional(),
+  fecha_fin: z.string().optional(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
 });
@@ -148,11 +157,20 @@ export interface Presupuesto {
   cliente?: string;
   ubicacion?: string;
   tipologia?: string;
+  fase: 'planeación' | 'ejecución' | 'pausa' | 'finalizado';
   factor_indirectos: number;
   factor_administrativos: number;
   factor_imprevistos: number;
   factor_utilidad: number;
   lineas: unknown[];
+  avanceFisico: number;
+  avanceFinanciero: number;
+  ingresos: number;
+  gastos: number;
+  pendienteAportar: number;
+  total: number;
+  fechaInicio: string;
+  fechaFin: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -337,11 +355,20 @@ export const dbToPresupuesto = (db: DBPresupuesto): Presupuesto => ({
   cliente: db.cliente || '',
   ubicacion: db.ubicacion || '',
   tipologia: db.tipologia || '',
+  fase: db.fase || 'planeación',
   factor_indirectos: Number(db.factor_indirectos) || 0,
   factor_administrativos: Number(db.factor_administrativos) || 0,
   factor_imprevistos: Number(db.factor_imprevistos) || 0,
   factor_utilidad: Number(db.factor_utilidad) || 0,
   lineas: db.lineas || [],
+  avanceFisico: Number(db.avance_fisico) || 0,
+  avanceFinanciero: Number(db.avance_financiero) || 0,
+  ingresos: Number(db.ingresos) || 0,
+  gastos: Number(db.gastos) || 0,
+  pendienteAportar: Number(db.pendiente_aportar) || 0,
+  total: Number(db.total) || 0,
+  fechaInicio: db.fecha_inicio || '',
+  fechaFin: db.fecha_fin || '',
   created_at: db.created_at || '',
   updated_at: db.updated_at || '',
 });
@@ -351,9 +378,18 @@ export const presupuestoToDb = (presupuesto: UpdatePresupuesto): Partial<DBPresu
   cliente: presupuesto.cliente,
   ubicacion: presupuesto.ubicacion,
   tipologia: presupuesto.tipologia,
+  fase: presupuesto.fase,
   factor_indirectos: presupuesto.factor_indirectos,
   factor_administrativos: presupuesto.factor_administrativos,
   factor_imprevistos: presupuesto.factor_imprevistos,
   factor_utilidad: presupuesto.factor_utilidad,
   lineas: presupuesto.lineas,
+  avance_fisico: presupuesto.avanceFisico,
+  avance_financiero: presupuesto.avanceFinanciero,
+  ingresos: presupuesto.ingresos,
+  gastos: presupuesto.gastos,
+  pendiente_aportar: presupuesto.pendienteAportar,
+  total: presupuesto.total,
+  fecha_inicio: presupuesto.fechaInicio,
+  fecha_fin: presupuesto.fechaFin,
 });

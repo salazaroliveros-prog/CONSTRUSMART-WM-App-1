@@ -1,15 +1,17 @@
 import React, { useMemo } from 'react';
-import { useAppContext, Proyecto } from '@/contexts/AppContext';
+import { useAppContext } from '@/contexts/AppContext';
 import Header from '@/components/shared/Header';
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
-import { Download, FileText, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { Download, FileText, Play, PauseCircle, CheckCircle, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Area, AreaChart } from 'recharts';
+import type { Presupuesto } from '@/types/supabase';
 
 const SeguimientoScreen: React.FC = () => {
-  const { proyectos, transacciones } = useAppContext();
+  const { presupuestos, transacciones, transicionFase } = useAppContext();
 
-  const ejecucion = proyectos.filter(p => p.estado === 'Ejecución');
-  const planeacion = proyectos.filter(p => p.estado === 'Planeación');
+  const ejecucion = presupuestos.filter(p => p.fase === 'ejecución');
+  const planeacion = presupuestos.filter(p => p.fase === 'planeación');
+  const finalizados = presupuestos.filter(p => p.fase === 'finalizado');
 
   const flujoMensual = useMemo(() => {
     const data: Record<string, { mes: string; ingresos: number; gastos: number }> = {};
@@ -23,7 +25,7 @@ const SeguimientoScreen: React.FC = () => {
   }, [transacciones]);
 
   const avanceData = ejecucion.map(p => ({
-    name: p.nombre.split(' ').slice(0, 3).join(' '),
+    name: p.proyecto.split(' ').slice(0, 3).join(' '),
     Físico: p.avanceFisico,
     Financiero: p.avanceFinanciero,
   }));
@@ -33,8 +35,8 @@ const SeguimientoScreen: React.FC = () => {
       ['Seguimiento de Proyectos - CONSTRUCTORA WM/M&S'],
       [`Fecha: ${new Date().toLocaleDateString('es-GT')}`],
       [],
-      ['Proyecto', 'Cliente', 'Tipo', 'Estado', 'Presupuesto', 'Avance Físico %', 'Avance Financiero %', 'Ingresos', 'Gastos', 'Pendiente Aportar'],
-      ...proyectos.map(p => [p.nombre, p.cliente, p.tipo, p.estado, p.presupuestoTotal, p.avanceFisico, p.avanceFinanciero, p.ingresos, p.gastos, p.pendienteAportar]),
+      ['Proyecto', 'Cliente', 'Tipo', 'Fase', 'Presupuesto', 'Avance Físico %', 'Avance Financiero %', 'Ingresos', 'Gastos', 'Pendiente'],
+      ...presupuestos.map(p => [p.proyecto, p.cliente, p.tipologia, p.fase, p.total, p.avanceFisico, p.avanceFinanciero, p.ingresos, p.gastos, p.pendienteAportar]),
     ];
     downloadCSV(`seguimiento_proyectos_${new Date().toISOString().split('T')[0]}.csv`, rows);
   };
@@ -43,13 +45,13 @@ const SeguimientoScreen: React.FC = () => {
     const body = `
       <h2>Proyectos en Ejecución</h2>
       <table>
-        <thead><tr><th>Proyecto</th><th>Cliente</th><th class="num">Presupuesto</th><th class="num">A. Físico</th><th class="num">A. Financ.</th><th class="num">Ingresos</th><th class="num">Gastos</th><th class="num">Pendiente</th></tr></thead>
-        <tbody>${ejecucion.map(p => `<tr><td>${p.nombre}</td><td>${p.cliente}</td><td class="num">${fmtQ(p.presupuestoTotal)}</td><td class="num">${p.avanceFisico}%</td><td class="num">${p.avanceFinanciero}%</td><td class="num">${fmtQ(p.ingresos)}</td><td class="num">${fmtQ(p.gastos)}</td><td class="num">${fmtQ(p.pendienteAportar)}</td></tr>`).join('')}</tbody>
+        <thead><tr><th>Proyecto</th><th>Cliente</th><th class="num">Presupuesto</th><th class="num">A. Físico</th><th class="num">A. Financ.</th><th class="num">Ingresos</th><th class="num">Gastos</th></tr></thead>
+        <tbody>${ejecucion.map(p => `<tr><td>${p.proyecto}</td><td>${p.cliente}</td><td class="num">${fmtQ(p.total)}</td><td class="num">${p.avanceFisico}%</td><td class="num">${p.avanceFinanciero}%</td><td class="num">${fmtQ(p.ingresos)}</td><td class="num">${fmtQ(p.gastos)}</td></tr>`).join('')}</tbody>
       </table>
       <h2>Proyectos en Planeación</h2>
       <table>
-        <thead><tr><th>Proyecto</th><th>Cliente</th><th>Tipo</th><th class="num">Presupuesto</th><th>Inicio Programado</th></tr></thead>
-        <tbody>${planeacion.map(p => `<tr><td>${p.nombre}</td><td>${p.cliente}</td><td>${p.tipo}</td><td class="num">${fmtQ(p.presupuestoTotal)}</td><td>${p.fechaInicio}</td></tr>`).join('')}</tbody>
+        <thead><tr><th>Proyecto</th><th>Cliente</th><th>Tipo</th><th class="num">Presupuesto</th></tr></thead>
+        <tbody>${planeacion.map(p => `<tr><td>${p.proyecto}</td><td>${p.cliente}</td><td>${p.tipologia}</td><td class="num">${fmtQ(p.total)}</td></tr>`).join('')}</tbody>
       </table>
     `;
     printPDF('Informe de Seguimiento de Proyectos', body);
@@ -60,7 +62,6 @@ const SeguimientoScreen: React.FC = () => {
       <Header title="Seguimiento de Proyectos" />
 
       <div className="p-3 sm:p-5 max-w-[1600px] mx-auto space-y-4">
-        {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl shadow-md p-4 lg:col-span-2">
             <h3 className="font-bold text-sm text-slate-800 mb-2">Flujo de Ingresos vs Gastos (Mensual)</h3>
@@ -102,7 +103,6 @@ const SeguimientoScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex justify-end gap-2">
           <button onClick={handleExportCSV} className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-sm font-semibold">
             <Download className="w-4 h-4" /> Exportar CSV
@@ -112,24 +112,35 @@ const SeguimientoScreen: React.FC = () => {
           </button>
         </div>
 
-        {/* Proyectos en Ejecución */}
-        <ProyectosTabla titulo="Proyectos en Ejecución" proyectos={ejecucion} color="emerald" />
+        <ProyectosTabla titulo="Proyectos en Ejecución" proyectos={ejecucion} color="emerald" onAction={(p) => {
+          if (p.fase === 'ejecución') transicionFase(p.id, 'pausa');
+          else if (p.fase === 'pausa') transicionFase(p.id, 'ejecución');
+        }} actionLabel={(p) => p.fase === 'pausa' ? 'Reanudar' : 'Pausar'} />
 
-        {/* Proyectos en Planeación */}
-        <ProyectosTabla titulo="Proyectos en Planeación" proyectos={planeacion} color="amber" />
+        <ProyectosTabla titulo="Proyectos en Planeación" proyectos={planeacion} color="amber" onAction={(p) => transicionFase(p.id, 'ejecución')} actionLabel={() => 'Iniciar'} />
+
+        {finalizados.length > 0 && (
+          <ProyectosTabla titulo="Proyectos Finalizados" proyectos={finalizados} color="emerald" />
+        )}
       </div>
     </div>
   );
 };
 
-const ProyectosTabla: React.FC<{ titulo: string; proyectos: Proyecto[]; color: string }> = ({ titulo, proyectos, color }) => {
+const ProyectosTabla: React.FC<{
+  titulo: string;
+  proyectos: Presupuesto[];
+  color: string;
+  onAction?: (p: Presupuesto) => void;
+  actionLabel?: (p: Presupuesto) => string;
+}> = ({ titulo, proyectos, color, onAction, actionLabel }) => {
   const colors: Record<string, string> = {
     emerald: 'from-emerald-600 to-emerald-700',
     amber: 'from-amber-600 to-amber-700',
   };
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden">
-      <div className={`bg-gradient-to-r ${colors[color]} text-white p-3`}>
+      <div className={`bg-gradient-to-r ${colors[color]} text-white p-3 flex items-center justify-between`}>
         <h3 className="font-bold text-sm">{titulo} ({proyectos.length})</h3>
       </div>
       <div className="overflow-x-auto">
@@ -139,29 +150,34 @@ const ProyectosTabla: React.FC<{ titulo: string; proyectos: Proyecto[]; color: s
               <th className="p-2.5 text-left">Proyecto</th>
               <th className="p-2.5 text-left hidden md:table-cell">Cliente</th>
               <th className="p-2.5 text-left">Avance Físico</th>
-              <th className="p-2.5 text-left">Avance Financiero</th>
               <th className="p-2.5 text-right">Ingresos</th>
               <th className="p-2.5 text-right">Gastos</th>
-              <th className="p-2.5 text-right">Pendiente</th>
+              <th className="p-2.5 text-center">Acción</th>
             </tr>
           </thead>
           <tbody>
             {proyectos.map(p => (
               <tr key={p.id} className="border-b hover:bg-blue-50/30">
                 <td className="p-2.5">
-                  <div className="font-semibold text-slate-800">{p.nombre}</div>
-                  <div className="text-[10px] text-slate-500">{p.tipo} · {fmtQ(p.presupuestoTotal)}</div>
+                  <div className="font-semibold text-slate-800">{p.proyecto}</div>
+                  <div className="text-[10px] text-slate-500">{p.tipologia || 'General'} · {fmtQ(p.total)}</div>
                 </td>
                 <td className="p-2.5 hidden md:table-cell">{p.cliente}</td>
                 <td className="p-2.5">
                   <Progreso valor={p.avanceFisico} color="bg-blue-600" />
                 </td>
-                <td className="p-2.5">
-                  <Progreso valor={p.avanceFinanciero} color="bg-emerald-500" />
-                </td>
                 <td className="p-2.5 text-right text-emerald-700 font-semibold">{fmtQ(p.ingresos)}</td>
                 <td className="p-2.5 text-right text-red-700 font-semibold">{fmtQ(p.gastos)}</td>
-                <td className="p-2.5 text-right text-amber-700 font-semibold">{fmtQ(p.pendienteAportar)}</td>
+                <td className="p-2.5 text-center">
+                  {onAction && actionLabel ? (
+                    <button onClick={() => onAction(p)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold text-white bg-blue-600 hover:bg-blue-700 transition">
+                      <Play className="w-3 h-3" /> {actionLabel(p)}
+                    </button>
+                  ) : (
+                    <span className="text-[10px] text-slate-400">-</span>
+                  )}
+                </td>
               </tr>
             ))}
             {proyectos.length === 0 && (
