@@ -37,7 +37,7 @@ const LoginScreen: React.FC = () => {
         <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-500 rounded-full blur-3xl"></div>
       </div>
       <div className="relative z-10 w-full max-w-md">
-        <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20">
+        <div className="bg-white/70 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/30">
             <div className="text-center mb-6">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-800 to-blue-600 mb-4 shadow-lg">
                 <img src="/logo.png" alt="Logo CONSTRUCTORA WM/M&S" className="w-20 h-20 object-contain" />
