@@ -27,5 +27,11 @@ export const TransaccionSchema = z.object({
   costoTotal: z.number().nonnegative(),
 });
 
-export type Cliente = z.infer<typeof ClienteSchema>;
-export type Transaccion = z.infer<typeof TransaccionSchema>;
+export const EquipoSchema = z.object({
+  id: z.string().uuid().optional(),
+  nombre: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
+  creador_id: z.string().uuid().optional(),
+  user_id: z.string().uuid().optional(),
+});
+
+export type EquipoInput = z.infer<typeof EquipoSchema>;

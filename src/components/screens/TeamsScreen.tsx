@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { EquipoSchema } from '@/lib/schemas';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/lib/supabase';
 import Header from '@/components/shared/Header';
@@ -26,9 +27,9 @@ const TeamsScreen: React.FC = () => {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteTeamId, setInviteTeamId] = useState<string | null>(null);
 
-  const loadEquipos = React.useCallback(async () => {
+  const loadEquipos = useCallback(async () => {
     if (!session) return;
-    const { data: equiposData } = await supabase.from('equipos').select('*').order('created_at', { ascending: false });
+    const { data: equiposData } = await supabase.from('equipos').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
     if (!equiposData) return;
 
     const enriched = await Promise.all(equiposData.map(async (e: Equipo) => {
@@ -41,15 +42,24 @@ const TeamsScreen: React.FC = () => {
   useEffect(() => { if (session) loadEquipos(); }, [session, loadEquipos]);
 
   const handleCrear = async () => {
-    if (!session || !nuevoEquipo.trim()) return;
+    if (!session) return;
+    
+    // Validación con Zod
+    const result = EquipoSchema.safeParse({ nombre: nuevoEquipo.trim() });
+    if (!result.success) {
+      toast.error(result.error.errors[0].message);
+      return;
+    }
+
     setCreando(true);
     try {
       const { error } = await supabase.from('equipos').insert({
-        nombre: nuevoEquipo.trim(),
+        nombre: result.data.nombre,
+        user_id: session.user.id,
         creador_id: session.user.id,
       });
       if (error) throw error;
-      toast.success(`Equipo "${nuevoEquipo}" creado`);
+      toast.success(`Equipo "${result.data.nombre}" creado`);
       setNuevoEquipo('');
       await loadEquipos();
     } catch (err) {
