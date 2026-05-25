@@ -9,7 +9,7 @@
  * @version 1.0.0
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,10 +29,8 @@ interface ModuleProps {
 
 export const IndexScreen: React.FC<ModuleProps> = ({ onSelectModule }) => {
   const { presupuestos } = useAppContext();
-  const [activeModule, setActiveModule] = useState<'presupuestos' | 'seguimiento' | 'dashboard' | null>(null);
 
   const handleSelectModule = (module: 'presupuestos' | 'seguimiento' | 'dashboard') => {
-    setActiveModule(module);
     onSelectModule(module);
   };
 

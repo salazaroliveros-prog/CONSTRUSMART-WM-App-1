@@ -330,8 +330,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setClientes(prev => [dbToCliente(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setClientes(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToCliente(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setClientes(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -339,8 +341,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setProyectos(prev => [dbToProyecto(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setProyectos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToProyecto(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setProyectos(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -348,8 +352,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setTransacciones(prev => [dbToTransaccion(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setTransacciones(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToTransaccion(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setTransacciones(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -357,8 +363,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setPresupuestos(prev => [dbToPresupuesto(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setPresupuestos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToPresupuesto(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setPresupuestos(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -366,17 +374,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setActividades(prev => [dbToActividad(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setActividades(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToActividad(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          setActividades(prev => prev.filter(x => x.id !== realPayload.old.id));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          setActividades(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
       case 'equipos':
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setEquipos(prev => [dbToEquipo(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setEquipos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToEquipo(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setEquipos(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -384,8 +396,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setEquipoMiembros(prev => [dbToEquipoMiembro(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setEquipoMiembros(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToEquipoMiembro(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setEquipoMiembros(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -628,7 +642,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const original = presupuestos.find(p => p.id === id)?.fase;
     try {
       setPresupuestos(prev => prev.map(p => p.id === id ? { ...p, fase: nuevaFase } : p));
-      const { data, error } = await supabase.rpc('transicionar_fase', {
+      const { error } = await supabase.rpc('transicionar_fase', {
         p_presupuesto_id: id,
         p_nueva_fase: nuevaFase,
         p_user_id: session.user.id,
