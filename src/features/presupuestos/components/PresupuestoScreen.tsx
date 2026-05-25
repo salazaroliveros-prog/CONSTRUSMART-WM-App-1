@@ -3,6 +3,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import Header from '@/components/shared/Header';
 import { renglonesPorTipologia, Tipologia, tipologiaLabels, Renglon } from '@/data/renglones';
 import { downloadCSV, printPDF, fmtQ } from '@/lib/exporters';
+import { BitacoraAvancePanel } from '@/components/shared/BitacoraAvancePanel';
 import { Plus, Trash2, ChevronDown, ChevronRight, Download, FileText, Calculator, Search, Save, FolderOpen, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import ChecklistPanel from '@/components/shared/ChecklistPanel';
 import MaterialesPanel from '@/components/shared/MaterialesPanel';
@@ -291,6 +292,7 @@ const PresupuestoScreen: React.FC = () => {
                 <ChecklistPanel presupuestoId={savedPresupuestoId} fase={faseAlGuardar} />
               </div>
               <MaterialesPanel presupuestoId={savedPresupuestoId} />
+              <BitacoraAvancePanel presupuestoId={savedPresupuestoId} />
             </>
           )}
 
