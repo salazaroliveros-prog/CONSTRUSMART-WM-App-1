@@ -4,15 +4,8 @@ import { ViewType } from '@/types/supabase';
 import Header from '@/components/shared/Header';
 import Calendar from '@/components/shared/Calendar';
 import TransactionForm from '@/components/shared/TransactionForm';
-import HealthIndicator from '@/components/shared/HealthIndicator';
-import ProjectHeatMap from '@/components/shared/ProjectHeatMap';
-import ProjectTimeline from '@/components/shared/ProjectTimeline';
-import RealtimeFeed from '@/components/shared/RealtimeFeed';
-import GanttView from '@/components/shared/GanttView';
-import CashFlowProjection from '@/components/shared/CashFlowProjection';
-import { Users, FolderKanban, Calculator, LineChart, Wallet, TrendingUp, TrendingDown, DollarSign, Folder, Percent, FileDown, Shield } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-import { exportCompleto } from '@/utils/exportExcel';
+import { Users, FolderKanban, Calculator, LineChart, Wallet, TrendingUp, TrendingDown, DollarSign, Folder, Percent, Shield } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
 const Dashboard: React.FC = () => {
   const { setView, presupuestos, transacciones, clientes } = useAppContext();
@@ -63,17 +56,17 @@ const Dashboard: React.FC = () => {
         {/* Fila 1: KPIs compactos */}
         <div className="col-span-12 grid grid-cols-8 gap-1 h-16">
           {[
-            { icon: TrendingUp, label: 'Ingresos', value: `Q${(stats.ingresos / 1000).toFixed(1)}K`, color: 'emerald' as const },
-            { icon: TrendingDown, label: 'Gastos', value: `Q${(stats.gastos / 1000).toFixed(1)}K`, color: 'red' as const },
-            { icon: DollarSign, label: 'Margen', value: `Q${(stats.margen / 1000).toFixed(1)}K`, color: (stats.margen >= 0 ? 'blue' : 'red') as const },
-            { icon: Percent, label: 'Rentabilidad', value: `${stats.rentabilidadGeneral.toFixed(1)}%`, color: (stats.rentabilidadGeneral >= 10 ? 'emerald' : 'amber') as const },
-            { icon: FolderKanban, label: 'Activos', value: String(stats.activos), color: 'indigo' as const },
-            { icon: FolderKanban, label: 'Planeación', value: String(stats.planeacion), color: 'purple' as const },
-            { icon: FolderKanban, label: 'Finalizados', value: String(stats.finalizados), color: 'teal' as const },
-            { icon: DollarSign, label: 'Pendiente', value: `Q${(stats.pendiente / 1000).toFixed(0)}K`, color: 'amber' as const },
+            { icon: TrendingUp, label: 'Ingresos', value: `Q${(stats.ingresos / 1000).toFixed(1)}K`, color: 'emerald' },
+            { icon: TrendingDown, label: 'Gastos', value: `Q${(stats.gastos / 1000).toFixed(1)}K`, color: 'red' },
+            { icon: DollarSign, label: 'Margen', value: `Q${(stats.margen / 1000).toFixed(1)}K`, color: stats.margen >= 0 ? 'blue' : 'red' },
+            { icon: Percent, label: 'Rentabilidad', value: `${stats.rentabilidadGeneral.toFixed(1)}%`, color: stats.rentabilidadGeneral >= 10 ? 'emerald' : 'amber' },
+            { icon: FolderKanban, label: 'Activos', value: String(stats.activos), color: 'indigo' },
+            { icon: FolderKanban, label: 'Planeación', value: String(stats.planeacion), color: 'purple' },
+            { icon: FolderKanban, label: 'Finalizados', value: String(stats.finalizados), color: 'teal' },
+            { icon: DollarSign, label: 'Pendiente', value: `Q${(stats.pendiente / 1000).toFixed(0)}K`, color: 'amber' },
           ].map((k, i) => (
             <div key={i} className="col-span-1">
-              <CompactKPI icon={k.icon} label={k.label} value={k.value} color={k.color} />
+              <CompactKPI icon={k.icon} label={k.label} value={k.value} color={k.color as any} />
             </div>
           ))}
         </div>
