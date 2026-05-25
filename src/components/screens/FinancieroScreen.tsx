@@ -3,7 +3,8 @@ import { useAppContext } from '@/contexts/AppContext';
 import Header from '@/components/shared/Header';
 import TransactionForm from '@/components/shared/TransactionForm';
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
-import { Download, FileText, Trash2, TrendingUp, TrendingDown, Wallet, Filter, FileDown } from 'lucide-react';
+import { Download, FileText, Trash2, TrendingUp, TrendingDown, Wallet, Filter, FileDown, Scan } from 'lucide-react';
+import OCRFactura from '@/components/shared/OCRFactura';
 import { exportTransacciones } from '@/utils/exportExcel';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 
@@ -132,7 +133,12 @@ const FinancieroScreen: React.FC = () => {
           </div>
         </div>
 
-        <TransactionForm />
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <div className="flex-1"><TransactionForm /></div>
+            <OcrToggle />
+          </div>
+        </div>
 
         {/* Filtros */}
         <div className="bg-white rounded-xl shadow-md p-3 flex flex-wrap items-center gap-2">
@@ -201,6 +207,21 @@ const FinancieroScreen: React.FC = () => {
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+const OcrToggle: React.FC = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="w-64 shrink-0">
+      {open ? <OCRFactura onClose={() => setOpen(false)} /> : (
+        <button onClick={() => setOpen(true)}
+          className="w-full h-full flex flex-col items-center justify-center gap-1.5 py-6 border-2 border-dashed border-slate-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/50 transition btn-press">
+          <Scan className="w-5 h-5 text-slate-400" />
+          <span className="text-[10px] text-slate-500 font-semibold">Escanear Factura</span>
+        </button>
+      )}
     </div>
   );
 };
