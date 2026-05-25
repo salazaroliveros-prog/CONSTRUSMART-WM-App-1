@@ -526,6 +526,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return null;
     } catch (error) {
       console.error('Error al agregar presupuesto:', error);
+      // Log detallado del error de Supabase
+      if (typeof error === 'object' && error !== null && 'message' in error) {
+        const err = error as { message: string; details?: string; hint?: string };
+        console.error('Detalles Supabase:', err.message, err.details, err.hint);
+      }
       toast.error('Error al guardar presupuesto', { description: error instanceof Error ? error.message : 'Error desconocido' });
       throw error;
     }
@@ -563,7 +568,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         p_nueva_fase: nuevaFase,
         p_user_id: session.user.id,
       });
-      if (error) throw error;
+      if (error) {
+        console.error('Detalles del error en RPC transicionar_fase:', error);
+        throw error;
+      }
       const { data: refreshed } = await supabase.from('presupuestos').select('*').eq('id', id).single();
       if (refreshed) setPresupuestos(prev => prev.map(p => p.id === id ? dbToPresupuesto(refreshed) : p));
       const { data: projData } = await supabase.from('proyectos').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(1);
