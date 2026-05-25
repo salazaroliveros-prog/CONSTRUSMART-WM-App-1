@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { useCashFlowProyectado } from '@/hooks/useCashFlowProyectado';
+import { useCashflowProyectado } from '@/hooks/useCashflowProyectado';
 import { validarFactores, sugerirFactores, detectarAnomalias } from '@/utils/validacionPresupuesto';
 import type { Presupuesto, Transaccion } from '@/types/supabase';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';

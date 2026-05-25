@@ -296,9 +296,6 @@ export interface EquipoMiembro {
   created_at?: string;
 }
 
-export type CreateEquipo = Omit<Equipo, 'id' | 'created_at'>;
-export type CreateEquipoMiembro = Omit<EquipoMiembro, 'id' | 'created_at'>;
-
 export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos';
 
 export interface User {

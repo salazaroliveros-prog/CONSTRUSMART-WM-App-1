@@ -1,21 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { PostgresChangesPayload } from '@supabase/supabase-js';
-import { seedDatabase } from '@/utils/seedDatabase';
 import { supabase } from '@/lib/supabase';
-import type { Session } from '@supabase/supabase-js';
+import type { Session, RealtimeChannel } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { 
-  Cliente, Proyecto, Transaccion, Actividad, Presupuesto, CategoriaTransaccion, Equipo, EquipoMiembro,
+  Cliente, Proyecto, Transaccion, Actividad, Presupuesto, Equipo, EquipoMiembro,
   CreateCliente, CreateProyecto, CreateTransaccion, CreateActividad, CreatePresupuesto, CreateEquipo, CreateEquipoMiembro,
-  UpdateCliente, UpdateProyecto, UpdateTransaccion, UpdateActividad, UpdatePresupuesto, UpdateEquipo, UpdateEquipoMiembro,
+  UpdateCliente, UpdateProyecto, UpdatePresupuesto, UpdateEquipo, UpdateEquipoMiembro,
   CreatePresupuestoInput,
-  validateCliente, validateProyecto, validateTransaccion, validateActividad, validatePresupuesto, validateEquipo, validateEquipoMiembro,
+  validateCliente, validateProyecto, validateTransaccion, validateActividad, validateEquipo, validateEquipoMiembro,
   dbToCliente, clienteToDb, dbToProyecto, proyectoToDb,
   dbToTransaccion, transaccionToDb, dbToActividad, actividadToDb, dbToPresupuesto, presupuestoToDb,
   dbToEquipo, equipoToDb, dbToEquipoMiembro, equipoMiembroToDb
 } from '@/types/supabase';
-
-export type { CategoriaTransaccion };
 
 export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos';
 
@@ -103,13 +99,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    const [actividades, setActividades] = useState<Actividad[]>([]);
    const [equipos, setEquipos] = useState<Equipo[]>([]);
    const [equipoMiembros, setEquipoMiembros] = useState<EquipoMiembro[]>([]);
-   const realtimeClientes = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
-   const realtimeProyectos = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
-   const realtimePresupuestos = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
-   const realtimeTransacciones = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
-   const realtimeActividades = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
-   const realtimeEquipos = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
-   const realtimeEquipoMiembros = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
+   const realtimeClientes = useRef<RealtimeChannel | null>(null);
+   const realtimeProyectos = useRef<RealtimeChannel | null>(null);
+   const realtimePresupuestos = useRef<RealtimeChannel | null>(null);
+   const realtimeTransacciones = useRef<RealtimeChannel | null>(null);
+   const realtimeActividades = useRef<RealtimeChannel | null>(null);
+   const realtimeEquipos = useRef<RealtimeChannel | null>(null);
+   const realtimeEquipoMiembros = useRef<RealtimeChannel | null>(null);
    const initDoneRef = useRef(false);
    const mountedRef = useRef(true);
 
@@ -328,69 +324,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       eventType: string;
       new?: Record<string, unknown>;
       old?: Record<string, unknown>;
-  };
+    };
     switch (table) {
       case 'clientes':
-        if (realPayload.eventType === 'INSERT') {
-          setClientes(prev => [dbToCliente(realPayload.new), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE') {
-          setClientes(prev => prev.map(x => x.id === realPayload.new.id ? dbToCliente(realPayload.new) : x));
-        } else if (realPayload.eventType === 'DELETE') {
-          setClientes(prev => prev.filter(x => x.id !== realPayload.old.id));
+        if (realPayload.eventType === 'INSERT' && realPayload.new) {
+          setClientes(prev => [dbToCliente(realPayload.new!), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          setClientes(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToCliente(realPayload.new!) : x));
+        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
+          setClientes(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
       case 'proyectos':
-        if (realPayload.eventType === 'INSERT') {
-          setProyectos(prev => [dbToProyecto(realPayload.new), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE') {
-          setProyectos(prev => prev.map(x => x.id === realPayload.new.id ? dbToProyecto(realPayload.new) : x));
-        } else if (realPayload.eventType === 'DELETE') {
-          setProyectos(prev => prev.filter(x => x.id !== realPayload.old.id));
+        if (realPayload.eventType === 'INSERT' && realPayload.new) {
+          setProyectos(prev => [dbToProyecto(realPayload.new!), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          setProyectos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToProyecto(realPayload.new!) : x));
+        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
+          setProyectos(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
       case 'transacciones':
-        if (realPayload.eventType === 'INSERT') {
-          setTransacciones(prev => [dbToTransaccion(realPayload.new), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE') {
-          setTransacciones(prev => prev.map(x => x.id === realPayload.new.id ? dbToTransaccion(realPayload.new) : x));
-        } else if (realPayload.eventType === 'DELETE') {
-          setTransacciones(prev => prev.filter(x => x.id !== realPayload.old.id));
+        if (realPayload.eventType === 'INSERT' && realPayload.new) {
+          setTransacciones(prev => [dbToTransaccion(realPayload.new!), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          setTransacciones(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToTransaccion(realPayload.new!) : x));
+        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
+          setTransacciones(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
       case 'presupuestos':
-        if (realPayload.eventType === 'INSERT') {
-          setPresupuestos(prev => [dbToPresupuesto(realPayload.new), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE') {
-          setPresupuestos(prev => prev.map(x => x.id === realPayload.new.id ? dbToPresupuesto(realPayload.new) : x));
-        } else if (realPayload.eventType === 'DELETE') {
-          setPresupuestos(prev => prev.filter(x => x.id !== realPayload.old.id));
+        if (realPayload.eventType === 'INSERT' && realPayload.new) {
+          setPresupuestos(prev => [dbToPresupuesto(realPayload.new!), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          setPresupuestos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToPresupuesto(realPayload.new!) : x));
+        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
+          setPresupuestos(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
       case 'actividades':
-        if (realPayload.eventType === 'INSERT') {
-          setActividades(prev => [dbToActividad(realPayload.new), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE') {
-          setActividades(prev => prev.map(x => x.id === realPayload.new.id ? dbToActividad(realPayload.new) : x));
-        } else if (realPayload.eventType === 'DELETE') {
+        if (realPayload.eventType === 'INSERT' && realPayload.new) {
+          setActividades(prev => [dbToActividad(realPayload.new!), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          setActividades(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToActividad(realPayload.new!) : x));
+        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
           setActividades(prev => prev.filter(x => x.id !== realPayload.old.id));
         }
         break;
       case 'equipos':
-        if (realPayload.eventType === 'INSERT') {
-          setEquipos(prev => [dbToEquipo(realPayload.new), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE') {
-          setEquipos(prev => prev.map(x => x.id === realPayload.new.id ? dbToEquipo(realPayload.new) : x));
-        } else if (realPayload.eventType === 'DELETE') {
-          setEquipos(prev => prev.filter(x => x.id !== realPayload.old.id));
+        if (realPayload.eventType === 'INSERT' && realPayload.new) {
+          setEquipos(prev => [dbToEquipo(realPayload.new!), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          setEquipos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToEquipo(realPayload.new!) : x));
+        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
+          setEquipos(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
       case 'equipo_miembros':
-        if (realPayload.eventType === 'INSERT') {
-          setEquipoMiembros(prev => [dbToEquipoMiembro(realPayload.new), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE') {
-          setEquipoMiembros(prev => prev.map(x => x.id === realPayload.new.id ? dbToEquipoMiembro(realPayload.new) : x));
-        } else if (realPayload.eventType === 'DELETE') {
-          setEquipoMiembros(prev => prev.filter(x => x.id !== realPayload.old.id));
+        if (realPayload.eventType === 'INSERT' && realPayload.new) {
+          setEquipoMiembros(prev => [dbToEquipoMiembro(realPayload.new!), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          setEquipoMiembros(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToEquipoMiembro(realPayload.new!) : x));
+        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
+          setEquipoMiembros(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
     }

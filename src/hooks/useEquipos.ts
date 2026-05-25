@@ -14,8 +14,8 @@
  * ```
  */
 
-import { useCallback, useContext, useMemo } from 'react';
-import { AppContext } from '@/contexts/AppContext';
+import { useCallback, useState, useMemo } from 'react';
+import { useAppContext } from '@/hooks/useAppContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Equipo, EquipoMiembro } from '@/types/supabase';
 
