@@ -116,52 +116,51 @@ CREATE POLICY "equipo_miembros_delete" ON equipo_miembros
   FOR DELETE USING (auth.uid()::text IS NOT NULL);
 
 -- ============================================================================
--- SECCIÓN 5: VERIFICAR QUÉTABLAS NUEVAS EXISTEN
+-- SECCIÓN 5: CREAR POLÍTICAS PARA NUEVAS TABLAS SI EXISTEN
 -- ============================================================================
 
--- Crear políticas para nuevas tablas si existen
+-- Crear políticas para caja_proyecto si la tabla existe
 DO $$
 BEGIN
-  -- Políticas para caja_proyecto si la tabla existe
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'caja_proyecto') THEN
     ALTER TABLE caja_proyecto ENABLE ROW LEVEL SECURITY;
+    EXECUTE 'DROP POLICY IF EXISTS "caja_proyecto_select" ON caja_proyecto';
+    EXECUTE 'DROP POLICY IF EXISTS "caja_proyecto_insert" ON caja_proyecto';
+    EXECUTE 'DROP POLICY IF EXISTS "caja_proyecto_update" ON caja_proyecto';
     
-    CREATE POLICY IF NOT EXISTS "caja_proyecto_select" ON caja_proyecto
-      FOR SELECT USING (auth.uid()::text IS NOT NULL);
-    
-    CREATE POLICY IF NOT EXISTS "caja_proyecto_insert" ON caja_proyecto
-      FOR INSERT WITH CHECK (auth.uid()::text IS NOT NULL);
-    
-    CREATE POLICY IF NOT EXISTS "caja_proyecto_update" ON caja_proyecto
-      FOR UPDATE USING (auth.uid()::text IS NOT NULL);
+    EXECUTE 'CREATE POLICY "caja_proyecto_select" ON caja_proyecto FOR SELECT USING (auth.uid()::text IS NOT NULL)';
+    EXECUTE 'CREATE POLICY "caja_proyecto_insert" ON caja_proyecto FOR INSERT WITH CHECK (auth.uid()::text IS NOT NULL)';
+    EXECUTE 'CREATE POLICY "caja_proyecto_update" ON caja_proyecto FOR UPDATE USING (auth.uid()::text IS NOT NULL)';
   END IF;
+END $$;
 
-  -- Políticas para movimientos_caja si la tabla existe
+-- Crear políticas para movimientos_caja si la tabla existe
+DO $$
+BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'movimientos_caja') THEN
     ALTER TABLE movimientos_caja ENABLE ROW LEVEL SECURITY;
+    EXECUTE 'DROP POLICY IF EXISTS "movimientos_caja_select" ON movimientos_caja';
+    EXECUTE 'DROP POLICY IF EXISTS "movimientos_caja_insert" ON movimientos_caja';
+    EXECUTE 'DROP POLICY IF EXISTS "movimientos_caja_update" ON movimientos_caja';
     
-    CREATE POLICY IF NOT EXISTS "movimientos_caja_select" ON movimientos_caja
-      FOR SELECT USING (auth.uid()::text IS NOT NULL);
-    
-    CREATE POLICY IF NOT EXISTS "movimientos_caja_insert" ON movimientos_caja
-      FOR INSERT WITH CHECK (auth.uid()::text IS NOT NULL);
-    
-    CREATE POLICY IF NOT EXISTS "movimientos_caja_update" ON movimientos_caja
-      FOR UPDATE USING (auth.uid()::text IS NOT NULL);
+    EXECUTE 'CREATE POLICY "movimientos_caja_select" ON movimientos_caja FOR SELECT USING (auth.uid()::text IS NOT NULL)';
+    EXECUTE 'CREATE POLICY "movimientos_caja_insert" ON movimientos_caja FOR INSERT WITH CHECK (auth.uid()::text IS NOT NULL)';
+    EXECUTE 'CREATE POLICY "movimientos_caja_update" ON movimientos_caja FOR UPDATE USING (auth.uid()::text IS NOT NULL)';
   END IF;
+END $$;
 
-  -- Políticas para transacciones_recurrentes si la tabla existe
+-- Crear políticas para transacciones_recurrentes si la tabla existe
+DO $$
+BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'transacciones_recurrentes') THEN
     ALTER TABLE transacciones_recurrentes ENABLE ROW LEVEL SECURITY;
+    EXECUTE 'DROP POLICY IF EXISTS "transacciones_recurrentes_select" ON transacciones_recurrentes';
+    EXECUTE 'DROP POLICY IF EXISTS "transacciones_recurrentes_insert" ON transacciones_recurrentes';
+    EXECUTE 'DROP POLICY IF EXISTS "transacciones_recurrentes_update" ON transacciones_recurrentes';
     
-    CREATE POLICY IF NOT EXISTS "transacciones_recurrentes_select" ON transacciones_recurrentes
-      FOR SELECT USING (auth.uid()::text IS NOT NULL);
-    
-    CREATE POLICY IF NOT EXISTS "transacciones_recurrentes_insert" ON transacciones_recurrentes
-      FOR INSERT WITH CHECK (auth.uid()::text IS NOT NULL);
-    
-    CREATE POLICY IF NOT EXISTS "transacciones_recurrentes_update" ON transacciones_recurrentes
-      FOR UPDATE USING (auth.uid()::text IS NOT NULL);
+    EXECUTE 'CREATE POLICY "transacciones_recurrentes_select" ON transacciones_recurrentes FOR SELECT USING (auth.uid()::text IS NOT NULL)';
+    EXECUTE 'CREATE POLICY "transacciones_recurrentes_insert" ON transacciones_recurrentes FOR INSERT WITH CHECK (auth.uid()::text IS NOT NULL)';
+    EXECUTE 'CREATE POLICY "transacciones_recurrentes_update" ON transacciones_recurrentes FOR UPDATE USING (auth.uid()::text IS NOT NULL)';
   END IF;
 END $$;
 
