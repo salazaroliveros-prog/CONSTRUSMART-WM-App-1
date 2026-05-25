@@ -11,7 +11,7 @@ interface AnimatedListProps<T> {
 
 export const AnimatedList = React.forwardRef(function AnimatedListComponent<T>(
   { items, renderItem, keyExtractor, direction = 'left' }: AnimatedListProps<T>,
-  ref: React.Ref<HTMLDivElement>
+  _ref: React.Ref<HTMLDivElement>
 ) {
   const variants = {
     left: { initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: 20 } },

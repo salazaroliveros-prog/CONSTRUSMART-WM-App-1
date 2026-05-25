@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useConciliacionBancaria } from '@/hooks/useConciliacionBancaria';
 import type { Presupuesto } from '@/types/supabase';
-import { AlertTriangle, CheckCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { AlertTriangle, CheckCircle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface ConciliacionBancariaProps {
@@ -17,14 +17,14 @@ interface ConciliacionBancariaProps {
 }
 
 export const ConciliacionBancariaPanel: React.FC<ConciliacionBancariaProps> = ({ presupuesto }) => {
-  const { caja, registrar, conciliar, resumen } = useConciliacionBancaria(
+  const { caja, resumen } = useConciliacionBancaria(
     presupuesto.id,
     presupuesto.ingresos || 0
   );
   const [mostrarForm, setMostrarForm] = useState(false);
 
   // Preparar datos para gráfico
-  const datosGrafico = caja.movimientos.slice(-10).map((m, i) => ({
+  const datosGrafico = caja.movimientos.slice(-10).map((m) => ({
     fecha: m.fecha.toLocaleDateString('es-GT'),
     saldo: m.saldo_sistema,
     diferencia: m.diferencia || 0,

@@ -2,7 +2,7 @@
  * M6: PANEL DE CAMBIOS (CHANGE ORDERS)
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Plus, GitCommit, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

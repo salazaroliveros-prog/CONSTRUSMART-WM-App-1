@@ -76,7 +76,9 @@ export const ChecklistCalidadPanel: React.FC<ChecklistCalidadPanelProps> = ({
             <div className="space-y-3">
               {checklists.map((checklist) => {
                 const resumen = generarResumenChecklist(checklist);
-                const { autorizado, razones_bloqueo } = verificarAvance(checklist.id);
+                const result = verificarAvance(checklist.id);
+                const { autorizado } = result;
+                const razonesBloqueo = 'razones_bloqueo' in result ? result.razones_bloqueo : [];
 
                 return (
                   <div
@@ -102,7 +104,7 @@ export const ChecklistCalidadPanel: React.FC<ChecklistCalidadPanelProps> = ({
                             Listo para avanzar
                           </Badge>
                         )}
-                        {!autorizado && razones_bloqueo.length > 0 && (
+                        {!autorizado && razonesBloqueo.length > 0 && (
                           <Badge className="bg-red-100 text-red-800">
                             <Lock className="w-3 h-3 mr-1" />
                             Bloqueado
@@ -144,14 +146,16 @@ export const ChecklistCalidadPanel: React.FC<ChecklistCalidadPanelProps> = ({
               <h4 className="font-semibold">Detalles - {checklistActual.fase}</h4>
 
               {/* Alertas de bloqueo */}
-              {!verificarAvance(checklistActual.id).autorizado &&
-                verificarAvance(checklistActual.id).razones_bloqueo.length > 0 && (
+              {(() => {
+                const res = verificarAvance(checklistActual.id);
+                const bloqueRazones = 'razones_bloqueo' in res ? res.razones_bloqueo : [];
+                return !res.autorizado && bloqueRazones.length > 0 ? (
                   <Alert className="border-red-200 bg-red-50">
                     <AlertTriangle className="h-4 w-4 text-red-600" />
                     <AlertDescription className="text-red-800">
                       <strong>No puede avanzar:</strong>
                       <ul className="mt-2 space-y-1">
-                        {verificarAvance(checklistActual.id).razones_bloqueo.map((r, i) => (
+                        {bloqueRazones.map((r: string, i: number) => (
                           <li key={i} className="text-sm">
                             • {r}
                           </li>
@@ -159,9 +163,8 @@ export const ChecklistCalidadPanel: React.FC<ChecklistCalidadPanelProps> = ({
                       </ul>
                     </AlertDescription>
                   </Alert>
-                )}
-
-              {/* Items del checklist */}
+                ) : null;
+              })()}
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {checklistActual.items.map((item) => (
                   <div

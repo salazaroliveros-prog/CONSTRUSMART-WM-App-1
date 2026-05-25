@@ -19,7 +19,7 @@ function mergeLineas(lineasA: LineaCalculada[] = [], lineasB: LineaCalculada[] =
   const mapA = Object.fromEntries(lineasA.map((l: LineaCalculada) => [l.codigo, l]));
   const mapB = Object.fromEntries(lineasB.map((l: LineaCalculada) => [l.codigo, l]));
   const codigos = Array.from(new Set([...lineasA.map((l: LineaCalculada) => l.codigo), ...lineasB.map((l: LineaCalculada) => l.codigo)]));
-  return codigos.map(codigo => ({ a: mapA[codigo], b: mapB[codigo] }));
+  return codigos.map(codigo => ({ a: mapA[codigo as string], b: mapB[codigo as string] }));
 }
 
 interface Presupuesto {
