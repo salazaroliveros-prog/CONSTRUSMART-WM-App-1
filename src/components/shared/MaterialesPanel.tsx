@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Package, Plus, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
@@ -13,7 +13,7 @@ const MaterialesPanel: React.FC<Props> = ({ presupuestoId, onClose }) => {
   const [items, setItems] = useState<Material[]>([]);
   const [nuevo, setNuevo] = useState({ nombre: '', unidad: 'unidad', cantidad: 0 });
 
-  const load = React.useCallback(async () => {
+  const load = useCallback(async () => {
     const { data } = await supabase.from('materiales_proyecto').select('*').eq('presupuesto_id', presupuestoId);
     if (data) setItems(data as Material[]);
   }, [presupuestoId]);

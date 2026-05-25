@@ -34,11 +34,13 @@ const NotificationBell: React.FC = () => {
 
   useEffect(() => {
     cargar();
+    const userId = session?.user.id;
+    if (!userId) return;
     const canal = supabase.channel('notificaciones')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notificaciones', filter: `user_id=eq.${session?.user.id}` }, () => cargar())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notificaciones', filter: `user_id=eq.${userId}` }, () => cargar())
       .subscribe();
     return () => { supabase.removeChannel(canal); };
-  }, [cargar]);
+  }, [cargar, session?.user.id]);
 
   const marcarLeido = async (id: string) => {
     await supabase.from('notificaciones').update({ leido: true }).eq('id', id);

@@ -22,13 +22,13 @@ const ChangeOrderPanel: React.FC<{ presupuestoId: string; onVersionChange?: () =
   const [creando, setCreando] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const loadCambios = async () => {
+  const loadCambios = React.useCallback(async () => {
     const { data } = await supabase.from('cambios_presupuesto')
       .select('*').eq('presupuesto_id', presupuestoId).order('version', { ascending: false });
     if (data) setCambios(data as Cambio[]);
-  };
+  }, [presupuestoId]);
 
-  useEffect(() => { if (presupuestoId) loadCambios(); }, [presupuestoId]);
+  useEffect(() => { if (presupuestoId) loadCambios(); }, [presupuestoId, loadCambios]);
 
   const crearCambio = async () => {
     if (!motivo.trim() || !session) return;

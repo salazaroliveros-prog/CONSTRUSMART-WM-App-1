@@ -26,7 +26,7 @@ const TeamsScreen: React.FC = () => {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteTeamId, setInviteTeamId] = useState<string | null>(null);
 
-  const loadEquipos = async () => {
+  const loadEquipos = React.useCallback(async () => {
     if (!session) return;
     const { data: equiposData } = await supabase.from('equipos').select('*').order('created_at', { ascending: false });
     if (!equiposData) return;
@@ -36,9 +36,9 @@ const TeamsScreen: React.FC = () => {
       return { ...e, miembros: miembros || [] };
     }));
     setEquipos(enriched);
-  };
+  }, [session]);
 
-  useEffect(() => { if (session) loadEquipos(); }, [session]);
+  useEffect(() => { if (session) loadEquipos(); }, [session, loadEquipos]);
 
   const handleCrear = async () => {
     if (!session || !nuevoEquipo.trim()) return;

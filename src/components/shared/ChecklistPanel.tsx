@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAppContext } from '@/contexts/AppContext';
 import { CheckSquare, Square, Camera, Plus, Trash2 } from 'lucide-react';
@@ -28,13 +28,13 @@ const ChecklistPanel: React.FC<{ presupuestoId: string; fase: string; onComplete
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [nuevoItem, setNuevoItem] = useState('');
 
-  const cargar = async () => {
+  const cargar = useCallback(async () => {
     const { data } = await supabase.from('checklist_items').select('*')
       .eq('presupuesto_id', presupuestoId).eq('fase', fase).order('created_at');
     if (data) setItems(data as ChecklistItem[]);
-  };
+  }, [presupuestoId, fase]);
 
-  useEffect(() => { if (presupuestoId && fase) cargar(); }, [presupuestoId, fase]);
+  useEffect(() => { if (presupuestoId && fase) cargar(); }, [presupuestoId, fase, cargar]);
 
   const agregarItem = async (texto: string) => {
     if (!session) return;

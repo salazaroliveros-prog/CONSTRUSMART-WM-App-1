@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAppContext } from '@/contexts/AppContext';
 import { Banknote, Plus, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
@@ -12,7 +12,7 @@ const ConciliacionPanel: React.FC = () => {
   const [data, setData] = useState<Conciliacion[]>([]);
   const { session } = useAppContext();
 
-  const load = React.useCallback(async () => {
+  const load = useCallback(async () => {
     if (!session) return;
     const { data: d } = await supabase.from('conciliaciones').select('*').eq('user_id', session.user.id).order('periodo', { ascending: false }).limit(10);
     if (d) setData(d as Conciliacion[]);
