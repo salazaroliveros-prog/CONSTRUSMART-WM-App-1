@@ -75,6 +75,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    const realtimeProyectos = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
    const realtimeTransacciones = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
    const realtimeActividades = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
+   const initDoneRef = useRef(false);
+   const mountedRef = useRef(true);
 
    const user = {
      nombre: session?.user?.user_metadata?.nombre || session?.user?.email?.split('@')[0] || 'Usuario',
@@ -121,12 +123,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Inicialización de sesión y realtime listeners
   useEffect(() => {
+    mountedRef.current = true;
+
+    const sessionTimeout = setTimeout(() => {
+      if (mountedRef.current) {
+        console.warn('Timeout de sesión. Forzando salida de carga.');
+        setLoading(false);
+        setView('login');
+      }
+    }, 8000);
+
     const initSession = async () => {
       try {
         const { data } = await supabase.auth.getSession();
+        if (!mountedRef.current) return;
         setSession(data.session);
         if (data.session) {
+          initDoneRef.current = true;
           await loadAll(data.session.user.id);
+          if (!mountedRef.current) return;
           setView('dashboard');
           setupRealtimeListeners(data.session.user.id);
         } else {
@@ -134,19 +149,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } catch (err) {
         console.error('Error al recuperar sesión:', err);
+        if (!mountedRef.current) return;
         setAuthError('No se pudo recuperar la sesión. Por favor, inicia sesión nuevamente.');
         setView('login');
       } finally {
-        setLoading(false);
+        clearTimeout(sessionTimeout);
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
     };
     initSession();
 
-    // Escuchar cambios de autenticación
+    // Escuchar cambios de autenticación (NO durante la inicialización)
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
+      if (!initDoneRef.current) return;
       setSession(s);
       if (s) {
         try { await loadAll(s.user.id); } catch (err) { console.error('Error en loadAll:', err); }
+        if (!mountedRef.current) return;
         setupRealtimeListeners(s.user.id);
         if (view === 'login') setView('dashboard');
       } else {
@@ -156,6 +177,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
    return () => {
+       mountedRef.current = false;
+       clearTimeout(sessionTimeout);
        if (sub?.subscription) sub.subscription.unsubscribe();
        if (realtimeClientes.current) realtimeClientes.current.unsubscribe();
        if (realtimeProyectos.current) realtimeProyectos.current.unsubscribe();
@@ -164,20 +187,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
      };
     // eslint-disable-next-line react-hooks/exhaustive-deps
    }, []);
-
-   // Evitar que la pantalla de carga se quede infinita
-   useEffect(() => {
-     let timer: ReturnType<typeof setTimeout>;
-     if (loading) {
-       timer = setTimeout(() => {
-         console.warn('Tiempo de carga máximo alcanzado. Forzando salida de pantalla de carga.');
-         setLoading(false);
-       }, 10000);
-     }
-     return () => {
-       if (timer) clearTimeout(timer);
-     };
-   }, [loading]);
 
  // Setup realtime listeners para todas las tablas
    const setupRealtimeListeners = (userId: string) => {
