@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import Header from '@/components/shared/Header';
 import TransactionForm from '@/components/shared/TransactionForm';
+import Calendar from '@/components/shared/Calendar'; // Importamos el calendario
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
 import { Download, FileText, Trash2, TrendingUp, TrendingDown, Wallet, Filter, FileDown, Scan } from 'lucide-react';
 import OCRFactura from '@/components/shared/OCRFactura';
@@ -106,31 +107,39 @@ const FinancieroScreen: React.FC = () => {
           <KPICard icon={TrendingUp} label="Balance" value={fmtQ(stats.balance)} color={stats.balance >= 0 ? 'from-emerald-600 to-teal-700' : 'from-red-600 to-red-700'} />
         </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="bg-white rounded-xl shadow-md p-4">
-            <h3 className="font-bold text-sm text-slate-800 mb-2">Gastos por Categoría</h3>
-            <ResponsiveContainer width="100%" height={240}>
-              <PieChart>
-                <Pie data={porCategoria} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40} label={(e: { value: number }) => `${((e.value / stats.gastos) * 100).toFixed(0)}%`} labelLine={false}>
-                  {porCategoria.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Tooltip formatter={(v: number) => fmtQ(v)} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-              </PieChart>
-            </ResponsiveContainer>
+        {/* Charts and Calendar Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white rounded-xl shadow-md p-4">
+              <h3 className="font-bold text-sm text-slate-800 mb-2">Gastos por Categoría</h3>
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie data={porCategoria} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40} label={(e: { value: number }) => `${((e.value / stats.gastos) * 100).toFixed(0)}%`} labelLine={false}>
+                    {porCategoria.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip formatter={(v: number) => fmtQ(v)} />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="bg-white rounded-xl shadow-md p-4">
+              <h3 className="font-bold text-sm text-slate-800 mb-2">Comparativa por Categoría</h3>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={porCategoria} margin={{ bottom: 40 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9 }} angle={-30} textAnchor="end" height={50} />
+                  <YAxis tick={{ fontSize: 9 }} tickFormatter={v => `Q${(v/1000).toFixed(0)}K`} />
+                  <Tooltip formatter={(v: number) => fmtQ(v)} />
+                  <Bar dataKey="value" fill="#1E3A8A" name="Total" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
           <div className="bg-white rounded-xl shadow-md p-4">
-            <h3 className="font-bold text-sm text-slate-800 mb-2">Comparativa por Categoría</h3>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={porCategoria} margin={{ bottom: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 9 }} angle={-30} textAnchor="end" height={50} />
-                <YAxis tick={{ fontSize: 9 }} tickFormatter={v => `Q${(v/1000).toFixed(0)}K`} />
-                <Tooltip formatter={(v: number) => fmtQ(v)} />
-                <Bar dataKey="value" fill="#1E3A8A" name="Total" />
-              </BarChart>
-            </ResponsiveContainer>
+            <h3 className="font-bold text-sm text-slate-800 mb-2">Calendario de Actividades</h3>
+            <div className="h-[240px]">
+                <Calendar />
+            </div>
           </div>
         </div>
 
