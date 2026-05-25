@@ -4,6 +4,8 @@ import Header from '@/components/shared/Header';
 import { renglonesPorTipologia, Tipologia, tipologiaLabels, Renglon } from '@/data/renglones';
 import { downloadCSV, printPDF, fmtQ } from '@/lib/exporters';
 import { Play, PauseCircle, CheckCircle, Plus, Trash2, ChevronDown, ChevronRight, Download, FileText, Calculator, Search, Save, FolderOpen, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import ChecklistPanel from '@/components/shared/ChecklistPanel';
+import MaterialesPanel from '@/components/shared/MaterialesPanel';
 import { validarFactores, sugerirFactores } from '@/utils/validacionPresupuesto';
 
 interface LineaPresupuesto extends Renglon {
@@ -282,6 +284,15 @@ const PresupuestoScreen: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {savedPresupuestoId && (
+            <>
+              <div className="bg-white rounded-xl shadow-md p-3">
+                <ChecklistPanel presupuestoId={savedPresupuestoId} fase={faseAlGuardar} />
+              </div>
+              <MaterialesPanel presupuestoId={savedPresupuestoId} />
+            </>
+          )}
 
           <div className="bg-white rounded-xl shadow-md p-4">
             <h3 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2"><FolderOpen className="w-4 h-4 text-blue-700" />Presupuestos Guardados</h3>
