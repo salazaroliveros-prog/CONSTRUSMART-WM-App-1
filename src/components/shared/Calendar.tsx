@@ -1,13 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalIcon, X, Clock } from 'lucide-react';
+import { toast } from 'sonner';
 
 const Calendar: React.FC = () => {
   const { actividades, addActividad, deleteActividad } = useAppContext();
   const [current, setCurrent] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(new Date().toISOString().split('T')[0]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ titulo: '', hora: '09:00', descripcion: '' });
+
+  // Notificaciones anticipadas
+  useEffect(() => {
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+
+    const interval = setInterval(() => {
+      const ahora = new Date();
+      actividades.forEach(act => {
+        const [h, m] = act.hora.split(':').map(Number);
+        const fechaActividad = new Date(act.fecha);
+        fechaActividad.setHours(h, m, 0);
+
+        const diff = fechaActividad.getTime() - ahora.getTime();
+        // Notificar si faltan entre 5 y 10 minutos
+        if (diff > 300000 && diff < 600000) {
+          if (Notification.permission === "granted") {
+            new Notification("Recordatorio de WM/M&S", {
+              body: `Tu actividad "${act.titulo}" inicia pronto a las ${act.hora}`,
+              icon: '/logo.png'
+            });
+          }
+          toast.info(`Recordatorio: ${act.titulo} a las ${act.hora}`);
+        }
+      });
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [actividades]);
 
   const year = current.getFullYear();
   const month = current.getMonth();
