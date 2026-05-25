@@ -7,6 +7,7 @@ import PresupuestoScreen from '@/components/screens/PresupuestoScreen';
 import ProyectosScreen from '@/components/screens/ProyectosScreen';
 import SeguimientoScreen from '@/components/screens/SeguimientoScreen';
 import FinancieroScreen from '@/components/screens/FinancieroScreen';
+import CommandPalette from '@/components/shared/CommandPalette';
 import { Building2, Loader2 } from 'lucide-react';
 
 const AppLayout: React.FC = () => {
@@ -44,6 +45,7 @@ const AppLayout: React.FC = () => {
 
   return (
     <div key={view} className="transition-all duration-300">
+      <CommandPalette />
       {renderView()}
     </div>
   );

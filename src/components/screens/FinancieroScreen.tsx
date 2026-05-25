@@ -3,7 +3,8 @@ import { useAppContext } from '@/contexts/AppContext';
 import Header from '@/components/shared/Header';
 import TransactionForm from '@/components/shared/TransactionForm';
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
-import { Download, FileText, Trash2, TrendingUp, TrendingDown, Wallet, Filter } from 'lucide-react';
+import { Download, FileText, Trash2, TrendingUp, TrendingDown, Wallet, Filter, FileDown } from 'lucide-react';
+import { exportTransacciones } from '@/utils/exportExcel';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 
 const categoriaLabels: Record<string, string> = {
@@ -21,7 +22,7 @@ const categoriaLabels: Record<string, string> = {
 };
 
 const FinancieroScreen: React.FC = () => {
-  const { transacciones, proyectos, deleteTransaccion } = useAppContext();
+  const { transacciones, presupuestos, deleteTransaccion } = useAppContext();
   const [filterTipo, setFilterTipo] = useState<'todos' | 'ingreso' | 'gasto'>('todos');
   const [filterCat, setFilterCat] = useState<string>('todos');
   const [filterProy, setFilterProy] = useState<string>('todos');
@@ -55,7 +56,7 @@ const FinancieroScreen: React.FC = () => {
   const getProyectoNombre = (id: string) => {
     if (id === 'admin') return 'Administrativo';
     if (id === 'personal') return 'Personal';
-    return proyectos.find(p => p.id === id)?.nombre || '—';
+    return presupuestos.find(p => p.id === id)?.proyecto || '—';
   };
 
   const handleExportCSV = () => {
@@ -149,9 +150,10 @@ const FinancieroScreen: React.FC = () => {
             <option value="todos">Todos los proyectos</option>
             <option value="admin">Administrativo</option>
             <option value="personal">Personal</option>
-            {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            {presupuestos.map(p => <option key={p.id} value={p.id}>{p.proyecto}</option>)}
           </select>
           <div className="flex-1" />
+          <button onClick={() => exportTransacciones(transacciones, presupuestos)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"><FileDown className="w-3 h-3" />Excel</button>
           <button onClick={handleExportCSV} className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded text-xs font-semibold"><Download className="w-3 h-3" />CSV</button>
           <button onClick={handleExportPDF} className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-semibold"><FileText className="w-3 h-3" />PDF</button>
         </div>

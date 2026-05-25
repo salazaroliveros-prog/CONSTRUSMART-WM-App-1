@@ -4,8 +4,9 @@ import { ViewType } from '@/types/supabase';
 import Header from '@/components/shared/Header';
 import Calendar from '@/components/shared/Calendar';
 import TransactionForm from '@/components/shared/TransactionForm';
-import { Users, FolderKanban, Calculator, LineChart, Wallet, TrendingUp, TrendingDown, AlertCircle, Briefcase, DollarSign, Folder } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { Users, FolderKanban, Calculator, LineChart, Wallet, TrendingUp, TrendingDown, AlertCircle, Briefcase, DollarSign, Folder, Percent, FileDown } from 'lucide-react';
+import { exportCompleto } from '@/utils/exportExcel';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 
 const Dashboard: React.FC = () => {
   const { setView, presupuestos, transacciones, clientes } = useAppContext();
@@ -19,21 +20,30 @@ const Dashboard: React.FC = () => {
     const avancePromedio = presupuestos.filter(p => p.fase === 'ejecución').reduce((s, p) => s + p.avanceFisico, 0) / (activos || 1);
     const pendiente = presupuestos.reduce((s, p) => s + p.pendienteAportar, 0);
     const totalPresupuestos = presupuestos.reduce((s, p) => s + p.total, 0);
-    return { ingresos, gastos, activos, planeacion, finalizados, avancePromedio, pendiente, margen: ingresos - gastos, totalPresupuestos };
+    const totalIngresosProyectos = presupuestos.reduce((s, p) => s + p.ingresos, 0);
+    const totalGastosProyectos = presupuestos.reduce((s, p) => s + p.gastos, 0);
+    const rentabilidadGeneral = totalIngresosProyectos > 0
+      ? ((totalIngresosProyectos - totalGastosProyectos) / totalIngresosProyectos * 100)
+      : 0;
+    return { ingresos, gastos, activos, planeacion, finalizados, avancePromedio, pendiente, margen: ingresos - gastos, totalPresupuestos, rentabilidadGeneral };
   }, [transacciones, presupuestos]);
 
   const pieData = presupuestos.filter(p => p.fase === 'ejecución').map(p => ({ name: p.proyecto.slice(0, 18), value: p.total }));
   const COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
-  const barData = presupuestos.map(p => ({
+  const barData = presupuestos.filter(p => p.fase === 'ejecución').map(p => ({
     name: p.proyecto.split(' ').slice(0, 2).join(' '),
     Avance: p.avanceFisico,
     Financiero: p.avanceFinanciero,
   }));
 
-  const radialData = [
-    { name: 'Avance', value: Math.round(stats.avancePromedio), fill: '#10B981' },
-  ];
+  const rentabilidadData = presupuestos.filter(p => p.fase === 'ejecución' || p.fase === 'finalizado').map(p => ({
+    name: p.proyecto.split(' ').slice(0, 2).join(' '),
+    Presupuesto: p.total,
+    Ingresos: p.ingresos,
+    Gastos: p.gastos,
+    Rentabilidad: p.total > 0 ? ((p.ingresos - p.gastos) / p.total * 100) : 0,
+  }));
 
   const modules: { id: string; label: string; icon: React.ComponentType<{ className?: string }>; color: string; desc: string }[] = [
     { id: 'clientes', label: 'Clientes', icon: Users, color: 'from-purple-600 to-purple-800', desc: `${clientes.length} registrados` },
@@ -49,13 +59,25 @@ const Dashboard: React.FC = () => {
 
       <div className="flex-1 p-3 sm:p-4 grid grid-cols-12 gap-3 max-w-[1600px] mx-auto w-full">
         {/* KPIs */}
-        <div className="col-span-12 grid grid-cols-2 lg:grid-cols-6 gap-3">
+        <div className="col-span-12 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
           <KPI icon={TrendingUp} label="Ingresos" value={`Q ${(stats.ingresos / 1000).toFixed(1)}K`} color="emerald" />
           <KPI icon={TrendingDown} label="Gastos" value={`Q ${(stats.gastos / 1000).toFixed(1)}K`} color="red" />
           <KPI icon={DollarSign} label="Margen" value={`Q ${(stats.margen / 1000).toFixed(1)}K`} color="blue" />
+          <KPI icon={Percent} label="Rentabilidad" value={`${stats.rentabilidadGeneral.toFixed(1)}%`} color={stats.rentabilidadGeneral >= 0 ? 'emerald' : 'red'} />
           <KPI icon={Briefcase} label="Activos" value={String(stats.activos)} color="indigo" />
           <KPI icon={FolderKanban} label="Planeación" value={String(stats.planeacion)} color="purple" />
+          <KPI icon={FolderKanban} label="Finalizados" value={String(stats.finalizados)} color="teal" />
           <KPI icon={AlertCircle} label="Pendiente" value={`Q ${(stats.pendiente / 1000).toFixed(0)}K`} color="amber" />
+        </div>
+
+        {/* Export row */}
+        <div className="col-span-12 flex justify-end">
+          <button
+            onClick={() => exportCompleto(presupuestos, transacciones, clientes)}
+            className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition shadow-sm"
+          >
+            <FileDown className="w-3.5 h-3.5" /> Exportar Todo
+          </button>
         </div>
 
         {/* Module buttons */}
@@ -105,6 +127,19 @@ const Dashboard: React.FC = () => {
           </ResponsiveContainer>
         </div>
 
+        <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-md border border-slate-200 p-3">
+          <h3 className="text-xs font-bold text-slate-700 mb-1">Rentabilidad por Proyecto (%)</h3>
+          <ResponsiveContainer width="100%" height={150}>
+            <BarChart data={rentabilidadData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+              <YAxis tick={{ fontSize: 9 }} domain={[-100, 100]} />
+              <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <Bar dataKey="Rentabilidad" fill="#8B5CF6" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
         {/* Transaction form */}
         <div className="col-span-12 lg:col-span-8">
           <TransactionForm />
@@ -122,6 +157,7 @@ const KPI: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: 
     indigo: 'from-indigo-500 to-indigo-600 text-indigo-50',
     purple: 'from-purple-500 to-purple-600 text-purple-50',
     amber: 'from-amber-500 to-amber-600 text-amber-50',
+    teal: 'from-teal-500 to-teal-600 text-teal-50',
   };
   return (
     <div className={`bg-gradient-to-br ${colors[color]} rounded-xl p-3 shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5`}>

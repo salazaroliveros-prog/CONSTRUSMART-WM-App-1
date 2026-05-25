@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { Home, LogOut, Building2 } from 'lucide-react';
+import { Home, LogOut, Building2, Search } from 'lucide-react';
 
 const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = true, title }) => {
   const { user, setView, signOut } = useAppContext();
@@ -46,6 +46,14 @@ const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = t
               <div className="text-[10px] text-blue-200">Administrador</div>
             </div>
           </div>
+          <button
+            onClick={() => document.dispatchEvent(new CustomEvent('toggle:commandpalette'))}
+            className="hidden sm:flex items-center gap-1.5 bg-white/10 hover:bg-white/20 transition px-2 py-1.5 rounded-lg text-xs shadow-md border border-white/10"
+            title="Buscar (⌘K)"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <kbd className="text-[10px] opacity-70">⌘K</kbd>
+          </button>
           {showHome ? (
             <button
               onClick={() => setView('dashboard')}
