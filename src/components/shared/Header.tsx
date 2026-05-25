@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import NotificationBell from '@/components/shared/NotificationBell';
-import { Home, LogOut, Building2, Search } from 'lucide-react';
+import { Home, LogOut, Building2, Search, Moon, Sun } from 'lucide-react';
 
 const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = true, title }) => {
-  const { user, setView, signOut } = useAppContext();
+  const { user, setView, signOut, darkMode, toggleDarkMode } = useAppContext();
 
   const [now, setNow] = useState(new Date());
 
@@ -47,6 +47,10 @@ const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = t
               <div className="text-[10px] text-blue-200">Administrador</div>
             </div>
           </div>
+          <button onClick={toggleDarkMode}
+            className="p-1.5 rounded-lg hover:bg-white/10 transition-colors btn-press" title={darkMode ? 'Modo claro' : 'Modo oscuro'}>
+            {darkMode ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-slate-100" />}
+          </button>
           <NotificationBell />
           <button
             onClick={() => document.dispatchEvent(new CustomEvent('toggle:commandpalette'))}

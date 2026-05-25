@@ -59,6 +59,8 @@ interface AppContextType {
 
   sidebarOpen: boolean;
   toggleSidebar: () => void;
+  darkMode: boolean;
+  toggleDarkMode: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -74,7 +76,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    const [loading, setLoading] = useState(true);
    const [authError, setAuthError] = useState<string | null>(null);
    const [sidebarOpen, setSidebarOpen] = useState(false);
+   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
    const loadingRef = useRef(false);
+
+   useEffect(() => {
+     document.documentElement.classList.toggle('dark', darkMode);
+     localStorage.setItem('darkMode', String(darkMode));
+   }, [darkMode]);
 
    const [clientes, setClientes] = useState<Cliente[]>([]);
    const [proyectos, setProyectos] = useState<Proyecto[]>([]);
@@ -539,6 +547,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       actividades, addActividad, deleteActividad,
       presupuestos, addPresupuesto, updatePresupuesto, transicionFase,
       sidebarOpen, toggleSidebar: () => setSidebarOpen(p => !p),
+      darkMode, toggleDarkMode: () => setDarkMode(p => !p),
     }}>
       {children}
     </AppContext.Provider>
