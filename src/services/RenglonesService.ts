@@ -208,7 +208,8 @@ export async function obtenerRenglonesFreuentes(
 
     if (error) return [];
 
-    const ids = data?.map((d) => d.renglon_id) || [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ids = data?.map((d: any) => d.renglon_id) || [];
     const { data: renglones } = await supabase
       .from('renglones')
       .select('*')

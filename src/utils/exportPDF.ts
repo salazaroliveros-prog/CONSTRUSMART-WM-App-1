@@ -11,10 +11,11 @@ export async function exportarPresupuestoPDF(elementId: string, fileName = 'pres
   if (!element) throw new Error('Elemento no encontrado para exportar PDF');
 
   // Opciones recomendadas para html2pdf
-  const opt = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const opt: any = {
     margin:       0.5,
     filename:     fileName,
-    image:        { type: 'jpeg', quality: 0.98 },
+    image:        { type: 'jpeg' as const, quality: 0.98 },
     html2canvas:  { scale: 2, useCORS: true },
     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
   };

@@ -5,7 +5,6 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import type { Presupuesto } from '@/types/supabase';
 import {
   calcularTotalesPresupuesto,
   type FactoresCalculo,
@@ -98,6 +97,7 @@ export async function obtenerPresupuesto(id: string, userId: string): Promise<Pr
         estimacionDiasTotal: 0,
         precioPorDia: 0,
         margenUtilidad: 0,
+        margenRelativo: 0,
       },
       created_at: data.created_at,
       updated_at: data.updated_at,

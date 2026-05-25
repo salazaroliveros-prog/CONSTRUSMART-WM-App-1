@@ -106,7 +106,7 @@ export const PanelAPUPredictor: React.FC<PanelAPUPredictorProps> = ({
                   <Button
                     size="sm"
                     variant="default"
-                    onClick={() => onAceptarSugerencia?.(typeof sugerencia.valor === 'number' ? sugerencia.valor : 0)}
+                    onClick={() => onAceptarSugerencia?.(sugerencia)}
                     className="ml-2 flex-shrink-0"
                   >
                     Aplicar

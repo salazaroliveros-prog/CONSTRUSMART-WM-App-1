@@ -14,14 +14,6 @@ interface Presupuesto {
   [key: string]: unknown;
 }
 
-// Función auxiliar: Fusiona líneas de ambos presupuestos por código
-function mergeLineas(lineasA: LineaCalculada[] = [], lineasB: LineaCalculada[] = []) {
-  const mapA = Object.fromEntries(lineasA.map((l: LineaCalculada) => [l.codigo, l]));
-  const mapB = Object.fromEntries(lineasB.map((l: LineaCalculada) => [l.codigo, l]));
-  const codigos = Array.from(new Set([...lineasA.map((l: LineaCalculada) => l.codigo), ...lineasB.map((l: LineaCalculada) => l.codigo)]));
-  return codigos.map(codigo => ({ a: mapA[codigo as string], b: mapB[codigo as string] }));
-}
-
 interface Presupuesto {
   id: string;
   proyecto: string;
@@ -150,31 +142,10 @@ const CompararPresupuestos: React.FC<{
 const ResumenPresupuesto: React.FC<{ presupuesto: Presupuesto }> = ({ presupuesto }) => {
   return (
     <div className="space-y-2 text-xs">
-      <div className="font-bold text-lg text-blue-800">Total: ${presupuesto.resultado?.total?.toLocaleString('es-CO') || 0}</div>
-      <div>Fase: <Badge>{presupuesto.fase}</Badge></div>
+      <div className="font-bold text-lg text-blue-800">Total: ${(presupuesto.total || 0).toLocaleString('es-CO')}</div>
       <div>Líneas: <span className="font-semibold">{presupuesto.lineas?.length || 0}</span></div>
-      <div>Utilidad: <span className="font-semibold">{presupuesto.resultado?.utilidad?.factor || 0}%</span></div>
       <div>Cliente: {presupuesto.cliente}</div>
       <div>Proyecto: {presupuesto.proyecto}</div>
-      <div>Tipología: {presupuesto.tipologia}</div>
-      <div>Última actualización: {presupuesto.updated_at?.slice(0,10)}</div>
-      {/* Puedes agregar más campos clave aquí */}
-      <div className="mt-2">
-        <span className="font-semibold">Factores:</span>
-        <ul className="ml-2">
-          {Object.entries(presupuesto.factores || {}).map(([k, v]) => (
-            <li key={k}>{k}: <span className="font-mono">{v}%</span></li>
-          ))}
-        </ul>
-      </div>
-      <div className="mt-2">
-        <span className="font-semibold">Anomalías:</span>
-        <ul className="ml-2">
-          {(presupuesto.resultado?.anomalias || []).map((a: string, i: number) => (
-            <li key={i} className="text-amber-700">{a}</li>
-          ))}
-        </ul>
-      </div>
     </div>
   );
 };

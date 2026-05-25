@@ -402,8 +402,8 @@ export function generarHTML(presupuesto: PresupuestoCompleto): string {
 /**
  * Descarga un archivo
  */
-export function descargarArchivo(contenido: string, nombreArchivo: string, tipo: string = 'text/plain') {
-  const blob = new Blob([contenido], { type });
+export function descargarArchivo(contenido: string, nombreArchivo: string, tipoMime: string = 'text/plain') {
+  const blob = new Blob([contenido], { type: tipoMime });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

@@ -242,8 +242,8 @@ export function generarResumenChecklist(checklist: ChecklistFase): ResumenCheckl
     items_completados: itemsCompletados.length,
     porcentaje_completacion: porcentajeCompletacion,
     items_faltantes: itemsFaltantes,
-    requiere_completo,
-    puede_avanzar,
+    requiere_completo: requiereCompleto,
+    puede_avanzar: puedeAvanzar,
   };
 }
 

@@ -14,7 +14,7 @@
  * ```
  */
 
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useState } from 'react';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Equipo, EquipoMiembro } from '@/types/supabase';
@@ -57,8 +57,9 @@ export interface UseEquiposAcciones {
  * Hook useEquipos
  */
 export function useEquipos(): UseEquiposState & UseEquiposAcciones {
-  const { equipos, equipoMiembros, session, agregarEquipo, actualizarEquipo, eliminarEquipo, agregarEquipoMiembro, actualizarEquipoMiembro, eliminarEquipoMiembro } =
-    useAppContext();
+  const context = useAppContext();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { equipos = [], equipoMiembros = [], session, agregarEquipo, actualizarEquipo, eliminarEquipo, agregarEquipoMiembro, actualizarEquipoMiembro, eliminarEquipoMiembro } = context as any;
   const { toast } = useToast();
   const [equipoActual, setEquipoActual] = useState<Equipo | null>(null);
 
@@ -160,7 +161,7 @@ export function useEquipos(): UseEquiposState & UseEquiposAcciones {
    */
   const seleccionar = useCallback((id: string | null) => {
     if (id) {
-      const equipo = equipos.find((e) => e.id === id);
+      const equipo = equipos.find((e: Equipo) => e.id === id);
       setEquipoActual(equipo || null);
     } else {
       setEquipoActual(null);
@@ -201,7 +202,7 @@ export function useEquipos(): UseEquiposState & UseEquiposAcciones {
   const actualizarRolMiembro = useCallback(
     async (equipoId: string, userId: string, rol: 'admin' | 'miembro' | 'visor') => {
       try {
-        const miembro = equipoMiembros.find((m) => m.equipoId === equipoId && m.userId === userId);
+        const miembro = equipoMiembros.find((m: EquipoMiembro) => m.equipoId === equipoId && m.userId === userId);
         if (!miembro) throw new Error('Miembro no encontrado');
 
         await actualizarEquipoMiembro(miembro.id, { rol });
@@ -228,7 +229,7 @@ export function useEquipos(): UseEquiposState & UseEquiposAcciones {
   const eliminarMiembro = useCallback(
     async (equipoId: string, userId: string) => {
       try {
-        const miembro = equipoMiembros.find((m) => m.equipoId === equipoId && m.userId === userId);
+        const miembro = equipoMiembros.find((m: EquipoMiembro) => m.equipoId === equipoId && m.userId === userId);
         if (!miembro) throw new Error('Miembro no encontrado');
 
         await eliminarEquipoMiembro(miembro.id);
@@ -254,7 +255,7 @@ export function useEquipos(): UseEquiposState & UseEquiposAcciones {
    */
   const obtenerMiembrosEquipo = useCallback(
     (equipoId: string): EquipoMiembro[] => {
-      return equipoMiembros.filter((m) => m.equipoId === equipoId);
+      return equipoMiembros.filter((m: EquipoMiembro) => m.equipoId === equipoId);
     },
     [equipoMiembros]
   );
@@ -266,7 +267,7 @@ export function useEquipos(): UseEquiposState & UseEquiposAcciones {
     (equipoId: string): boolean => {
       if (!session) return false;
 
-      const miembro = equipoMiembros.find((m) => m.equipoId === equipoId && m.userId === session.user.id);
+      const miembro = equipoMiembros.find((m: EquipoMiembro) => m.equipoId === equipoId && m.userId === session.user.id);
       return miembro?.rol === 'admin' || miembro?.rol === 'miembro';
     },
     [session, equipoMiembros]
@@ -279,7 +280,7 @@ export function useEquipos(): UseEquiposState & UseEquiposAcciones {
     (equipoId: string): boolean => {
       if (!session) return false;
 
-      const miembro = equipoMiembros.find((m) => m.equipoId === equipoId && m.userId === session.user.id);
+      const miembro = equipoMiembros.find((m: EquipoMiembro) => m.equipoId === equipoId && m.userId === session.user.id);
       return miembro?.rol === 'admin';
     },
     [session, equipoMiembros]
@@ -291,14 +292,14 @@ export function useEquipos(): UseEquiposState & UseEquiposAcciones {
   const obtenerEstadisticas = useCallback(() => {
     const rolesDistribucion: Record<string, number> = { admin: 0, miembro: 0, visor: 0 };
 
-    equipoMiembros.forEach((m) => {
+    equipoMiembros.forEach((m: EquipoMiembro) => {
       rolesDistribucion[m.rol]++;
     });
 
     return {
       totalEquipos: equipos.length,
       totalMiembros: equipoMiembros.length,
-      equiposActivos: equipos.filter((e) => e.estado === 'activo').length,
+      equiposActivos: (equipos as Equipo[]).filter((e: Equipo) => e.estado === 'activo').length,
       rolesDistribucion,
     };
   }, [equipos, equipoMiembros]);

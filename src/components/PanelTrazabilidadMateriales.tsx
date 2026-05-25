@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Package, AlertTriangle, CheckCircle, TrendingUp } from 'lucide-react';
+import { Package, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 

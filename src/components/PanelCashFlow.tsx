@@ -4,7 +4,7 @@
 
 import React, { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { AlertTriangle, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCashflowProyectado } from '@/hooks/useCashflowProyectado';
 import type { Transaccion } from '@/types/supabase';

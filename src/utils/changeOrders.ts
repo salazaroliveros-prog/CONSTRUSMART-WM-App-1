@@ -54,13 +54,17 @@ export function crearChangeOrder(
   // Comparar líneas
   const lineasAnteriores = presupuesto_actual.lineas || [];
 
-  lineasNuevas.forEach(nueva => {
-    const anterior = lineasAnteriores.find(l => l.id === nueva.id);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  lineasNuevas.forEach((nueva: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anterior = lineasAnteriores.find((l: any) => l.id === nueva.id);
     
     if (anterior) {
-      const costoAnt = anterior.costoUnitario || 0;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const costoAnt = (anterior as any).costoUnitario || 0;
       const costaNvo = nueva.unitario;
-      const cantAnt = anterior.cantidad || 0;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cantAnt = (anterior as any).cantidad || 0;
       const cantNva = nueva.cantidad;
 
       if (cantAnt !== cantNva || costoAnt !== costaNvo) {
@@ -187,7 +191,7 @@ export function generarReporteChangeOrders(
   let reporte = `HISTORIAL DE CAMBIOS - ${presupuesto.proyecto}\n`;
   reporte += `=${'='.repeat(80)}\n\n`;
 
-  changeOrders.forEach((co, idx) => {
+  changeOrders.forEach((co) => {
     reporte += `VERSIÓN ${co.version} - ${co.estado.toUpperCase()}\n`;
     reporte += `Fecha: ${co.solicitado_fecha.toLocaleDateString('es-GT')}\n`;
     reporte += `Solicitado por: ${co.solicitado_por}\n`;
