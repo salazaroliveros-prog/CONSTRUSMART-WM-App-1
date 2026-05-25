@@ -176,26 +176,77 @@ export interface Presupuesto {
   id: string;
   user_id: string;
   proyecto: string;
+  proyecto_nombre?: string;
   cliente?: string;
   ubicacion?: string;
   tipologia?: string;
   fase: 'planeación' | 'ejecución' | 'pausa' | 'finalizado';
+  estado?: 'Planeación' | 'Ejecución' | 'Pausa' | 'Finalizado';
   proyectoId?: string;
+  costo_directo?: number;
+  costo_material?: number;
+  costo_mano_obra?: number;
+  costo_herramienta?: number;
   factor_indirectos: number;
   factor_administrativos: number;
   factor_imprevistos: number;
   factor_utilidad: number;
   lineas: unknown[];
-  avanceFisico: number;
-  avanceFinanciero: number;
-  ingresos: number;
-  gastos: number;
-  pendienteAportar: number;
+  avanceFisico?: number;
+  avance?: number;
+  avanceFinanciero?: number;
+  ingresos?: number;
+  gastos?: number;
+  pendienteAportar?: number;
   total: number;
+  dias_duracion?: number;
   fechaInicio: string;
   fechaFin: string;
   created_at?: string;
   updated_at?: string;
+}
+
+/**
+ * M6: CAMBIOS DE PRESUPUESTO (CHANGE ORDERS)
+ */
+export interface CambiosPresupuesto {
+  id: string;
+  presupuesto_id: string;
+  version: number;
+  cambios: Record<string, { anterior: number; nuevo: number; motivo: string }>;
+  descripcion_cambios?: string;
+  usuario_creador: string;
+  aprobado_por?: string;
+  estado: 'pendiente' | 'aprobado' | 'rechazado';
+  impacto_presupuesto: number; // Diferencia total
+  porcentaje_impacto: number; // % cambio
+  created_at: string;
+  approved_at?: string;
+}
+
+/**
+ * M9: TRAZABILIDAD DE MATERIALES
+ */
+export interface ConsumoMateriales {
+  id: string;
+  presupuesto_id: string;
+  renglon_codigo: string;
+  descripcion_material?: string;
+  unidad: string;
+  cantidad_presupuestada: number;
+  cantidad_comprada: number;
+  cantidad_consumida: number;
+  costo_unitario_presupuestado?: number;
+  costo_total_presupuestado?: number;
+  costo_total_comprado?: number;
+  desperdicio_porcentaje: number; // (comprado - consumido) / presupuestado
+  desperdicio_alerta: boolean; // true si desperdicio > 10%
+  proveedor?: string;
+  fecha_compra?: string;
+  fecha_consumo?: string;
+  notas?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export type CreateCliente = Omit<Cliente, 'id'>;

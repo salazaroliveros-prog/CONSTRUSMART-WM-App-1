@@ -49,3 +49,52 @@ export function sugerirFactores(tipologia: string): { factor_indirectos: number;
   };
   return defaults[tipologia] || defaults.general;
 }
+
+/**
+ * M7 ENHANCEMENTS: Detectar anomalías en presupuesto
+ */
+export function detectarAnomalias(
+  costoDireto: number,
+  costoMaterial: number,
+  costoManoObra: number,
+  costoHerramienta: number
+): string[] {
+  const anomalias: string[] = [];
+
+  if (costoDireto === 0) return anomalias;
+
+  const porcentajeMaterial = (costoMaterial / costoDireto) * 100;
+  const porcentajeManoObra = (costoManoObra / costoDireto) * 100;
+  const porcentajeHerramienta = (costoHerramienta / costoDireto) * 100;
+
+  if (porcentajeMaterial > 80) {
+    anomalias.push('🚨 Material muy dominante (>80%) - Verificar presupuesto');
+  }
+  if (porcentajeManoObra > 70) {
+    anomalias.push('🚨 Mano de obra muy alta (>70%) - Revisar rendimientos');
+  }
+  if (porcentajeHerramienta > 25) {
+    anomalias.push('⚠️ Herramienta elevada (>25%) - Considerar renta vs compra');
+  }
+  if (porcentajeMaterial < 20 && porcentajeManoObra > 50) {
+    anomalias.push('⚠️ Mano de obra sin proporción de material - Verificar');
+  }
+
+  return anomalias;
+}
+
+/**
+ * Calcular puntuación de salud del presupuesto (0-100)
+ */
+export function calcularPuntuacionSalud(validacion: ValidacionPresupuesto): number {
+  let puntuacion = 100;
+
+  // Restar por estado
+  if (validacion.salud === 'riesgo') puntuacion -= 20;
+  if (validacion.salud === 'critica') puntuacion -= 40;
+
+  // Restar por advertencias
+  puntuacion -= validacion.advertencias.length * 5;
+
+  return Math.max(0, Math.min(100, puntuacion));
+}
