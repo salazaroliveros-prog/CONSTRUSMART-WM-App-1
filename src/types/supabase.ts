@@ -63,6 +63,7 @@ const ActividadSchema = z.object({
   fecha: z.string(),
   hora: z.string().optional(),
   descripcion: z.string().optional(),
+  presupuesto_id: z.string().optional(),
   created_at: z.string().optional(),
 });
 
@@ -74,6 +75,7 @@ const PresupuestoSchema = z.object({
   ubicacion: z.string().optional(),
   tipologia: z.string().optional(),
   fase: z.enum(['planeación', 'ejecución', 'pausa', 'finalizado']).default('planeación'),
+  proyecto_id: z.string().optional(),
   factor_indirectos: z.number().min(0).default(0),
   factor_administrativos: z.number().min(0).default(0),
   factor_imprevistos: z.number().min(0).default(0),
@@ -148,6 +150,7 @@ export interface Actividad {
   fecha: string;
   hora: string;
   descripcion: string;
+  presupuestoId?: string;
 }
 
 export interface Presupuesto {
@@ -158,6 +161,7 @@ export interface Presupuesto {
   ubicacion?: string;
   tipologia?: string;
   fase: 'planeación' | 'ejecución' | 'pausa' | 'finalizado';
+  proyectoId?: string;
   factor_indirectos: number;
   factor_administrativos: number;
   factor_imprevistos: number;
@@ -231,6 +235,11 @@ export interface AppContextType {
   sidebarOpen: boolean;
   toggleSidebar: () => void;
 }
+
+// ====== Tipos auxiliares ======
+export type CategoriaTransaccion = 'materiales' | 'mano-obra' | 'herramienta' | 'sub-contrato' |
+  'administrativo' | 'personal' | 'transporte' | 'fijos' |
+  'hogar' | 'aporte' | 'trabajos-extra';
 
 // ====== Funciones de validación ======
 export const validateCliente = (data: unknown): DBCliente => {
@@ -335,6 +344,7 @@ export const dbToActividad = (db: DBActividad): Actividad => ({
   fecha: db.fecha,
   hora: db.hora || '',
   descripcion: db.descripcion || '',
+  presupuestoId: db.presupuesto_id || '',
 });
 
 export const actividadToDb = (actividad: UpdateActividad): Partial<DBActividad> => ({
@@ -342,6 +352,7 @@ export const actividadToDb = (actividad: UpdateActividad): Partial<DBActividad> 
   fecha: actividad.fecha,
   hora: actividad.hora,
   descripcion: actividad.descripcion,
+  presupuesto_id: actividad.presupuestoId,
 });
 
 export const validatePresupuesto = (data: unknown): DBPresupuesto => {
@@ -356,6 +367,7 @@ export const dbToPresupuesto = (db: DBPresupuesto): Presupuesto => ({
   ubicacion: db.ubicacion || '',
   tipologia: db.tipologia || '',
   fase: db.fase || 'planeación',
+  proyectoId: db.proyecto_id || '',
   factor_indirectos: Number(db.factor_indirectos) || 0,
   factor_administrativos: Number(db.factor_administrativos) || 0,
   factor_imprevistos: Number(db.factor_imprevistos) || 0,
@@ -379,6 +391,7 @@ export const presupuestoToDb = (presupuesto: UpdatePresupuesto): Partial<DBPresu
   ubicacion: presupuesto.ubicacion,
   tipologia: presupuesto.tipologia,
   fase: presupuesto.fase,
+  proyecto_id: presupuesto.proyectoId,
   factor_indirectos: presupuesto.factor_indirectos,
   factor_administrativos: presupuesto.factor_administrativos,
   factor_imprevistos: presupuesto.factor_imprevistos,

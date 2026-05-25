@@ -3,14 +3,17 @@ import { PostgresChangesPayload } from '@supabase/supabase-js';
 import { seedDatabase } from '@/utils/seedDatabase';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
+import { toast } from 'sonner';
 import { 
-  Cliente, Proyecto, Transaccion, Actividad, Presupuesto,
+  Cliente, Proyecto, Transaccion, Actividad, Presupuesto, CategoriaTransaccion,
   CreateCliente, CreateProyecto, CreateTransaccion, CreateActividad, CreatePresupuesto,
   UpdateCliente, UpdateProyecto, UpdateTransaccion, UpdateActividad, UpdatePresupuesto,
   validateCliente, validateProyecto, validateTransaccion, validateActividad, validatePresupuesto,
   dbToCliente, clienteToDb, dbToProyecto, proyectoToDb,
   dbToTransaccion, transaccionToDb, dbToActividad, actividadToDb, dbToPresupuesto, presupuestoToDb
 } from '@/types/supabase';
+
+export type { CategoriaTransaccion };
 
 export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos';
 
@@ -49,8 +52,8 @@ interface AppContextType {
   deleteActividad: (id: string) => Promise<void>;
 
   presupuestos: Presupuesto[];
-  addPresupuesto: (p: CreatePresupuesto) => Promise<string | null>;
-  updatePresupuesto: (id: string, p: UpdatePresupuesto) => Promise<void>;
+  addPresupuesto: (p: Record<string, unknown>) => Promise<string | null>;
+  updatePresupuesto: (id: string, p: Record<string, unknown>) => Promise<void>;
   transicionFase: (id: string, nuevaFase: Presupuesto['fase']) => Promise<void>;
 
   sidebarOpen: boolean;
@@ -445,11 +448,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (error) throw error;
       if (data) {
         setPresupuestos(prev => [dbToPresupuesto(data), ...prev]);
+        toast.success('Presupuesto guardado');
         return data.id;
       }
       return null;
     } catch (error) {
       console.error('Error al agregar presupuesto:', error);
+      toast.error('Error al guardar presupuesto', { description: error instanceof Error ? error.message : 'Error desconocido' });
       throw error;
     }
   };
@@ -461,9 +466,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .eq('id', id)
         .select()
         .single();
-      if (!error && data) setPresupuestos(prev => prev.map(x => x.id === id ? dbToPresupuesto(data) : x));
+      if (!error && data) {
+        setPresupuestos(prev => prev.map(x => x.id === id ? dbToPresupuesto(data) : x));
+        toast.success('Presupuesto actualizado');
+      }
     } catch (error) {
       console.error('Error al actualizar presupuesto:', error);
+      toast.error('Error al actualizar presupuesto', { description: error instanceof Error ? error.message : 'Error desconocido' });
       throw error;
     }
   };
@@ -487,9 +496,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (exists) return prev.map(x => x.id === projData[0].id ? dbToProyecto(projData[0]) : x);
         return [dbToProyecto(projData[0]), ...prev];
       });
+      toast.success(`Proyecto movido a fase: ${nuevaFase}`);
     } catch (error) {
       console.error('Error en transicionFase:', error);
       if (original) setPresupuestos(prev => prev.map(p => p.id === id ? { ...p, fase: original } : p));
+      toast.error('Error al cambiar de fase');
       throw error;
     }
   };
