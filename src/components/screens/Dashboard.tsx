@@ -11,7 +11,7 @@ import RealtimeFeed from '@/components/shared/RealtimeFeed';
 import GanttView from '@/components/shared/GanttView';
 import CashFlowProjection from '@/components/shared/CashFlowProjection';
 import { Users, FolderKanban, Calculator, LineChart, Wallet, TrendingUp, TrendingDown, DollarSign, Folder, Percent, FileDown, Shield } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, AreaChart, Area } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { exportCompleto } from '@/utils/exportExcel';
 
 const Dashboard: React.FC = () => {

@@ -2,8 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import type { Presupuesto } from '@/types/supabase';
 import Header from '@/components/shared/Header';
-import { fmtQ } from '@/lib/exporters';
 import { Play, PauseCircle, CheckCircle, Folder, Filter } from 'lucide-react';
+// fmtQ no se usa, así que se elimina de la importación
+
 
 type Fase = Presupuesto['fase'];
 const nextFase: Record<Fase, { label: string; icon: React.ComponentType<{ className?: string }>; color: string; fase: Fase } | null> = {

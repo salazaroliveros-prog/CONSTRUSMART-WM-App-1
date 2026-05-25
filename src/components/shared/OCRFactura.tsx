@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { createWorker } from 'tesseract.js';
 import { useAppContext } from '@/contexts/AppContext';
-import { Camera, Upload, Scan, DollarSign, Calendar, Building2, FileText, CheckCircle, X, Loader2 } from 'lucide-react';
+import { Upload, Scan, DollarSign, Calendar, Building2, FileText, CheckCircle, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FacturaData {
@@ -66,11 +66,15 @@ const OCRFactura: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
   const guardarTransaccion = async () => {
     try {
       await addTransaccion({
-        tipo: 'egreso',
+        tipo: 'gasto',
         categoria: 'materiales',
-        monto: manual.monto,
+        cantidad: 1,
+        unidad: 'unidad',
+        costoUnitario: manual.monto,
+        costoTotal: manual.monto,
         fecha: manual.fecha,
         descripcion: `${manual.proveedor} - ${manual.concepto}`.slice(0, 200),
+        proyectoId: 'admin'
       });
       toast.success('Transacción creada desde factura');
       onClose?.();

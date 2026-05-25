@@ -5,17 +5,6 @@ import Header from '@/components/shared/Header';
 import { Plus, Search, Trash2, Edit2, Phone, Mail, MapPin, Download, X } from 'lucide-react';
 import { downloadCSV } from '@/lib/exporters';
 
-const empty: Omit<Cliente, 'id'> = {
-  nombre: '',
-  telefono: '',
-  email: '',
-  direccion: '',
-  tipoProyecto: 'Residencial',
-  estado: 'Potencial',
-  notas: '',
-  fecha: new Date().toISOString().split('T')[0],
-};
-
 const ClientesScreen: React.FC = () => {
   const { clientes, addCliente, updateCliente, deleteCliente } = useAppContext();
   const [search, setSearch] = useState('');
