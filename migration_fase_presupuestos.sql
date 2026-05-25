@@ -138,4 +138,13 @@ $$;
 
 -- Indice unico para upsert en proyectos (si no existe)
 CREATE UNIQUE INDEX IF NOT EXISTS proyectos_nombre_user_idx ON public.proyectos (nombre, user_id);
-ALTER TABLE public.proyectos ADD CONSTRAINT IF NOT EXISTS proyectos_nombre_user_key UNIQUE (nombre, user_id);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'proyectos_nombre_user_key'
+  ) THEN
+    ALTER TABLE public.proyectos ADD CONSTRAINT proyectos_nombre_user_key UNIQUE (nombre, user_id);
+  END IF;
+END;
+$$;
