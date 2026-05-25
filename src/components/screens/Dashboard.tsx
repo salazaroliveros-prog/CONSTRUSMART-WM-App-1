@@ -8,6 +8,7 @@ import GaugeChart from '@/components/shared/GaugeChart';
 import HealthIndicator from '@/components/shared/HealthIndicator';
 import ProjectHeatMap from '@/components/shared/ProjectHeatMap';
 import ProjectTimeline from '@/components/shared/ProjectTimeline';
+import RealtimeFeed from '@/components/shared/RealtimeFeed';
 import { Users, FolderKanban, Calculator, LineChart, Wallet, TrendingUp, TrendingDown, DollarSign, Folder, Percent, FileDown, Shield } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, AreaChart, Area } from 'recharts';
 import { exportCompleto } from '@/utils/exportExcel';
@@ -161,7 +162,10 @@ const Dashboard: React.FC = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* Fila 5: Transaction form */}
+        {/* Fila 5: Actividad + Transaction form */}
+        <div className="col-span-12 lg:col-span-4">
+          <RealtimeFeed />
+        </div>
         <div className="col-span-12 lg:col-span-8">
           <TransactionForm />
         </div>

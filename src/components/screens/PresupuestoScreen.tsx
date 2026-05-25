@@ -3,7 +3,8 @@ import { useAppContext } from '@/contexts/AppContext';
 import Header from '@/components/shared/Header';
 import { renglonesPorTipologia, Tipologia, tipologiaLabels, Renglon } from '@/data/renglones';
 import { downloadCSV, printPDF, fmtQ } from '@/lib/exporters';
-import { Play, PauseCircle, CheckCircle, Plus, Trash2, ChevronDown, ChevronRight, Download, FileText, Calculator, Search, Save, FolderOpen } from 'lucide-react';
+import { Play, PauseCircle, CheckCircle, Plus, Trash2, ChevronDown, ChevronRight, Download, FileText, Calculator, Search, Save, FolderOpen, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { validarFactores, sugerirFactores } from '@/utils/validacionPresupuesto';
 
 interface LineaPresupuesto extends Renglon {
   cantidad: number;
@@ -73,6 +74,11 @@ const PresupuestoScreen: React.FC = () => {
     });
   };
 
+  const handleSugerirFactores = () => {
+    const s = sugerirFactores(tipologia);
+    setMeta(m => ({ ...m, ...s }));
+  };
+
   const totales = useMemo(() => {
     const direct = lineas.map(l => {
       const cu = l.costoMaterial + l.costoManoObra + l.costoHerramienta;
@@ -88,6 +94,8 @@ const PresupuestoScreen: React.FC = () => {
     const tiempo = lineas.reduce((s, l) => s + (l.rendimiento > 0 ? l.cantidad / l.rendimiento : 0), 0);
     return { direct, costoDirecto, indirectos, administrativos, imprevistos, subtotal, utilidad, total, tiempo };
   }, [lineas, meta]);
+
+  const validacion = useMemo(() => validarFactores({ ...meta, total: totales.total }), [meta, totales.total]);
 
   const handleExportCSV = () => {
     const rows: (string | number)[][] = [
@@ -247,6 +255,31 @@ const PresupuestoScreen: React.FC = () => {
                   <input type="number" placeholder="Utilidad %" value={meta.factorUtilidad} onChange={e => setMeta({ ...meta, factorUtilidad: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 text-xs border rounded" />
                 </div>
               </div>
+
+              {/* Validación de factores */}
+              {validacion.advertencias.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {validacion.advertencias.map((w, i) => (
+                    <div key={i} className={`flex items-start gap-1.5 text-[10px] p-1.5 rounded ${validacion.salud === 'critica' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
+                      <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                      <span>{w}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {validacion.sugerencias.length > 0 && (
+                <div className="mt-1 space-y-0.5">
+                  {validacion.sugerencias.map((s, i) => (
+                    <div key={i} className="flex items-start gap-1.5 text-[10px] text-slate-500 p-1">
+                      <Info className="w-3 h-3 mt-0.5 shrink-0" />
+                      <span>{s}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button onClick={handleSugerirFactores} className="mt-1.5 text-[10px] text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> Sugerir factores para {tipologiaLabels[tipologia]}
+              </button>
             </div>
           </div>
 
