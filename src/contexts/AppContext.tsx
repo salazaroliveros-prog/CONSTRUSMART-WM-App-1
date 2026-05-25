@@ -476,6 +476,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         pendienteAportar: 0,
         fechaInicio: '',
         fechaFin: '',
+        proyectoId: undefined,
       };
       const dbPayload = presupuestoToDb(createPayload);
       const { data, error } = await supabase.from('presupuestos')

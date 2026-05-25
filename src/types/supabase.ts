@@ -313,7 +313,7 @@ export const clienteToDb = (cliente: UpdateCliente): Partial<DBCliente> => ({
   tipo_proyecto: cliente.tipoProyecto,
   estado: cliente.estado,
   notas: cliente.notas,
-  fecha: cliente.fecha,
+  fecha: cliente.fecha || null,
 });
 
 export const dbToProyecto = (db: DBProyecto): Proyecto => ({
@@ -343,8 +343,8 @@ export const proyectoToDb = (proyecto: UpdateProyecto): Partial<DBProyecto> => (
   ingresos: proyecto.ingresos,
   gastos: proyecto.gastos,
   pendiente_aportar: proyecto.pendienteAportar,
-  fecha_inicio: proyecto.fechaInicio,
-  fecha_fin: proyecto.fechaFin,
+  fecha_inicio: proyecto.fechaInicio || null,
+  fecha_fin: proyecto.fechaFin || null,
 });
 
 export const dbToTransaccion = (db: DBTransaccion): Transaccion => ({
@@ -425,7 +425,7 @@ export const presupuestoToDb = (presupuesto: UpdatePresupuesto): Partial<DBPresu
   ubicacion: presupuesto.ubicacion,
   tipologia: presupuesto.tipologia,
   fase: presupuesto.fase,
-  proyecto_id: presupuesto.proyectoId,
+  proyecto_id: presupuesto.proyectoId || null,
   factor_indirectos: presupuesto.factor_indirectos,
   factor_administrativos: presupuesto.factor_administrativos,
   factor_imprevistos: presupuesto.factor_imprevistos,
@@ -437,6 +437,6 @@ export const presupuestoToDb = (presupuesto: UpdatePresupuesto): Partial<DBPresu
   gastos: presupuesto.gastos,
   pendiente_aportar: presupuesto.pendienteAportar,
   total: presupuesto.total,
-  fecha_inicio: presupuesto.fechaInicio,
-  fecha_fin: presupuesto.fechaFin,
+  fecha_inicio: presupuesto.fechaInicio || null,
+  fecha_fin: presupuesto.fechaFin || null,
 });
