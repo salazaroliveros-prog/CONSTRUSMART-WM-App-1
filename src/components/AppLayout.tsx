@@ -6,6 +6,7 @@ import ClientesScreen from '@/features/clientes/components/ClientesScreen';
 import ProyectosScreen from '@/features/proyectos/components/ProyectosScreen';
 import PresupuestoScreen from '@/features/presupuestos/components/PresupuestoScreen';
 import FinancieroScreen from '@/features/financiero/components/FinancieroScreen';
+import SeguimientoScreen from '@/components/screens/SeguimientoScreen';
 import TeamsScreen from '@/components/screens/TeamsScreen';
 import CommandPalette from '@/components/shared/CommandPalette';
 import { Building2, Loader2 } from 'lucide-react';
