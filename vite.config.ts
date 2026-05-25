@@ -13,6 +13,14 @@ export default defineConfig(({ mode }) => ({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+      },
+      devOptions: {
+        enabled: true,
+      },
       includeAssets: ["favicon.ico", "logo.png", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"],
       manifest: {
         short_name: "CONSTRUSMART",

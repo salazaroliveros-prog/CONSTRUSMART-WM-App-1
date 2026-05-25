@@ -10,17 +10,24 @@ const KEYS = {
   transacciones: ['transacciones'] as const,
 };
 
+import { PresupuestoSchema } from '@/lib/schemas';
+
 export function usePresupuestos() {
   return useQuery({
     queryKey: KEYS.presupuestos,
     queryFn: async (): Promise<Presupuesto[]> => {
       const { data, error } = await supabase.from('presupuestos').select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []).map(presupuestoTransformer);
+      
+      // Validación estricta con Zod
+      return data.map(item => PresupuestoSchema.parse(item));
     },
     staleTime: 30_000,
   });
 }
+
+import { PresupuestoSchema, ClienteSchema, TransaccionSchema } from '@/lib/schemas';
+import type { Cliente, Transaccion } from '@/types/supabase';
 
 export function useClientes() {
   return useQuery({
@@ -28,7 +35,7 @@ export function useClientes() {
     queryFn: async (): Promise<Cliente[]> => {
       const { data, error } = await supabase.from('clientes').select('*').order('nombre');
       if (error) throw error;
-      return data || [];
+      return (data || []).map(item => ClienteSchema.parse(item));
     },
     staleTime: 30_000,
   });
@@ -40,7 +47,7 @@ export function useTransacciones() {
     queryFn: async (): Promise<Transaccion[]> => {
       const { data, error } = await supabase.from('transacciones').select('*').order('fecha', { ascending: false });
       if (error) throw error;
-      return data || [];
+      return (data || []).map(item => TransaccionSchema.parse(item));
     },
     staleTime: 30_000,
   });
