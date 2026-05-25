@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
+import NotificationBell from '@/components/shared/NotificationBell';
 import { Home, LogOut, Building2, Search } from 'lucide-react';
 
 const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = true, title }) => {
@@ -46,6 +47,7 @@ const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = t
               <div className="text-[10px] text-blue-200">Administrador</div>
             </div>
           </div>
+          <NotificationBell />
           <button
             onClick={() => document.dispatchEvent(new CustomEvent('toggle:commandpalette'))}
             className="hidden sm:flex items-center gap-1.5 bg-white/10 hover:bg-white/20 transition px-2 py-1.5 rounded-lg text-xs shadow-md border border-white/10 btn-press"

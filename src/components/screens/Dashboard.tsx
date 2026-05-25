@@ -4,12 +4,12 @@ import { ViewType } from '@/types/supabase';
 import Header from '@/components/shared/Header';
 import Calendar from '@/components/shared/Calendar';
 import TransactionForm from '@/components/shared/TransactionForm';
-import GaugeChart from '@/components/shared/GaugeChart';
 import HealthIndicator from '@/components/shared/HealthIndicator';
 import ProjectHeatMap from '@/components/shared/ProjectHeatMap';
 import ProjectTimeline from '@/components/shared/ProjectTimeline';
 import RealtimeFeed from '@/components/shared/RealtimeFeed';
 import GanttView from '@/components/shared/GanttView';
+import CashFlowProjection from '@/components/shared/CashFlowProjection';
 import { Users, FolderKanban, Calculator, LineChart, Wallet, TrendingUp, TrendingDown, DollarSign, Folder, Percent, FileDown, Shield } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, AreaChart, Area } from 'recharts';
 import { exportCompleto } from '@/utils/exportExcel';
@@ -106,13 +106,8 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Fila 3: Charts */}
-        <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-sm border border-slate-200 p-2 card-hover">
-          <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">Avance Global</h3>
-          <div className="flex justify-center">
-            <GaugeChart value={stats.avancePromedio} label="Físico" size={90} color="#1E3A8A" />
-            <div className="w-8" />
-            <GaugeChart value={presupuestos.reduce((s, p) => s + p.avanceFinanciero, 0) / (presupuestos.length || 1)} label="Financiero" size={90} color="#10B981" />
-          </div>
+        <div className="col-span-12 lg:col-span-4">
+          <CashFlowProjection />
         </div>
 
         <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-sm border border-slate-200 p-2 card-hover">
