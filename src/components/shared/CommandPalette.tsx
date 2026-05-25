@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Command } from 'cmdk';
-import { useAppContext } from '@/contexts/AppContext';
+import { useAppContext, ViewType } from '@/contexts/AppContext';
 import { Search, Folder, Users, Calculator, LineChart, Wallet, LayoutDashboard, Plus, Shield, DollarSign } from 'lucide-react';
 
 const views = [
@@ -36,9 +36,9 @@ const CommandPalette: React.FC = () => {
 
   const handleSelect = useCallback((value: string) => {
     if (value.startsWith('view:')) {
-      setView(value.slice(5));
+      setView(value.slice(5) as ViewType);
     } else if (value === 'nuevo:presupuesto') {
-      addPresupuesto({});
+      addPresupuesto({ proyecto: 'Nuevo Proyecto' });
       setView('presupuesto');
     } else if (value === 'nuevo:cliente') {
       setView('clientes');

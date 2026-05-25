@@ -3,7 +3,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import Header from '@/components/shared/Header';
 import { renglonesPorTipologia, Tipologia, tipologiaLabels, Renglon } from '@/data/renglones';
 import { downloadCSV, printPDF, fmtQ } from '@/lib/exporters';
-import { Play, PauseCircle, CheckCircle, Plus, Trash2, ChevronDown, ChevronRight, Download, FileText, Calculator, Search, Save, FolderOpen, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { Play, Plus, Trash2, ChevronDown, ChevronRight, Download, FileText, Calculator, Search, Save, FolderOpen, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import ChecklistPanel from '@/components/shared/ChecklistPanel';
 import MaterialesPanel from '@/components/shared/MaterialesPanel';
 import { validarFactores, sugerirFactores } from '@/utils/validacionPresupuesto';

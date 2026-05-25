@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
-import { useAppContext, Cliente } from '@/contexts/AppContext';
+import { useAppContext } from '@/contexts/AppContext';
+import { Cliente } from '@/types/supabase';
 import Header from '@/components/shared/Header';
 import { Plus, Search, Trash2, Edit2, Phone, Mail, MapPin, Download, X } from 'lucide-react';
 import { downloadCSV } from '@/lib/exporters';
 
 const empty: Omit<Cliente, 'id'> = {
-  nombre: '', telefono: '', email: '', direccion: '',
-  tipoProyecto: 'Residencial', estado: 'Potencial', notas: '',
+  nombre: '',
+  telefono: '',
+  email: '',
+  direccion: '',
+  tipoProyecto: 'Residencial',
+  estado: 'Potencial',
+  notas: '',
   fecha: new Date().toISOString().split('T')[0],
 };
 
@@ -16,7 +22,27 @@ const ClientesScreen: React.FC = () => {
   const [filtro, setFiltro] = useState('todos');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState<Omit<Cliente, 'id'>>(empty);
+  const [form, setForm] = useState<Omit<Cliente, 'id'>>({
+    nombre: '',
+    telefono: '',
+    email: '',
+    direccion: '',
+    tipoProyecto: 'Residencial',
+    estado: 'Potencial',
+    notas: '',
+    fecha: new Date().toISOString().split('T')[0],
+  });
+
+  const resetForm = () => setForm({
+    nombre: '',
+    telefono: '',
+    email: '',
+    direccion: '',
+    tipoProyecto: 'Residencial',
+    estado: 'Potencial',
+    notas: '',
+    fecha: new Date().toISOString().split('T')[0],
+  });
 
   const filtered = clientes.filter(c => {
     const matchSearch = c.nombre.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase());
@@ -28,12 +54,16 @@ const ClientesScreen: React.FC = () => {
     e.preventDefault();
     if (editId) updateCliente(editId, form);
     else addCliente(form);
-    setForm(empty); setShowForm(false); setEditId(null);
+    resetForm(); setShowForm(false); setEditId(null);
   };
 
   const handleEdit = (c: Cliente) => {
     const { id, ...rest } = c;
-    setForm(rest); setEditId(id); setShowForm(true);
+    setForm(rest as Omit<Cliente, 'id'>); setEditId(id); setShowForm(true);
+  };
+
+  const handleNew = () => {
+    resetForm(); setEditId(null); setShowForm(true);
   };
 
   const handleExport = () => {
@@ -75,7 +105,7 @@ const ClientesScreen: React.FC = () => {
             <button onClick={handleExport} className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-sm font-semibold">
               <Download className="w-4 h-4" /> Exportar
             </button>
-            <button onClick={() => { setShowForm(true); setEditId(null); setForm(empty); }} className="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-800 text-white px-3 py-2 rounded-lg text-sm font-semibold">
+            <button onClick={() => { handleNew(); }} className="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-800 text-white px-3 py-2 rounded-lg text-sm font-semibold">
               <Plus className="w-4 h-4" /> Nuevo Cliente
             </button>
           </div>
@@ -85,7 +115,7 @@ const ClientesScreen: React.FC = () => {
           <div className="bg-white rounded-xl shadow-lg border-l-4 border-blue-700 p-4 mb-4">
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-bold text-slate-800">{editId ? 'Editar Cliente' : 'Nuevo Cliente'}</h3>
-              <button onClick={() => { setShowForm(false); setEditId(null); }}><X className="w-4 h-4" /></button>
+              <button onClick={() => { setShowForm(false); }}><X className="w-4 h-4" /></button>
             </div>
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <input required placeholder="Nombre completo" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} className="px-3 py-2 text-sm border rounded-lg" />

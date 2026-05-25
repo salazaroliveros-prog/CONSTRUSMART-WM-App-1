@@ -283,7 +283,7 @@ export const dbToCliente = (db: DBRow): Cliente => ({
   email: (db.email as string) ?? '',
   direccion: (db.direccion as string) ?? '',
   tipoProyecto: (db.tipo_proyecto as string) ?? 'Residencial',
-  estado: (db.estado as string) ?? 'Potencial',
+  estado: (['Potencial', 'Activo', 'Cerrado'].includes(db.estado as string) ? db.estado : 'Potencial') as 'Potencial' | 'Activo' | 'Cerrado',
   notas: (db.notas as string) ?? '',
   fecha: (db.fecha as string) ?? new Date().toISOString().split('T')[0],
 });
@@ -306,7 +306,7 @@ export const dbToProyecto = (db: DBRow): Proyecto => ({
   nombre: (db.nombre as string) ?? '',
   cliente: (db.cliente as string) ?? '',
   tipo: (db.tipo as string) ?? '',
-  estado: (db.estado as string) ?? 'Planeación',
+  estado: (['Planeación', 'Ejecución', 'Finalizado', 'Evaluación', 'Parado'].includes(db.estado as string) ? db.estado : 'Planeación') as 'Planeación' | 'Ejecución' | 'Finalizado' | 'Evaluación' | 'Parado',
   presupuestoTotal: typeof db.presupuesto_total === 'number' ? db.presupuesto_total : Number(db.presupuesto_total) || 0,
   avanceFisico: typeof db.avance_fisico === 'number' ? db.avance_fisico : Number(db.avance_fisico) || 0,
   avanceFinanciero: typeof db.avance_financiero === 'number' ? db.avance_financiero : Number(db.avance_financiero) || 0,

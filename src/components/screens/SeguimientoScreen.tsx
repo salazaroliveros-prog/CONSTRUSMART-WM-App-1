@@ -2,8 +2,8 @@ import React, { useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import Header from '@/components/shared/Header';
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
-import { Download, FileText, Play, PauseCircle, CheckCircle, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Area, AreaChart } from 'recharts';
+import { Download, FileText, Play } from 'lucide-react';
+import { LineChart, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Area, AreaChart } from 'recharts';
 import type { Presupuesto } from '@/types/supabase';
 
 const SeguimientoScreen: React.FC = () => {
@@ -31,14 +31,14 @@ const SeguimientoScreen: React.FC = () => {
   }));
 
   const handleExportCSV = () => {
-    const rows: (string | number)[][] = [
-      ['Seguimiento de Proyectos - CONSTRUCTORA WM/M&S'],
-      [`Fecha: ${new Date().toLocaleDateString('es-GT')}`],
-      [],
-      ['Proyecto', 'Cliente', 'Tipo', 'Fase', 'Presupuesto', 'Avance Físico %', 'Avance Financiero %', 'Ingresos', 'Gastos', 'Pendiente'],
-      ...presupuestos.map(p => [p.proyecto, p.cliente, p.tipologia, p.fase, p.total, p.avanceFisico, p.avanceFinanciero, p.ingresos, p.gastos, p.pendienteAportar]),
+    const rows: (string | number)[] = [
+      'Seguimiento de Proyectos - CONSTRUCTORA WM/M&S',
+      `Fecha: ${new Date().toLocaleDateString('es-GT')}`,
+      '',
+      'Proyecto,Cliente,Tipo,Fase,Presupuesto,Avance Físico %,Avance Financiero %,Ingresos,Gastos,Pendiente',
+      ...presupuestos.map(p => [p.proyecto, p.cliente, p.tipologia, p.fase, p.total, p.avanceFisico, p.avanceFinanciero, p.ingresos, p.gastos, p.pendienteAportar].join(',')),
     ];
-    downloadCSV(`seguimiento_proyectos_${new Date().toISOString().split('T')[0]}.csv`, rows);
+    downloadCSV(`seguimiento_proyectos_${new Date().toISOString().split('T')[0]}.csv`, rows.map(r => Array.isArray(r) ? r : [r]));
   };
 
   const handleExportPDF = () => {
