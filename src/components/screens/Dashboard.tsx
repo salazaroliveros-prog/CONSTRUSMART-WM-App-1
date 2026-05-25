@@ -54,7 +54,7 @@ const Dashboard: React.FC = () => {
     Financiero: p.avanceFinanciero,
   }));
 
-  const kpiData: { icon: any; label: string; value: string; color: KPIColor }[] = [
+  const kpiData: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; color: KPIColor }[] = [
     { icon: TrendingUp, label: 'Ingresos', value: `Q${(stats.ingresos / 1000).toFixed(1)}K`, color: 'emerald' },
     { icon: TrendingDown, label: 'Gastos', value: `Q${(stats.gastos / 1000).toFixed(1)}K`, color: 'red' },
     { icon: DollarSign, label: 'Margen', value: `Q${(stats.margen / 1000).toFixed(1)}K`, color: stats.margen >= 0 ? 'blue' : 'red' },
