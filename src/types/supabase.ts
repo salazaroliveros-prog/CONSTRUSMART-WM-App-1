@@ -386,7 +386,7 @@ export const actividadToDb = (actividad: UpdateActividad): Partial<DBActividad> 
   fecha: actividad.fecha,
   hora: actividad.hora,
   descripcion: actividad.descripcion,
-  presupuesto_id: actividad.presupuestoId,
+  presupuesto_id: actividad.presupuestoId || null,
 });
 
 export const validatePresupuesto = (data: unknown): DBPresupuesto => {
