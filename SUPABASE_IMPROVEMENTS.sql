@@ -18,9 +18,20 @@
 -- SECCIÓN 1: CREAR ENUMERACIONES (ENUM TYPES)
 -- ============================================================================
 
-CREATE TYPE IF NOT EXISTS cambio_estado AS ENUM ('pendiente', 'aprobada', 'rechazada', 'cancelada');
-CREATE TYPE IF NOT EXISTS movimiento_subtipo AS ENUM ('retiro', 'deposito', 'gasto', 'ingreso', 'ajuste');
-CREATE TYPE IF NOT EXISTS frecuencia_pago AS ENUM ('unica', 'diaria', 'semanal', 'mensual', 'trimestral', 'anual');
+DO $$ BEGIN
+  CREATE TYPE cambio_estado AS ENUM ('pendiente', 'aprobada', 'rechazada', 'cancelada');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE movimiento_subtipo AS ENUM ('retiro', 'deposito', 'gasto', 'ingreso', 'ajuste');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE frecuencia_pago AS ENUM ('unica', 'diaria', 'semanal', 'mensual', 'trimestral', 'anual');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ============================================================================
 -- SECCIÓN 2: MEJORAR TABLA EXISTENTE - cambios_presupuesto
