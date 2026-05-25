@@ -356,100 +356,134 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ---------- CRUD Clientes ----------
   const addCliente = async (c: CreateCliente) => {
-    if (!session) return;
+    if (!session) { toast.error('Sesión no encontrada'); return; }
     try {
-      // Validar datos antes de enviar a Supabase
       const validated = validateCliente({ ...c, user_id: session.user.id });
       const { data, error } = await supabase.from('clientes').insert({ ...clienteToDb(validated), user_id: session.user.id }).select().single();
-      if (!error && data) setClientes(p => [dbToCliente(data), ...p]);
+      if (error) throw error;
+      if (data) setClientes(p => [dbToCliente(data), ...p]);
+      toast.success('Cliente guardado');
     } catch (error) {
       console.error('Error al agregar cliente:', error);
+      toast.error('Error al guardar cliente', { description: error instanceof Error ? error.message : 'Error desconocido' });
       throw error;
     }
   };
 
   const updateCliente = async (id: string, c: UpdateCliente) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
     try {
-      // Validar datos antes de enviar a Supabase
-      const validated = validateCliente({ ...c, id, user_id: session?.user.id });
-      const { data, error } = await supabase.from('clientes').update(clienteToDb(validated)).eq('id', id).select().single();
-      if (!error && data) setClientes(p => p.map(x => x.id === id ? dbToCliente(data) : x));
+      const validated = validateCliente({ ...c, id, user_id: session.user.id });
+      const { data, error } = await supabase.from('clientes').update(clienteToDb(validated)).eq('id', id).eq('user_id', session.user.id).select().single();
+      if (error) throw error;
+      if (data) setClientes(p => p.map(x => x.id === id ? dbToCliente(data) : x));
+      toast.success('Cliente actualizado');
     } catch (error) {
       console.error('Error al actualizar cliente:', error);
+      toast.error('Error al actualizar cliente', { description: error instanceof Error ? error.message : 'Error desconocido' });
       throw error;
     }
   };
 
   const deleteCliente = async (id: string) => {
-    if (!session) return;
-    const { error } = await supabase.from('clientes').delete().eq('id', id);
-    if (!error) setClientes(p => p.filter(x => x.id !== id));
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    const { error } = await supabase.from('clientes').delete().eq('id', id).eq('user_id', session.user.id);
+    if (error) { toast.error('Error al eliminar cliente'); throw error; }
+    setClientes(p => p.filter(x => x.id !== id));
+    toast.success('Cliente eliminado');
   };
 
   // ---------- CRUD Proyectos ----------
   const addProyecto = async (p: CreateProyecto) => {
-    if (!session) return;
+    if (!session) { toast.error('Sesión no encontrada'); return; }
     try {
-      // Validar datos antes de enviar a Supabase
       const validated = validateProyecto({ ...p, user_id: session.user.id });
       const { data, error } = await supabase.from('proyectos').insert({ ...proyectoToDb(validated), user_id: session.user.id }).select().single();
-      if (!error && data) setProyectos(prev => [dbToProyecto(data), ...prev]);
+      if (error) throw error;
+      if (data) setProyectos(prev => [dbToProyecto(data), ...prev]);
+      toast.success('Proyecto guardado');
     } catch (error) {
       console.error('Error al agregar proyecto:', error);
+      toast.error('Error al guardar proyecto', { description: error instanceof Error ? error.message : 'Error desconocido' });
       throw error;
     }
   };
 
   const updateProyecto = async (id: string, p: UpdateProyecto) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
     try {
-      // Validar datos antes de enviar a Supabase
-      const validated = validateProyecto({ ...p, id, user_id: session?.user.id });
-      const { data, error } = await supabase.from('proyectos').update(proyectoToDb(validated)).eq('id', id).select().single();
-      if (!error && data) setProyectos(prev => prev.map(x => x.id === id ? dbToProyecto(data) : x));
+      const validated = validateProyecto({ ...p, id, user_id: session.user.id });
+      const { data, error } = await supabase.from('proyectos').update(proyectoToDb(validated)).eq('id', id).eq('user_id', session.user.id).select().single();
+      if (error) throw error;
+      if (data) setProyectos(prev => prev.map(x => x.id === id ? dbToProyecto(data) : x));
+      toast.success('Proyecto actualizado');
     } catch (error) {
       console.error('Error al actualizar proyecto:', error);
+      toast.error('Error al actualizar proyecto', { description: error instanceof Error ? error.message : 'Error desconocido' });
       throw error;
     }
   };
 
   // ---------- CRUD Transacciones ----------
   const addTransaccion = async (t: CreateTransaccion) => {
-    if (!session) return;
+    if (!session) { toast.error('Sesión no encontrada'); return; }
     try {
-      // Validar datos antes de enviar a Supabase
       const validated = validateTransaccion({ ...t, user_id: session.user.id });
       const { data, error } = await supabase.from('transacciones').insert({ ...transaccionToDb(validated), user_id: session.user.id }).select().single();
-      if (!error && data) setTransacciones(p => [dbToTransaccion(data), ...p]);
+      if (error) throw error;
+      if (data) {
+        setTransacciones(p => [dbToTransaccion(data), ...p]);
+        toast.success('Transacción registrada');
+      }
     } catch (error) {
       console.error('Error al agregar transacción:', error);
+      toast.error('Error al registrar transacción', { description: error instanceof Error ? error.message : 'Error desconocido' });
       throw error;
     }
   };
 
   const deleteTransaccion = async (id: string) => {
-    if (!session) return;
-    const { error } = await supabase.from('transacciones').delete().eq('id', id);
-    if (!error) setTransacciones(p => p.filter(x => x.id !== id));
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    try {
+      const { error } = await supabase.from('transacciones').delete().eq('id', id).eq('user_id', session.user.id);
+      if (error) throw error;
+      setTransacciones(p => p.filter(x => x.id !== id));
+      toast.success('Transacción eliminada');
+    } catch (error) {
+      console.error('Error al eliminar transacción:', error);
+      toast.error('Error al eliminar transacción');
+    }
   };
 
   // ---------- CRUD Actividades ----------
   const addActividad = async (a: CreateActividad) => {
-    if (!session) return;
+    if (!session) { toast.error('Sesión no encontrada'); return; }
     try {
-      // Validar datos antes de enviar a Supabase
       const validated = validateActividad({ ...a, user_id: session.user.id });
       const { data, error } = await supabase.from('actividades').insert({ ...actividadToDb(validated), user_id: session.user.id }).select().single();
-      if (!error && data) setActividades(p => [dbToActividad(data), ...p]);
+      if (error) throw error;
+      if (data) {
+        setActividades(p => [dbToActividad(data), ...p]);
+        toast.success('Actividad guardada');
+      }
     } catch (error) {
       console.error('Error al agregar actividad:', error);
+      toast.error('Error al guardar actividad', { description: error instanceof Error ? error.message : 'Error desconocido' });
       throw error;
     }
   };
 
   const deleteActividad = async (id: string) => {
-    if (!session) return;
-    const { error } = await supabase.from('actividades').delete().eq('id', id);
-    if (!error) setActividades(p => p.filter(x => x.id !== id));
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    try {
+      const { error } = await supabase.from('actividades').delete().eq('id', id).eq('user_id', session.user.id);
+      if (error) throw error;
+      setActividades(p => p.filter(x => x.id !== id));
+      toast.success('Actividad eliminada');
+    } catch (error) {
+      console.error('Error al eliminar actividad:', error);
+      toast.error('Error al eliminar actividad');
+    }
   };
 
   // ---------- CRUD Presupuestos (unificado con fase) ----------
@@ -498,14 +532,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updatePresupuesto = async (id: string, p: UpdatePresupuesto) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
     try {
       const dbPayload = presupuestoToDb(p);
       const { data, error } = await supabase.from('presupuestos')
         .update({ ...dbPayload, updated_at: new Date().toISOString() })
         .eq('id', id)
+        .eq('user_id', session.user.id)
         .select()
         .single();
-      if (!error && data) {
+      if (error) throw error;
+      if (data) {
         setPresupuestos(prev => prev.map(x => x.id === id ? dbToPresupuesto(data) : x));
         toast.success('Presupuesto actualizado');
       }

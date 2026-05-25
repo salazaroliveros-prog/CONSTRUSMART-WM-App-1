@@ -13,11 +13,11 @@ const MaterialesPanel: React.FC<Props> = ({ presupuestoId, onClose }) => {
   const [items, setItems] = useState<Material[]>([]);
   const [nuevo, setNuevo] = useState({ nombre: '', unidad: 'unidad', cantidad: 0 });
 
-  const load = async () => {
+  const load = React.useCallback(async () => {
     const { data } = await supabase.from('materiales_proyecto').select('*').eq('presupuesto_id', presupuestoId);
     if (data) setItems(data as Material[]);
-  };
-  useEffect(() => { if (presupuestoId) load(); }, [presupuestoId]);
+  }, [presupuestoId]);
+  useEffect(() => { if (presupuestoId) load(); }, [presupuestoId, load]);
 
   const agregar = async () => {
     if (!nuevo.nombre) return;

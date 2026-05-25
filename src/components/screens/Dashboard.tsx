@@ -76,7 +76,7 @@ const Dashboard: React.FC = () => {
             { icon: DollarSign, label: 'Pendiente', value: `Q${(stats.pendiente / 1000).toFixed(0)}K`, color: 'amber' },
           ].map((k, i) => (
             <div key={i} className="col-span-3 sm:col-span-1">
-              <CompactKPI icon={k.icon} label={k.label} value={k.value} color={k.color as any} />
+              <CompactKPI icon={k.icon} label={k.label} value={k.value} color={k.color as 'emerald' | 'red' | 'blue' | 'indigo' | 'purple' | 'amber' | 'teal'} />
             </div>
           ))}
         </div>

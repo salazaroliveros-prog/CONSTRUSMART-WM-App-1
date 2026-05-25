@@ -7,10 +7,10 @@ import { z } from 'zod';
 // ====== Esquemas de validación Zod ======
 const ClienteSchema = z.object({
   id: z.string().optional(),
-  user_id: z.string(),
+  user_id: z.string().min(1, 'user_id requerido'),
   nombre: z.string().min(1, 'El nombre es requerido'),
   telefono: z.string().optional(),
-  email: z.string().email('Email inválido').optional(),
+  email: z.string().email('Email inválido').optional().or(z.literal('')),
   direccion: z.string().optional(),
   tipo_proyecto: z.string().default('Residencial'),
   estado: z.enum(['Potencial', 'Activo', 'Cerrado']).default('Potencial'),
@@ -21,7 +21,7 @@ const ClienteSchema = z.object({
 
 const ProyectoSchema = z.object({
   id: z.string().optional(),
-  user_id: z.string(),
+  user_id: z.string().min(1, 'user_id requerido'),
   nombre: z.string().min(1, 'El nombre es requerido'),
   cliente: z.string().optional(),
   tipo: z.string().optional(),
@@ -32,14 +32,14 @@ const ProyectoSchema = z.object({
   ingresos: z.number().default(0),
   gastos: z.number().default(0),
   pendiente_aportar: z.number().default(0),
-  fecha_inicio: z.string().optional(),
-  fecha_fin: z.string().optional(),
+  fecha_inicio: z.string().optional().or(z.literal('')),
+  fecha_fin: z.string().optional().or(z.literal('')),
   created_at: z.string().optional(),
 });
 
 const TransaccionSchema = z.object({
   id: z.string().optional(),
-  user_id: z.string(),
+  user_id: z.string().min(1, 'user_id requerido'),
   tipo: z.enum(['ingreso', 'gasto']),
   descripcion: z.string().optional(),
   cantidad: z.number().min(0).default(1),
@@ -58,7 +58,7 @@ const TransaccionSchema = z.object({
 
 const ActividadSchema = z.object({
   id: z.string().optional(),
-  user_id: z.string(),
+  user_id: z.string().min(1, 'user_id requerido'),
   titulo: z.string().min(1, 'El título es requerido'),
   fecha: z.string(),
   hora: z.string().optional(),
@@ -69,7 +69,7 @@ const ActividadSchema = z.object({
 
 const PresupuestoSchema = z.object({
   id: z.string().optional(),
-  user_id: z.string(),
+  user_id: z.string().min(1, 'user_id requerido'),
   proyecto: z.string().min(1, 'El nombre del proyecto es requerido'),
   cliente: z.string().optional(),
   ubicacion: z.string().optional(),
@@ -87,8 +87,8 @@ const PresupuestoSchema = z.object({
   gastos: z.number().default(0),
   pendiente_aportar: z.number().default(0),
   total: z.number().default(0),
-  fecha_inicio: z.string().optional(),
-  fecha_fin: z.string().optional(),
+  fecha_inicio: z.string().optional().or(z.literal('')),
+  fecha_fin: z.string().optional().or(z.literal('')),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
 });
@@ -179,8 +179,6 @@ export interface Presupuesto {
   updated_at?: string;
 }
 
-// ====== Tipos de formulario (sin ID) ======
-
 export type CreateCliente = Omit<Cliente, 'id'>;
 export type CreateProyecto = Omit<Proyecto, 'id'>;
 export type CreateTransaccion = Omit<Transaccion, 'id'>;
@@ -193,7 +191,6 @@ export type UpdateTransaccion = Partial<CreateTransaccion>;
 export type UpdateActividad = Partial<CreateActividad>;
 export type UpdatePresupuesto = Partial<CreatePresupuesto>;
 
-// Tipo de entrada para crear presupuesto desde el formulario (campos opcionales con defaults)
 export interface CreatePresupuestoInput {
   proyecto: string;
   cliente?: string;
@@ -208,7 +205,6 @@ export interface CreatePresupuestoInput {
   total?: number;
 }
 
-// ====== Tipos de Equipo (Mejora 14) ======
 export interface Equipo {
   id: string;
   nombre: string;
@@ -227,7 +223,6 @@ export interface EquipoMiembro {
 export type CreateEquipo = Omit<Equipo, 'id' | 'created_at'>;
 export type CreateEquipoMiembro = Omit<EquipoMiembro, 'id' | 'created_at'>;
 
-// ====== Tipos de vista y contexto ======
 export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos';
 
 export interface User {
@@ -241,202 +236,196 @@ import { Session } from '@supabase/supabase-js';
 export interface AppContextType {
    view: ViewType;
    setView: (v: ViewType) => void;
-   session: Session | null; // Session de Supabase
+   session: Session | null;
    loading: boolean;
    authError: string | null;
    signIn: (email: string, password: string) => Promise<boolean>;
    signUp: (email: string, password: string, nombre: string) => Promise<boolean>;
+   signInWithGoogle: () => Promise<void>;
    signOut: () => Promise<void>;
    user: User;
-
   clientes: Cliente[];
   addCliente: (c: CreateCliente) => Promise<void>;
   updateCliente: (id: string, c: UpdateCliente) => Promise<void>;
   deleteCliente: (id: string) => Promise<void>;
-
   proyectos: Proyecto[];
   addProyecto: (p: CreateProyecto) => Promise<void>;
   updateProyecto: (id: string, p: UpdateProyecto) => Promise<void>;
-
   transacciones: Transaccion[];
   addTransaccion: (t: CreateTransaccion) => Promise<void>;
   deleteTransaccion: (id: string) => Promise<void>;
-
   actividades: Actividad[];
   addActividad: (a: CreateActividad) => Promise<void>;
   deleteActividad: (id: string) => Promise<void>;
-
+  presupuestos: Presupuesto[];
+  addPresupuesto: (p: CreatePresupuestoInput) => Promise<string | null>;
+  updatePresupuesto: (id: string, p: UpdatePresupuesto) => Promise<void>;
+  transicionFase: (id: string, nuevaFase: Presupuesto['fase']) => Promise<void>;
   sidebarOpen: boolean;
   toggleSidebar: () => void;
+  darkMode: boolean;
+  toggleDarkMode: () => void;
 }
 
-// ====== Tipos auxiliares ======
-export type CategoriaTransaccion = 'materiales' | 'mano-obra' | 'herramienta' | 'sub-contrato' |
-  'administrativo' | 'personal' | 'transporte' | 'fijos' |
-  'hogar' | 'aporte' | 'trabajos-extra';
+export const validateCliente = (data: unknown): DBCliente => ClienteSchema.parse(data);
+export const validateProyecto = (data: unknown): DBProyecto => ProyectoSchema.parse(data);
+export const validateTransaccion = (data: unknown): DBTransaccion => TransaccionSchema.parse(data);
+export const validateActividad = (data: unknown): DBActividad => ActividadSchema.parse(data);
+export const validatePresupuesto = (data: unknown): DBPresupuesto => PresupuestoSchema.parse(data);
 
-// ====== Funciones de validación ======
-export const validateCliente = (data: unknown): DBCliente => {
-  return ClienteSchema.parse(data);
-};
-
-export const validateProyecto = (data: unknown): DBProyecto => {
-  return ProyectoSchema.parse(data);
-};
-
-export const validateTransaccion = (data: unknown): DBTransaccion => {
-  return TransaccionSchema.parse(data);
-};
-
-export const validateActividad = (data: unknown): DBActividad => {
-  return ActividadSchema.parse(data);
-};
+type DBRow = Record<string, unknown>;
 
 // ====== Funciones de transformación DB <-> App ======
-export const dbToCliente = (db: DBCliente): Cliente => ({
-  id: db.id || '',
-  nombre: db.nombre || '',
-  telefono: db.telefono || '',
-  email: db.email || '',
-  direccion: db.direccion || '',
-  tipoProyecto: db.tipo_proyecto || 'Residencial',
-  estado: db.estado || 'Potencial',
-  notas: db.notas || '',
-  fecha: db.fecha || '',
+export const dbToCliente = (db: DBRow): Cliente => ({
+  id: (db.id as string) || '',
+  nombre: (db.nombre as string) ?? '',
+  telefono: (db.telefono as string) ?? '',
+  email: (db.email as string) ?? '',
+  direccion: (db.direccion as string) ?? '',
+  tipoProyecto: (db.tipo_proyecto as string) ?? 'Residencial',
+  estado: (db.estado as string) ?? 'Potencial',
+  notas: (db.notas as string) ?? '',
+  fecha: (db.fecha as string) ?? new Date().toISOString().split('T')[0],
 });
 
-export const clienteToDb = (cliente: UpdateCliente): Partial<DBCliente> => ({
-  nombre: cliente.nombre,
-  telefono: cliente.telefono,
-  email: cliente.email,
-  direccion: cliente.direccion,
-  tipo_proyecto: cliente.tipoProyecto,
-  estado: cliente.estado,
-  notas: cliente.notas,
-  fecha: cliente.fecha || null,
-});
-
-export const dbToProyecto = (db: DBProyecto): Proyecto => ({
-  id: db.id || '',
-  nombre: db.nombre || '',
-  cliente: db.cliente || '',
-  tipo: db.tipo || '',
-  estado: db.estado || 'Planeación',
-  presupuestoTotal: Number(db.presupuesto_total) || 0,
-  avanceFisico: Number(db.avance_fisico) || 0,
-  avanceFinanciero: Number(db.avance_financiero) || 0,
-  ingresos: Number(db.ingresos) || 0,
-  gastos: Number(db.gastos) || 0,
-  pendienteAportar: Number(db.pendiente_aportar) || 0,
-  fechaInicio: db.fecha_inicio || '',
-  fechaFin: db.fecha_fin || '',
-});
-
-export const proyectoToDb = (proyecto: UpdateProyecto): Partial<DBProyecto> => ({
-  nombre: proyecto.nombre,
-  cliente: proyecto.cliente,
-  tipo: proyecto.tipo,
-  estado: proyecto.estado,
-  presupuesto_total: proyecto.presupuestoTotal,
-  avance_fisico: proyecto.avanceFisico,
-  avance_financiero: proyecto.avanceFinanciero,
-  ingresos: proyecto.ingresos,
-  gastos: proyecto.gastos,
-  pendiente_aportar: proyecto.pendienteAportar,
-  fecha_inicio: proyecto.fechaInicio || null,
-  fecha_fin: proyecto.fechaFin || null,
-});
-
-export const dbToTransaccion = (db: DBTransaccion): Transaccion => ({
-  id: db.id || '',
-  tipo: db.tipo,
-  descripcion: db.descripcion || '',
-  cantidad: Number(db.cantidad) || 0,
-  unidad: db.unidad || '',
-  categoria: db.categoria,
-  costoUnitario: Number(db.costo_unitario) || 0,
-  costoTotal: Number(db.costo_total) || 0,
-  fecha: db.fecha || '',
-  proyectoId: db.proyecto_id || 'admin',
-});
-
-export const transaccionToDb = (transaccion: UpdateTransaccion): Partial<DBTransaccion> => ({
-  tipo: transaccion.tipo,
-  descripcion: transaccion.descripcion,
-  cantidad: transaccion.cantidad,
-  unidad: transaccion.unidad,
-  categoria: transaccion.categoria,
-  costo_unitario: transaccion.costoUnitario,
-  costo_total: transaccion.costoTotal,
-  fecha: transaccion.fecha,
-  proyecto_id: transaccion.proyectoId,
-});
-
-export const dbToActividad = (db: DBActividad): Actividad => ({
-  id: db.id || '',
-  titulo: db.titulo,
-  fecha: db.fecha,
-  hora: db.hora || '',
-  descripcion: db.descripcion || '',
-  presupuestoId: db.presupuesto_id || '',
-});
-
-export const actividadToDb = (actividad: UpdateActividad): Partial<DBActividad> => ({
-  titulo: actividad.titulo,
-  fecha: actividad.fecha,
-  hora: actividad.hora,
-  descripcion: actividad.descripcion,
-  presupuesto_id: actividad.presupuestoId || null,
-});
-
-export const validatePresupuesto = (data: unknown): DBPresupuesto => {
-  return PresupuestoSchema.parse(data);
+export const clienteToDb = (cliente: UpdateCliente): Partial<DBCliente> => {
+  const out: DBRow = {};
+  if (cliente.nombre !== undefined) out.nombre = cliente.nombre;
+  if (cliente.telefono !== undefined) out.telefono = cliente.telefono;
+  if (cliente.email !== undefined) out.email = cliente.email;
+  if (cliente.direccion !== undefined) out.direccion = cliente.direccion;
+  if (cliente.tipoProyecto !== undefined) out.tipo_proyecto = cliente.tipoProyecto;
+  if (cliente.estado !== undefined) out.estado = cliente.estado;
+  if (cliente.notas !== undefined) out.notas = cliente.notas;
+  out.fecha = cliente.fecha || null;
+  return out as Partial<DBCliente>;
 };
 
-export const dbToPresupuesto = (db: DBPresupuesto): Presupuesto => ({
-  id: db.id || '',
-  user_id: db.user_id,
-  proyecto: db.proyecto,
-  cliente: db.cliente || '',
-  ubicacion: db.ubicacion || '',
-  tipologia: db.tipologia || '',
-  fase: db.fase || 'planeación',
-  proyectoId: db.proyecto_id || '',
-  factor_indirectos: Number(db.factor_indirectos) || 0,
-  factor_administrativos: Number(db.factor_administrativos) || 0,
-  factor_imprevistos: Number(db.factor_imprevistos) || 0,
-  factor_utilidad: Number(db.factor_utilidad) || 0,
-  lineas: db.lineas || [],
-  avanceFisico: Number(db.avance_fisico) || 0,
-  avanceFinanciero: Number(db.avance_financiero) || 0,
-  ingresos: Number(db.ingresos) || 0,
-  gastos: Number(db.gastos) || 0,
-  pendienteAportar: Number(db.pendiente_aportar) || 0,
-  total: Number(db.total) || 0,
-  fechaInicio: db.fecha_inicio || '',
-  fechaFin: db.fecha_fin || '',
-  created_at: db.created_at || '',
-  updated_at: db.updated_at || '',
+export const dbToProyecto = (db: DBRow): Proyecto => ({
+  id: (db.id as string) || '',
+  nombre: (db.nombre as string) ?? '',
+  cliente: (db.cliente as string) ?? '',
+  tipo: (db.tipo as string) ?? '',
+  estado: (db.estado as string) ?? 'Planeación',
+  presupuestoTotal: typeof db.presupuesto_total === 'number' ? db.presupuesto_total : Number(db.presupuesto_total) || 0,
+  avanceFisico: typeof db.avance_fisico === 'number' ? db.avance_fisico : Number(db.avance_fisico) || 0,
+  avanceFinanciero: typeof db.avance_financiero === 'number' ? db.avance_financiero : Number(db.avance_financiero) || 0,
+  ingresos: typeof db.ingresos === 'number' ? db.ingresos : Number(db.ingresos) || 0,
+  gastos: typeof db.gastos === 'number' ? db.gastos : Number(db.gastos) || 0,
+  pendienteAportar: typeof db.pendiente_aportar === 'number' ? db.pendiente_aportar : Number(db.pendiente_aportar) || 0,
+  fechaInicio: (db.fecha_inicio as string) ?? '',
+  fechaFin: (db.fecha_fin as string) ?? '',
 });
 
-export const presupuestoToDb = (presupuesto: UpdatePresupuesto): Partial<DBPresupuesto> => ({
-  proyecto: presupuesto.proyecto,
-  cliente: presupuesto.cliente,
-  ubicacion: presupuesto.ubicacion,
-  tipologia: presupuesto.tipologia,
-  fase: presupuesto.fase,
-  proyecto_id: presupuesto.proyectoId || null,
-  factor_indirectos: presupuesto.factor_indirectos,
-  factor_administrativos: presupuesto.factor_administrativos,
-  factor_imprevistos: presupuesto.factor_imprevistos,
-  factor_utilidad: presupuesto.factor_utilidad,
-  lineas: presupuesto.lineas,
-  avance_fisico: presupuesto.avanceFisico,
-  avance_financiero: presupuesto.avanceFinanciero,
-  ingresos: presupuesto.ingresos,
-  gastos: presupuesto.gastos,
-  pendiente_aportar: presupuesto.pendienteAportar,
-  total: presupuesto.total,
-  fecha_inicio: presupuesto.fechaInicio || null,
-  fecha_fin: presupuesto.fechaFin || null,
+export const proyectoToDb = (proyecto: UpdateProyecto): Partial<DBProyecto> => {
+  const out: DBRow = {};
+  if (proyecto.nombre !== undefined) out.nombre = proyecto.nombre;
+  if (proyecto.cliente !== undefined) out.cliente = proyecto.cliente;
+  if (proyecto.tipo !== undefined) out.tipo = proyecto.tipo;
+  if (proyecto.estado !== undefined) out.estado = proyecto.estado;
+  if (proyecto.presupuestoTotal !== undefined) out.presupuesto_total = proyecto.presupuestoTotal;
+  if (proyecto.avanceFisico !== undefined) out.avance_fisico = proyecto.avanceFisico;
+  if (proyecto.avanceFinanciero !== undefined) out.avance_financiero = proyecto.avanceFinanciero;
+  if (proyecto.ingresos !== undefined) out.ingresos = proyecto.ingresos;
+  if (proyecto.gastos !== undefined) out.gastos = proyecto.gastos;
+  if (proyecto.pendienteAportar !== undefined) out.pendiente_aportar = proyecto.pendienteAportar;
+  out.fecha_inicio = proyecto.fechaInicio || null;
+  out.fecha_fin = proyecto.fechaFin || null;
+  return out as Partial<DBProyecto>;
+};
+
+export const dbToTransaccion = (db: DBRow): Transaccion => ({
+  id: (db.id as string) || '',
+  tipo: (db.tipo as 'ingreso' | 'gasto') ?? 'gasto',
+  descripcion: (db.descripcion as string) ?? '',
+  cantidad: typeof db.cantidad === 'number' ? db.cantidad : Number(db.cantidad) || 0,
+  unidad: (db.unidad as string) ?? '',
+  categoria: (db.categoria as Transaccion['categoria']) ?? 'materiales',
+  costoUnitario: typeof db.costo_unitario === 'number' ? db.costo_unitario : Number(db.costo_unitario) || 0,
+  costoTotal: typeof db.costo_total === 'number' ? db.costo_total : Number(db.costo_total) || 0,
+  fecha: (db.fecha as string) ?? new Date().toISOString().split('T')[0],
+  proyectoId: (db.proyecto_id as string) ?? 'admin',
 });
+
+export const transaccionToDb = (transaccion: UpdateTransaccion): Partial<DBTransaccion> => {
+  const out: DBRow = {};
+  if (transaccion.tipo !== undefined) out.tipo = transaccion.tipo;
+  if (transaccion.descripcion !== undefined) out.descripcion = transaccion.descripcion;
+  if (transaccion.cantidad !== undefined) out.cantidad = transaccion.cantidad;
+  if (transaccion.unidad !== undefined) out.unidad = transaccion.unidad;
+  if (transaccion.categoria !== undefined) out.categoria = transaccion.categoria;
+  if (transaccion.costoUnitario !== undefined) out.costo_unitario = transaccion.costoUnitario;
+  if (transaccion.costoTotal !== undefined) out.costo_total = transaccion.costoTotal;
+  if (transaccion.fecha !== undefined) out.fecha = transaccion.fecha;
+  if (transaccion.proyectoId !== undefined) out.proyecto_id = transaccion.proyectoId;
+  return out as Partial<DBTransaccion>;
+};
+
+export const dbToActividad = (db: DBRow): Actividad => ({
+  id: (db.id as string) || '',
+  titulo: (db.titulo as string) ?? '',
+  fecha: (db.fecha as string) ?? new Date().toISOString().split('T')[0],
+  hora: (db.hora as string) ?? '',
+  descripcion: (db.descripcion as string) ?? '',
+  presupuestoId: (db.presupuesto_id as string) ?? undefined,
+});
+
+export const actividadToDb = (actividad: UpdateActividad): Partial<DBActividad> => {
+  const out: DBRow = {};
+  if (actividad.titulo !== undefined) out.titulo = actividad.titulo;
+  if (actividad.fecha !== undefined) out.fecha = actividad.fecha;
+  if (actividad.hora !== undefined) out.hora = actividad.hora;
+  if (actividad.descripcion !== undefined) out.descripcion = actividad.descripcion;
+  out.presupuesto_id = actividad.presupuestoId || null;
+  return out as Partial<DBActividad>;
+};
+
+export const dbToPresupuesto = (db: DBRow): Presupuesto => ({
+  id: (db.id as string) || '',
+  user_id: (db.user_id as string) ?? '',
+  proyecto: (db.proyecto as string) ?? '',
+  cliente: (db.cliente as string) ?? '',
+  ubicacion: (db.ubicacion as string) ?? '',
+  tipologia: (db.tipologia as string) ?? '',
+  fase: (db.fase as 'planeación' | 'ejecución' | 'pausa' | 'finalizado') ?? 'planeación',
+  proyectoId: (db.proyecto_id as string) ?? undefined,
+  factor_indirectos: typeof db.factor_indirectos === 'number' ? db.factor_indirectos : Number(db.factor_indirectos) || 0,
+  factor_administrativos: typeof db.factor_administrativos === 'number' ? db.factor_administrativos : Number(db.factor_administrativos) || 0,
+  factor_imprevistos: typeof db.factor_imprevistos === 'number' ? db.factor_imprevistos : Number(db.factor_imprevistos) || 0,
+  factor_utilidad: typeof db.factor_utilidad === 'number' ? db.factor_utilidad : Number(db.factor_utilidad) || 0,
+  lineas: Array.isArray(db.lineas) ? db.lineas : [],
+  avanceFisico: typeof db.avance_fisico === 'number' ? db.avance_fisico : Number(db.avance_fisico) || 0,
+  avanceFinanciero: typeof db.avance_financiero === 'number' ? db.avance_financiero : Number(db.avance_financiero) || 0,
+  ingresos: typeof db.ingresos === 'number' ? db.ingresos : Number(db.ingresos) || 0,
+  gastos: typeof db.gastos === 'number' ? db.gastos : Number(db.gastos) || 0,
+  pendienteAportar: typeof db.pendiente_aportar === 'number' ? db.pendiente_aportar : Number(db.pendiente_aportar) || 0,
+  total: typeof db.total === 'number' ? db.total : Number(db.total) || 0,
+  fechaInicio: (db.fecha_inicio as string) ?? '',
+  fechaFin: (db.fecha_fin as string) ?? '',
+  created_at: (db.created_at as string) ?? undefined,
+  updated_at: (db.updated_at as string) ?? undefined,
+});
+
+export const presupuestoToDb = (presupuesto: UpdatePresupuesto): Partial<DBPresupuesto> => {
+  const out: DBRow = {};
+  if (presupuesto.proyecto !== undefined) out.proyecto = presupuesto.proyecto;
+  if (presupuesto.cliente !== undefined) out.cliente = presupuesto.cliente;
+  if (presupuesto.ubicacion !== undefined) out.ubicacion = presupuesto.ubicacion;
+  if (presupuesto.tipologia !== undefined) out.tipologia = presupuesto.tipologia;
+  if (presupuesto.fase !== undefined) out.fase = presupuesto.fase;
+  out.proyecto_id = presupuesto.proyectoId || null;
+  if (presupuesto.factor_indirectos !== undefined) out.factor_indirectos = presupuesto.factor_indirectos;
+  if (presupuesto.factor_administrativos !== undefined) out.factor_administrativos = presupuesto.factor_administrativos;
+  if (presupuesto.factor_imprevistos !== undefined) out.factor_imprevistos = presupuesto.factor_imprevistos;
+  if (presupuesto.factor_utilidad !== undefined) out.factor_utilidad = presupuesto.factor_utilidad;
+  if (presupuesto.lineas !== undefined) out.lineas = presupuesto.lineas;
+  if (presupuesto.avanceFisico !== undefined) out.avance_fisico = presupuesto.avanceFisico;
+  if (presupuesto.avanceFinanciero !== undefined) out.avance_financiero = presupuesto.avanceFinanciero;
+  if (presupuesto.ingresos !== undefined) out.ingresos = presupuesto.ingresos;
+  if (presupuesto.gastos !== undefined) out.gastos = presupuesto.gastos;
+  if (presupuesto.pendienteAportar !== undefined) out.pendiente_aportar = presupuesto.pendienteAportar;
+  if (presupuesto.total !== undefined) out.total = presupuesto.total;
+  out.fecha_inicio = presupuesto.fechaInicio || null;
+  out.fecha_fin = presupuesto.fechaFin || null;
+  return out as Partial<DBPresupuesto>;
+};

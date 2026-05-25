@@ -12,13 +12,13 @@ const ConciliacionPanel: React.FC = () => {
   const [data, setData] = useState<Conciliacion[]>([]);
   const { session } = useAppContext();
 
-  const load = async () => {
+  const load = React.useCallback(async () => {
     if (!session) return;
     const { data: d } = await supabase.from('conciliaciones').select('*').eq('user_id', session.user.id).order('periodo', { ascending: false }).limit(10);
     if (d) setData(d as Conciliacion[]);
-  };
+  }, [session]);
 
-  useEffect(() => { load(); }, [session]);
+  useEffect(() => { load(); }, [load]);
 
   const nuevaConciliacion = async () => {
     if (!session) return;
