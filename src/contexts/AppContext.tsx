@@ -8,6 +8,7 @@ import {
   Cliente, Proyecto, Transaccion, Actividad, Presupuesto, CategoriaTransaccion,
   CreateCliente, CreateProyecto, CreateTransaccion, CreateActividad, CreatePresupuesto,
   UpdateCliente, UpdateProyecto, UpdateTransaccion, UpdateActividad, UpdatePresupuesto,
+  CreatePresupuestoInput,
   validateCliente, validateProyecto, validateTransaccion, validateActividad, validatePresupuesto,
   dbToCliente, clienteToDb, dbToProyecto, proyectoToDb,
   dbToTransaccion, transaccionToDb, dbToActividad, actividadToDb, dbToPresupuesto, presupuestoToDb
@@ -15,7 +16,7 @@ import {
 
 export type { CategoriaTransaccion };
 
-export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos';
+export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos';
 
 export interface User {
   nombre: string;
@@ -52,8 +53,8 @@ interface AppContextType {
   deleteActividad: (id: string) => Promise<void>;
 
   presupuestos: Presupuesto[];
-  addPresupuesto: (p: Record<string, unknown>) => Promise<string | null>;
-  updatePresupuesto: (id: string, p: Record<string, unknown>) => Promise<void>;
+  addPresupuesto: (p: CreatePresupuestoInput) => Promise<string | null>;
+  updatePresupuesto: (id: string, p: UpdatePresupuesto) => Promise<void>;
   transicionFase: (id: string, nuevaFase: Presupuesto['fase']) => Promise<void>;
 
   sidebarOpen: boolean;
@@ -101,13 +102,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
      if (loadingRef.current) return;
      loadingRef.current = true;
      
+      const PAGE_SIZE = 200;
       try {
         let cR, pR, prR, tR, aR;
-        try { [cR] = await Promise.all([supabase.from('clientes').select('*').order('created_at', { ascending: false })]); } catch (e) { console.error('Error cargando clientes:', e); }
-        try { [pR] = await Promise.all([supabase.from('proyectos').select('*').order('created_at', { ascending: false })]); } catch (e) { console.error('Error cargando proyectos:', e); }
-        try { [prR] = await Promise.all([supabase.from('presupuestos').select('*').order('created_at', { ascending: false })]); } catch (e) { console.error('Error cargando presupuestos:', e); }
-        try { [tR] = await Promise.all([supabase.from('transacciones').select('*').order('fecha', { ascending: false })]); } catch (e) { console.error('Error cargando transacciones:', e); }
-        try { [aR] = await Promise.all([supabase.from('actividades').select('*').order('fecha', { ascending: false })]); } catch (e) { console.error('Error cargando actividades:', e); }
+        try { [cR] = await Promise.all([supabase.from('clientes').select('*').order('created_at', { ascending: false }).limit(PAGE_SIZE)]); } catch (e) { console.error('Error cargando clientes:', e); }
+        try { [pR] = await Promise.all([supabase.from('proyectos').select('*').order('created_at', { ascending: false }).limit(PAGE_SIZE)]); } catch (e) { console.error('Error cargando proyectos:', e); }
+        try { [prR] = await Promise.all([supabase.from('presupuestos').select('*').order('created_at', { ascending: false }).limit(PAGE_SIZE)]); } catch (e) { console.error('Error cargando presupuestos:', e); }
+        try { [tR] = await Promise.all([supabase.from('transacciones').select('*').order('fecha', { ascending: false }).limit(PAGE_SIZE)]); } catch (e) { console.error('Error cargando transacciones:', e); }
+        try { [aR] = await Promise.all([supabase.from('actividades').select('*').order('fecha', { ascending: false }).limit(PAGE_SIZE)]); } catch (e) { console.error('Error cargando actividades:', e); }
         
         setClientes((cR?.data || []).map(dbToCliente));
         setProyectos((pR?.data || []).map(dbToProyecto));
@@ -438,11 +440,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // ---------- CRUD Presupuestos (unificado con fase) ----------
-  const addPresupuesto = async (p: Record<string, unknown>): Promise<string | null> => {
+  const addPresupuesto = async (p: CreatePresupuestoInput): Promise<string | null> => {
     if (!session) return null;
     try {
+      const createPayload: CreatePresupuesto = {
+        proyecto: p.proyecto,
+        cliente: p.cliente || '',
+        ubicacion: p.ubicacion || '',
+        tipologia: p.tipologia || '',
+        fase: p.fase || 'planeación',
+        factor_indirectos: p.factor_indirectos ?? 12,
+        factor_administrativos: p.factor_administrativos ?? 8,
+        factor_imprevistos: p.factor_imprevistos ?? 5,
+        factor_utilidad: p.factor_utilidad ?? 15,
+        lineas: p.lineas || [],
+        total: p.total || 0,
+        user_id: session.user.id,
+        avanceFisico: 0,
+        avanceFinanciero: 0,
+        ingresos: 0,
+        gastos: 0,
+        pendienteAportar: 0,
+        fechaInicio: '',
+        fechaFin: '',
+      };
+      const dbPayload = presupuestoToDb(createPayload);
       const { data, error } = await supabase.from('presupuestos')
-        .insert({ ...p, user_id: session.user.id, created_at: new Date().toISOString() } as never)
+        .insert({ ...dbPayload, user_id: session.user.id, created_at: new Date().toISOString() })
         .select()
         .single();
       if (error) throw error;
@@ -459,10 +483,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const updatePresupuesto = async (id: string, p: Record<string, unknown>) => {
+  const updatePresupuesto = async (id: string, p: UpdatePresupuesto) => {
     try {
+      const dbPayload = presupuestoToDb(p);
       const { data, error } = await supabase.from('presupuestos')
-        .update({ ...p, updated_at: new Date().toISOString() } as never)
+        .update({ ...dbPayload, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
         .single();

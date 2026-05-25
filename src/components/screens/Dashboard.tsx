@@ -4,7 +4,7 @@ import { ViewType } from '@/types/supabase';
 import Header from '@/components/shared/Header';
 import Calendar from '@/components/shared/Calendar';
 import TransactionForm from '@/components/shared/TransactionForm';
-import { Users, FolderKanban, Calculator, LineChart, Wallet, TrendingUp, TrendingDown, AlertCircle, Briefcase, DollarSign, Folder, Percent, FileDown } from 'lucide-react';
+import { Users, FolderKanban, Calculator, LineChart, Wallet, TrendingUp, TrendingDown, AlertCircle, Briefcase, DollarSign, Folder, Percent, FileDown, Shield } from 'lucide-react';
 import { exportCompleto } from '@/utils/exportExcel';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 
@@ -51,6 +51,7 @@ const Dashboard: React.FC = () => {
     { id: 'proyectos', label: 'Proyectos', icon: Folder, color: 'from-cyan-600 to-cyan-800', desc: `${stats.activos} activos` },
     { id: 'seguimiento', label: 'Seguimiento', icon: LineChart, color: 'from-emerald-600 to-emerald-800', desc: 'Cashflow' },
     { id: 'financiero', label: 'Control Financiero', icon: Wallet, color: 'from-amber-600 to-amber-800', desc: 'Planilla y gastos' },
+    { id: 'equipos', label: 'Equipos', icon: Shield, color: 'from-rose-600 to-rose-800', desc: 'Colaboración' },
   ];
 
   return (
@@ -81,7 +82,7 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Module buttons */}
-        <div className="col-span-12 lg:col-span-8 grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="col-span-12 lg:col-span-8 grid grid-cols-2 lg:grid-cols-6 gap-3">
           {modules.map(m => (
             <button
               key={m.id}

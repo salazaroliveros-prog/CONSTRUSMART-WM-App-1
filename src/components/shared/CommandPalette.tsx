@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Command } from 'cmdk';
 import { useAppContext } from '@/contexts/AppContext';
-import { Search, Folder, Users, Calculator, LineChart, Wallet, LayoutDashboard, Plus } from 'lucide-react';
+import { Search, Folder, Users, Calculator, LineChart, Wallet, LayoutDashboard, Plus, Shield } from 'lucide-react';
 
 const views: { id: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -10,6 +10,7 @@ const views: { id: string; label: string; icon: React.ComponentType<{ className?
   { id: 'proyectos', label: 'Proyectos', icon: Folder },
   { id: 'seguimiento', label: 'Seguimiento', icon: LineChart },
   { id: 'financiero', label: 'Control Financiero', icon: Wallet },
+  { id: 'equipos', label: 'Equipos', icon: Shield },
 ];
 
 const CommandPalette: React.FC = () => {

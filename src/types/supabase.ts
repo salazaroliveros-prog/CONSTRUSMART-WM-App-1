@@ -193,8 +193,42 @@ export type UpdateTransaccion = Partial<CreateTransaccion>;
 export type UpdateActividad = Partial<CreateActividad>;
 export type UpdatePresupuesto = Partial<CreatePresupuesto>;
 
+// Tipo de entrada para crear presupuesto desde el formulario (campos opcionales con defaults)
+export interface CreatePresupuestoInput {
+  proyecto: string;
+  cliente?: string;
+  ubicacion?: string;
+  tipologia?: string;
+  fase?: Presupuesto['fase'];
+  factor_indirectos?: number;
+  factor_administrativos?: number;
+  factor_imprevistos?: number;
+  factor_utilidad?: number;
+  lineas?: unknown[];
+  total?: number;
+}
+
+// ====== Tipos de Equipo (Mejora 14) ======
+export interface Equipo {
+  id: string;
+  nombre: string;
+  creador_id: string;
+  created_at?: string;
+}
+
+export interface EquipoMiembro {
+  id: string;
+  equipo_id: string;
+  user_id: string;
+  rol: 'admin' | 'miembro' | 'visor';
+  created_at?: string;
+}
+
+export type CreateEquipo = Omit<Equipo, 'id' | 'created_at'>;
+export type CreateEquipoMiembro = Omit<EquipoMiembro, 'id' | 'created_at'>;
+
 // ====== Tipos de vista y contexto ======
-export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos';
+export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos';
 
 export interface User {
   nombre: string;

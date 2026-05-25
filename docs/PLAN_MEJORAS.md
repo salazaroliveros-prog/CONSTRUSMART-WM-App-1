@@ -776,23 +776,23 @@ pg_dump -- db-url > backup_$(date +%Y%m%d).sql
 
 ## Resumen de Implementación
 
-| # | Mejora | Prioridad | Esfuerzo | Dependencias |
-|---|--------|-----------|----------|--------------|
-| 1 | TypeScript strict mode | ALTA | 3 días | Ninguna |
-| 2 | Unificar presupuestos/proyectos | ALTA | 2 días | Migración SQL |
-| 3 | Auto-actualizar financiero desde transacciones | ALTA | 1 día | Mejora 2 |
-| 4 | Toast notifications | MEDIA | 0.5 días | Ninguna |
-| 5 | React Query hooks | MEDIA | 3 días | Ninguna |
-| 6 | RLS policies completas | ALTA | 0.5 días | Ninguna |
-| 7 | Calendario sincronizado con fases | BAJA | 1 día | Mejora 2 |
-| 8 | Exportación Excel | BAJA | 0.5 días | `npm install xlsx` |
-| 9 | Audit log | MEDIA | 1 día | Migración SQL |
-| 10 | Dashboard rentabilidad real | MEDIA | 1 día | Mejora 3 |
-| 11 | Paginación | BAJA | 2 días | Mejora 5 |
-| 12 | Command palette (Cmd+K) | BAJA | 1 día | Ninguna |
-| 13 | Proyección flujo de caja | BAJA | 1 día | Mejora 3 |
-| 14 | Equipos multi-usuario | FUTURA | 5 días | Migración SQL |
-| 15 | Backups | ALTA | 0.5 días | Config Supabase |
+| # | Mejora | Prioridad | Estado | Archivos Clave |
+|---|--------|-----------|--------|----------------|
+| 1 | TypeScript strict mode | ALTA | ✅ Completado | `tsconfig.app.json`, `tsconfig.json` |
+| 2 | Unificar presupuestos/proyectos | ALTA | ✅ Completado | `migration_fase_presupuestos.sql` |
+| 3 | Auto-actualizar financiero desde transacciones | ALTA | ✅ Completado | `migration_fase_presupuestos.sql` (trigger) |
+| 4 | Toast notifications | MEDIA | ✅ Completado | `AppContext.tsx` |
+| 5 | React Query hooks | MEDIA | ✅ Completado | `src/hooks/useDataQuery.ts` |
+| 6 | RLS policies completas | ALTA | ✅ Completado | `migration_fase_presupuestos.sql` |
+| 7 | Calendario sincronizado con fases | BAJA | ✅ Completado | `migration_fase_presupuestos.sql` (RPC) |
+| 8 | Exportación Excel | BAJA | ✅ Completado | `src/utils/exportExcel.ts` |
+| 9 | Audit log | MEDIA | ✅ Completado | `migration_fase_presupuestos.sql` |
+| 10 | Dashboard rentabilidad real | MEDIA | ✅ Completado | `Dashboard.tsx` |
+| 11 | Paginación | BAJA | ✅ Completado | `AppContext.tsx` (PAGE_SIZE) |
+| 12 | Command palette (Cmd+K) | BAJA | ✅ Completado | `CommandPalette.tsx` |
+| 13 | Proyección flujo de caja | BAJA | ✅ Completado | `Dashboard.tsx` |
+| 14 | Equipos multi-usuario | FUTURA | ✅ Completado | `migration_equipos.sql`, `TeamsScreen.tsx` |
+| 15 | Backups | ALTA | ✅ Documentado | Configuración en Supabase Dashboard |
 
 ## Orden recomendado de implementación
 

@@ -7,6 +7,7 @@ import PresupuestoScreen from '@/components/screens/PresupuestoScreen';
 import ProyectosScreen from '@/components/screens/ProyectosScreen';
 import SeguimientoScreen from '@/components/screens/SeguimientoScreen';
 import FinancieroScreen from '@/components/screens/FinancieroScreen';
+import TeamsScreen from '@/components/screens/TeamsScreen';
 import CommandPalette from '@/components/shared/CommandPalette';
 import { Building2, Loader2 } from 'lucide-react';
 
@@ -39,6 +40,7 @@ const AppLayout: React.FC = () => {
       case 'proyectos': return <ProyectosScreen />;
       case 'seguimiento': return <SeguimientoScreen />;
       case 'financiero': return <FinancieroScreen />;
+      case 'equipos': return <TeamsScreen />;
       default: return <Dashboard />;
     }
   };
