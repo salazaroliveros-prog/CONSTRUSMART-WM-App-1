@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS public.equipos (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   nombre text NOT NULL,
   creador_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL DEFAULT auth.uid(),
   created_at timestamptz DEFAULT now()
 );
 
@@ -26,33 +27,36 @@ ALTER TABLE public.equipo_miembros ENABLE ROW LEVEL SECURITY;
 
 -- Políticas equipos
 CREATE POLICY "equipos_select" ON public.equipos FOR SELECT TO authenticated
-  USING (creador_id = auth.uid() OR id IN (
+  USING (user_id = auth.uid() OR id IN (
     SELECT equipo_id FROM public.equipo_miembros WHERE user_id = auth.uid()
   ));
 
 CREATE POLICY "equipos_insert" ON public.equipos FOR INSERT TO authenticated
-  WITH CHECK (creador_id = auth.uid());
+  WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "equipos_update" ON public.equipos FOR UPDATE TO authenticated
-  USING (creador_id = auth.uid());
+  USING (user_id = auth.uid());
 
 CREATE POLICY "equipos_delete" ON public.equipos FOR DELETE TO authenticated
-  USING (creador_id = auth.uid());
+  USING (user_id = auth.uid());
 
 -- Políticas miembros
 CREATE POLICY "miembros_select" ON public.equipo_miembros FOR SELECT TO authenticated
-  USING (equipo_id IN (
-    SELECT equipo_id FROM public.equipo_miembros WHERE user_id = auth.uid()
-  ));
+  USING (
+    auth.uid() = user_id OR
+    equipo_id IN (
+      SELECT id FROM public.equipos WHERE user_id = auth.uid()
+    )
+  );
 
 CREATE POLICY "miembros_insert" ON public.equipo_miembros FOR INSERT TO authenticated
   WITH CHECK (equipo_id IN (
-    SELECT id FROM public.equipos WHERE creador_id = auth.uid()
+    SELECT id FROM public.equipos WHERE user_id = auth.uid()
   ));
 
 CREATE POLICY "miembros_delete" ON public.equipo_miembros FOR DELETE TO authenticated
   USING (equipo_id IN (
-    SELECT id FROM public.equipos WHERE creador_id = auth.uid()
+    SELECT id FROM public.equipos WHERE user_id = auth.uid()
   ));
 
 -- Extender RLS de presupuestos para permitir acceso a miembros del equipo
