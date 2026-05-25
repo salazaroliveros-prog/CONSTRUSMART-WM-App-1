@@ -1,8 +1,34 @@
 -- =====================================================================
--- MIGRACION: ADD COLUMNA fase A presupuestos + UNIFICACION proyecto
+-- MIGRACION: CREAR TABLA presupuestos + COLUMNA fase + UNIFICACION
 -- =====================================================================
 
--- 1. Agregar columna fase a presupuestos
+-- 0. Crear tabla presupuestos (si no existe)
+CREATE TABLE IF NOT EXISTS public.presupuestos (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  proyecto text NOT NULL,
+  cliente text,
+  ubicacion text,
+  tipologia text,
+  fase text DEFAULT 'planeación',
+  factor_indirectos numeric DEFAULT 0,
+  factor_administrativos numeric DEFAULT 0,
+  factor_imprevistos numeric DEFAULT 0,
+  factor_utilidad numeric DEFAULT 0,
+  lineas jsonb DEFAULT '[]'::jsonb,
+  avance_fisico numeric DEFAULT 0,
+  avance_financiero numeric DEFAULT 0,
+  ingresos numeric DEFAULT 0,
+  gastos numeric DEFAULT 0,
+  pendiente_aportar numeric DEFAULT 0,
+  total numeric DEFAULT 0,
+  fecha_inicio date,
+  fecha_fin date,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- 1. Agregar columna fase a presupuestos (por si ya existe la tabla)
 ALTER TABLE public.presupuestos ADD COLUMN IF NOT EXISTS fase text DEFAULT 'planeación'::text;
 ALTER TABLE public.presupuestos ADD COLUMN IF NOT EXISTS avance_fisico numeric DEFAULT 0;
 ALTER TABLE public.presupuestos ADD COLUMN IF NOT EXISTS avance_financiero numeric DEFAULT 0;
@@ -13,7 +39,7 @@ ALTER TABLE public.presupuestos ADD COLUMN IF NOT EXISTS fecha_inicio date;
 ALTER TABLE public.presupuestos ADD COLUMN IF NOT EXISTS fecha_fin date;
 ALTER TABLE public.presupuestos ADD COLUMN IF NOT EXISTS total numeric DEFAULT 0;
 
--- 2. Sincronizar presupuestos existentes <- proyectos existentes
+-- 2. Sincronizar presupuestos existentes desde proyectos
 UPDATE public.presupuestos p
 SET
   avance_fisico = COALESCE((SELECT pr.avance_fisico FROM public.proyectos pr WHERE pr.nombre = p.proyecto LIMIT 1), 0),
@@ -37,7 +63,7 @@ SET fase =
   END
 WHERE EXISTS (SELECT 1 FROM public.proyectos pr WHERE pr.nombre = presupuestos.proyecto);
 
--- 4. RLS para presupuestos (si no existe)
+-- 4. RLS para presupuestos
 ALTER TABLE public.presupuestos ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Permitir CRUD de presupuestos propios" ON public.presupuestos;
@@ -110,6 +136,6 @@ BEGIN
 END;
 $$;
 
--- NOTA: Ejecutar tambien en Supabase SQL Editor:
--- CREATE UNIQUE INDEX IF NOT EXISTS proyectos_nombre_user_idx ON public.proyectos (nombre, user_id);
--- ALTER TABLE public.proyectos ADD CONSTRAINT proyectos_nombre_user_key UNIQUE (nombre, user_id);
+-- Indice unico para upsert en proyectos (si no existe)
+CREATE UNIQUE INDEX IF NOT EXISTS proyectos_nombre_user_idx ON public.proyectos (nombre, user_id);
+ALTER TABLE public.proyectos ADD CONSTRAINT IF NOT EXISTS proyectos_nombre_user_key UNIQUE (nombre, user_id);
