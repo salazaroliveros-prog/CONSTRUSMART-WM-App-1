@@ -63,17 +63,17 @@ const Dashboard: React.FC = () => {
         {/* Fila 1: KPIs compactos */}
         <div className="col-span-12 grid grid-cols-8 gap-1 h-16">
           {[
-            { icon: TrendingUp, label: 'Ingresos', value: `Q${(stats.ingresos / 1000).toFixed(1)}K`, color: 'emerald' },
-            { icon: TrendingDown, label: 'Gastos', value: `Q${(stats.gastos / 1000).toFixed(1)}K`, color: 'red' },
-            { icon: DollarSign, label: 'Margen', value: `Q${(stats.margen / 1000).toFixed(1)}K`, color: stats.margen >= 0 ? 'blue' : 'red' },
-            { icon: Percent, label: 'Rentabilidad', value: `${stats.rentabilidadGeneral.toFixed(1)}%`, color: stats.rentabilidadGeneral >= 10 ? 'emerald' : 'amber' },
-            { icon: FolderKanban, label: 'Activos', value: String(stats.activos), color: 'indigo' },
-            { icon: FolderKanban, label: 'Planeación', value: String(stats.planeacion), color: 'purple' },
-            { icon: FolderKanban, label: 'Finalizados', value: String(stats.finalizados), color: 'teal' },
-            { icon: DollarSign, label: 'Pendiente', value: `Q${(stats.pendiente / 1000).toFixed(0)}K`, color: 'amber' },
+            { icon: TrendingUp, label: 'Ingresos', value: `Q${(stats.ingresos / 1000).toFixed(1)}K`, color: 'emerald' as const },
+            { icon: TrendingDown, label: 'Gastos', value: `Q${(stats.gastos / 1000).toFixed(1)}K`, color: 'red' as const },
+            { icon: DollarSign, label: 'Margen', value: `Q${(stats.margen / 1000).toFixed(1)}K`, color: (stats.margen >= 0 ? 'blue' : 'red') as const },
+            { icon: Percent, label: 'Rentabilidad', value: `${stats.rentabilidadGeneral.toFixed(1)}%`, color: (stats.rentabilidadGeneral >= 10 ? 'emerald' : 'amber') as const },
+            { icon: FolderKanban, label: 'Activos', value: String(stats.activos), color: 'indigo' as const },
+            { icon: FolderKanban, label: 'Planeación', value: String(stats.planeacion), color: 'purple' as const },
+            { icon: FolderKanban, label: 'Finalizados', value: String(stats.finalizados), color: 'teal' as const },
+            { icon: DollarSign, label: 'Pendiente', value: `Q${(stats.pendiente / 1000).toFixed(0)}K`, color: 'amber' as const },
           ].map((k, i) => (
             <div key={i} className="col-span-1">
-              <CompactKPI icon={k.icon} label={k.label} value={k.value} color={k.color as any} />
+              <CompactKPI icon={k.icon} label={k.label} value={k.value} color={k.color} />
             </div>
           ))}
         </div>
