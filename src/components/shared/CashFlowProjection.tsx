@@ -10,9 +10,9 @@ const CashFlowProjection: React.FC = () => {
     const hoy = now.toISOString().slice(0, 10);
 
     const ingresos = transacciones.filter(t => t.tipo === 'ingreso' && t.fecha <= hoy)
-      .reduce((s, t) => s + Number(t.monto), 0);
-    const egresos = transacciones.filter(t => t.tipo === 'egreso' && t.fecha <= hoy)
-      .reduce((s, t) => s + Number(t.monto), 0);
+      .reduce((s, t) => s + t.costoTotal, 0);
+    const egresos = transacciones.filter(t => t.tipo === 'gasto' && t.fecha <= hoy)
+      .reduce((s, t) => s + t.costoTotal, 0);
     const saldoActual = ingresos - egresos;
 
     const en30 = new Date(now.getTime() + 30 * 86400000).toISOString().slice(0, 10);
@@ -20,17 +20,17 @@ const CashFlowProjection: React.FC = () => {
     const en90 = new Date(now.getTime() + 90 * 86400000).toISOString().slice(0, 10);
 
     const izq = transacciones.filter(t => t.fecha > hoy && t.fecha <= en30);
-    const izqIngreso = izq.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + Number(t.monto), 0);
-    const izqEgreso = izq.filter(t => t.tipo === 'egreso').reduce((s, t) => s + Number(t.monto), 0);
+    const izqIngreso = izq.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
+    const izqEgreso = izq.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
     const proy30 = saldoActual + izqIngreso - izqEgreso;
 
     const izq60 = transacciones.filter(t => t.fecha > en30 && t.fecha <= en60);
-    const proy60 = proy30 + izq60.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + Number(t.monto), 0)
-      - izq60.filter(t => t.tipo === 'egreso').reduce((s, t) => s + Number(t.monto), 0);
+    const proy60 = proy30 + izq60.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0)
+      - izq60.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
 
     const izq90 = transacciones.filter(t => t.fecha > en60 && t.fecha <= en90);
-    const proy90 = proy60 + izq90.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + Number(t.monto), 0)
-      - izq90.filter(t => t.tipo === 'egreso').reduce((s, t) => s + Number(t.monto), 0);
+    const proy90 = proy60 + izq90.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0)
+      - izq90.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
 
     return { saldoActual, proy30, proy60, proy90, izqIngreso, izqEgreso };
   }, [transacciones]);
