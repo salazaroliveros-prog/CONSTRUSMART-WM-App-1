@@ -104,31 +104,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
      avatar: session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture || '',
    };
 
-   const loadAll = useCallback(async (userId?: string) => {
-     if (!userId) return;
-     
-     // Evitar múltiples ejecuciones simultáneas
-     if (loadingRef.current) return;
-     loadingRef.current = true;
-     
-      const PAGE_SIZE = 200;
-      try {
-        let cR, pR, prR, tR, aR;
-        try { [cR] = await Promise.all([supabase.from('clientes').select('*').order('created_at', { ascending: false }).limit(PAGE_SIZE)]); } catch (e) { console.error('Error cargando clientes:', e); }
-        try { [pR] = await Promise.all([supabase.from('proyectos').select('*').order('created_at', { ascending: false }).limit(PAGE_SIZE)]); } catch (e) { console.error('Error cargando proyectos:', e); }
-        try { [prR] = await Promise.all([supabase.from('presupuestos').select('*').order('created_at', { ascending: false }).limit(PAGE_SIZE)]); } catch (e) { console.error('Error cargando presupuestos:', e); }
-        try { [tR] = await Promise.all([supabase.from('transacciones').select('*').order('fecha', { ascending: false }).limit(PAGE_SIZE)]); } catch (e) { console.error('Error cargando transacciones:', e); }
-        try { [aR] = await Promise.all([supabase.from('actividades').select('*').order('fecha', { ascending: false }).limit(PAGE_SIZE)]); } catch (e) { console.error('Error cargando actividades:', e); }
-        
-        setClientes((cR?.data || []).map(dbToCliente));
-        setProyectos((pR?.data || []).map(dbToProyecto));
-        setPresupuestos((prR?.data || []).map(dbToPresupuesto));
-        setTransacciones((tR?.data || []).map(dbToTransaccion));
-        setActividades((aR?.data || []).map(dbToActividad));
-      } finally {
-       loadingRef.current = false;
-     }
-   }, []);
+    const loadAll = useCallback(async (userId?: string) => {
+      if (!userId) return;
+      
+      // Evitar múltiples ejecuciones simultáneas
+      if (loadingRef.current) return;
+      loadingRef.current = true;
+      
+       const PAGE_SIZE = 200;
+       try {
+         const [cR, pR, prR, tR, aR] = await Promise.all([
+           supabase.from('clientes').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE),
+           supabase.from('proyectos').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE),
+           supabase.from('presupuestos').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE),
+           supabase.from('transacciones').select('*').eq('user_id', userId).order('fecha', { ascending: false }).limit(PAGE_SIZE),
+           supabase.from('actividades').select('*').eq('user_id', userId).order('fecha', { ascending: false }).limit(PAGE_SIZE)
+         ]);
+         
+         setClientes((cR.data || []).map(dbToCliente));
+         setProyectos((pR.data || []).map(dbToProyecto));
+         setPresupuestos((prR.data || []).map(dbToPresupuesto));
+         setTransacciones((tR.data || []).map(dbToTransaccion));
+         setActividades((aR.data || []).map(dbToActividad));
+       } catch (e) {
+         console.error('Error cargando datos:', e);
+         toast.error('Error al cargar datos de la base.');
+       } finally {
+        loadingRef.current = false;
+      }
+    }, []);
 
   // Inicialización de sesión y realtime listeners
   useEffect(() => {
