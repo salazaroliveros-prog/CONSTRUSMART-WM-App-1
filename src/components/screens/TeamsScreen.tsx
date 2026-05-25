@@ -51,6 +51,8 @@ const TeamsScreen: React.FC = () => {
       return;
     }
 
+    if (!confirm(`¿Estás seguro de crear el equipo "${result.data.nombre}"?`)) return;
+
     setCreando(true);
     try {
       const { error } = await supabase.from('equipos').insert({
@@ -72,6 +74,7 @@ const TeamsScreen: React.FC = () => {
 
   const handleInvite = async (equipoId: string) => {
     if (!inviteEmail.trim()) return;
+    if (!confirm('¿Confirmas que deseas agregar a este usuario al equipo?')) return;
     try {
       const { error } = await supabase.from('equipo_miembros').insert({
         equipo_id: equipoId,
@@ -90,6 +93,7 @@ const TeamsScreen: React.FC = () => {
   };
 
   const handleRemoveMember = async (miembroId: string) => {
+    if (!confirm('¿Estás seguro de eliminar a este miembro del equipo? Esta acción no se puede deshacer.')) return;
     try {
       await supabase.from('equipo_miembros').delete().eq('id', miembroId);
       toast.success('Miembro removido');
