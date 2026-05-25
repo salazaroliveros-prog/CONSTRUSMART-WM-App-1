@@ -137,6 +137,9 @@ export function calcularTotalesPresupuesto(
   // 8. Margen de utilidad
   const margenUtilidad = total > 0 ? ((utilidad / total) * 100) : 0;
 
+  // 9. Margen relativo (margenUtilidad respecto al costo directo)
+  const margenRelativo = costoDirecto > 0 ? ((utilidad / costoDirecto) * 100) : 0;
+
   return {
     costoDirecto: Math.round(costoDirecto * 100) / 100,
     costosIndirectos: Math.round(costosIndirectos * 100) / 100,
@@ -148,6 +151,7 @@ export function calcularTotalesPresupuesto(
     estimacionDiasTotal,
     precioPorDia: Math.round(precioPorDia * 100) / 100,
     margenUtilidad: Math.round(margenUtilidad * 100) / 100,
+    margenRelativo: Math.round(margenRelativo * 100) / 100,
   };
 }
 

@@ -2,7 +2,7 @@
  * M8: Conciliación Bancaria / Caja Chica - Seguimiento de efectivo
  */
 
-import type { Transaccion } from '@/types/supabase';
+
 
 export type SubtipoMovimiento = 'retiro' | 'deposito' | 'gasto' | 'ingreso' | 'ajuste';
 

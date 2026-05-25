@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { validarFactores, sugerirFactores, detectarAnomalias } from '@/utils/validacionPresupuesto';
-import type { Presupuesto, Transaccion } from '@/types/supabase';
+import type { Presupuesto } from '@/types/supabase';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AlertTriangle, CheckCircle } from 'lucide-react';
 

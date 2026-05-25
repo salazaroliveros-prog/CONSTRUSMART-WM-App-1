@@ -184,7 +184,7 @@ export function generarResumenTrazabilidad(materiales: MaterialesRenglon[]): Res
     total_comprado: totalComprado,
     total_consumido: totalConsumido,
     diferencia_costo: diferenciaCosto,
-    porcentaje_variacion: porcentajeVariacion,
+    porcentaje_variacion_costo: porcentajeVariacion,
     porcentaje_desperdicio: porcentajeDesperdicio,
     materiales,
     alertas,
@@ -202,5 +202,5 @@ export function proyectarConsumoFaltante(
   const consumoActual = material.cantidad_consumida;
   const diferencia = consumoEsperado - consumoActual;
 
-  return { consumo_esperado, consumo_actual, diferencia };
+  return { consumo_esperado: consumoEsperado, consumo_actual: consumoActual, diferencia };
 }
