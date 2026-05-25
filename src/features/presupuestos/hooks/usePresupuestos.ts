@@ -17,10 +17,17 @@ export function usePresupuestos() {
     queryKey: KEYS.presupuestos,
     queryFn: async (): Promise<Presupuesto[]> => {
       const { data, error } = await supabase.from('presupuestos').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
       
-      // Validación estricta con Zod
-      return data.map(item => PresupuestoSchema.parse(item));
+      if (error) {
+        console.error('Supabase Error:', error);
+        // Si el error es 403 (Forbidden), el usuario no tiene acceso (RLS)
+        if (error.code === 'PGRST116' || error.message.includes('row-level security')) {
+            throw new Error('No tienes permisos suficientes para ver estos datos.');
+        }
+        throw error;
+      }
+      
+      return (data || []).map(item => PresupuestoSchema.parse(item));
     },
     staleTime: 30_000,
   });
