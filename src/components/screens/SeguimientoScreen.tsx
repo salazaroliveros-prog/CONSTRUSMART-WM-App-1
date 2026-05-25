@@ -3,7 +3,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import Header from '@/components/shared/Header';
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
 import { Download, FileText, Play } from 'lucide-react';
-import { LineChart, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Area, AreaChart } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Area, AreaChart } from 'recharts';
 import type { Presupuesto } from '@/types/supabase';
 
 const SeguimientoScreen: React.FC = () => {

@@ -10,7 +10,6 @@ interface ChangeEvent {
 }
 
 const RealtimeFeed: React.FC = () => {
-  const { presupuestos, transacciones } = useAppContext();
   const [events, setEvents] = useState<ChangeEvent[]>([]);
 
   useEffect(() => {

@@ -1,14 +1,14 @@
 import React, { useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { ViewType } from '@/types/supabase';
 import Header from '@/components/shared/Header';
 import Calendar from '@/components/shared/Calendar';
 import TransactionForm from '@/components/shared/TransactionForm';
-import { Users, FolderKanban, Calculator, LineChart, Wallet, TrendingUp, TrendingDown, DollarSign, Folder, Percent, Shield } from 'lucide-react';
+import { Users, FolderKanban, Calculator, Wallet, TrendingUp, TrendingDown, DollarSign, Folder, Percent, Shield } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
-const Dashboard: React.FC = () => {
-  const { setView, presupuestos, transacciones, clientes } = useAppContext();
+  const Dashboard: React.FC = () => {
+  const { presupuestos, transacciones, clientes } = useAppContext();
+
 
   const stats = useMemo(() => {
     const ingresos = transacciones.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
