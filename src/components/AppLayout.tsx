@@ -9,7 +9,7 @@ import FinancieroScreen from '@/features/financiero/components/FinancieroScreen'
 import SeguimientoScreen from '@/components/screens/SeguimientoScreen';
 import TeamsScreen from '@/components/screens/TeamsScreen';
 import CommandPalette from '@/components/shared/CommandPalette';
-import { FloatingMenu } from '@/components/shared/FloatingMenu';
+// import { FloatingMenu } from '@/components/shared/FloatingMenu'; // Eliminado ya que ahora está en Header
 import { Building2, Loader2 } from 'lucide-react';
 
 const viewOrder = ['login', 'dashboard', 'clientes', 'presupuesto', 'proyectos', 'seguimiento', 'financiero', 'equipos'];
@@ -55,7 +55,7 @@ const AppLayout: React.FC = () => {
   return (
     <div key={view} className={`animate-${dir === 'right' ? 'slide-right' : 'slide-left'}`}>
       <CommandPalette />
-      <FloatingMenu />
+      {/* FloatingMenu eliminado */}
       {renderView()}
     </div>
   );

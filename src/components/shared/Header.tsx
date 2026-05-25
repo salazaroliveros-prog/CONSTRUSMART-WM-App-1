@@ -1,12 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import NotificationBell from '@/components/shared/NotificationBell';
-import { Home, LogOut, Search, Moon, Sun, User } from 'lucide-react';
+import { Home, LogOut, Search, Moon, Sun, User, Menu, X, LayoutGrid, Users, Calculator, Folder, LineChart, Wallet, Shield } from 'lucide-react';
+import { ViewType } from '@/types/supabase';
 
 const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = true, title }) => {
   const { user, setView, signOut, darkMode, toggleDarkMode } = useAppContext();
-
+  const [menuOpen, setMenuOpen] = useState(false);
   const [now, setNow] = useState(new Date());
+
+  const modules = [
+    { id: 'dashboard', label: 'Inicio', icon: LayoutGrid },
+    { id: 'clientes', label: 'Clientes', icon: Users },
+    { id: 'presupuesto', label: 'Presupuestos', icon: Calculator },
+    { id: 'proyectos', label: 'Proyectos', icon: Folder },
+    { id: 'seguimiento', label: 'Seguimiento', icon: LineChart },
+    { id: 'financiero', label: 'Financiero', icon: Wallet },
+    { id: 'equipos', label: 'Equipos', icon: Shield },
+  ];
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -20,6 +31,22 @@ const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = t
     <header className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white shadow-xl border-b-4 border-emerald-500 sticky top-0 z-40">
       <div className="px-4 sm:px-6 py-3 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
+          {/* Menú Desplegable Flotante en Header */}
+          <div className="relative">
+            <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 hover:bg-white/10 rounded-lg transition">
+              {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+            {menuOpen && (
+              <div className="absolute top-full left-0 mt-2 w-48 bg-white/95 backdrop-blur shadow-2xl rounded-xl border border-slate-200 p-2 z-50 text-slate-800">
+                {modules.map((m) => (
+                  <button key={m.id} onClick={() => { setView(m.id as ViewType); setMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 p-3 hover:bg-blue-50 rounded-lg transition text-sm font-medium">
+                    <m.icon className="w-4 h-4 text-blue-700" /> {m.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center border border-white/20 overflow-hidden">
             <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain" />
           </div>
