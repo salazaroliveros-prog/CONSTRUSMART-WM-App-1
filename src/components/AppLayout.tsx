@@ -36,7 +36,7 @@ const AppLayout: React.FC = () => {
   }
 
   // Sin sesión → siempre login
-  if (!session) return <LoginScreen />;
+  if (!loading && !session) return <LoginScreen />;
 
   const renderView = () => {
     switch (view) {
