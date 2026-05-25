@@ -33,12 +33,15 @@ export const ChangeOrdersPanel: React.FC<ChangeOrdersPanelProps> = ({ presupuest
   const handleCrearOrden = async () => {
     if (!motivoNuevo.trim()) return;
     
-    const lineasNuevas = (presupuesto.lineas || []).map((l: Record<string, unknown>) => ({
-      id: (l as Record<string, unknown>).id,
-      codigo: (l as Record<string, unknown>).codigo,
-      cantidad: (l as Record<string, unknown>).cantidad,
-      unitario: (l as Record<string, unknown>).costoUnitario || 0,
-    }));
+    const lineasNuevas = (presupuesto.lineas || []).map((l: unknown) => {
+      const item = l as Record<string, unknown>;
+      return {
+        id: item.id as string,
+        codigo: item.codigo as string | undefined,
+        cantidad: item.cantidad as number,
+        unitario: (item.costoUnitario as number) || 0,
+      };
+    });
 
     await crearOrden(lineasNuevas, motivoNuevo);
     setMotivoNuevo('');

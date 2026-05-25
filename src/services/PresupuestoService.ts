@@ -165,13 +165,16 @@ export async function guardarPresupuesto(
 ): Promise<string | null> {
   try {
     // Calcular totales
-    const lineasCalculadas: LineaCalculada[] = presupuesto.lineas.map((linea) => ({
-      id: linea.id,
-      costoUnitario: linea.costoMaterial + linea.costoManoObra + linea.costoHerramienta,
-      cantidad: linea.cantidad,
-      subtotal: (linea.costoMaterial + linea.costoManoObra + linea.costoHerramienta) * linea.cantidad,
-      estimacionDias: Math.ceil((linea.cantidad || 0) / (linea.rendimiento || 1)),
-    }));
+    const lineasCalculadas: LineaCalculada[] = presupuesto.lineas.map((linea: unknown) => {
+      const l = linea as { id: string; costoMaterial: number; costoManoObra: number; costoHerramienta: number; cantidad: number; rendimiento?: number };
+      return {
+        id: l.id,
+        costoUnitario: l.costoMaterial + l.costoManoObra + l.costoHerramienta,
+        cantidad: l.cantidad,
+        subtotal: (l.costoMaterial + l.costoManoObra + l.costoHerramienta) * l.cantidad,
+        estimacionDias: Math.ceil((l.cantidad || 0) / (l.rendimiento || 1)),
+      };
+    });
 
     const resultado = calcularTotalesPresupuesto(lineasCalculadas, presupuesto.factores);
 
@@ -328,15 +331,36 @@ export async function obtenerEstadisticasPresupuestos(userId: string) {
 
     if (error || !data) return null;
 
-    const total = data.reduce((sum, p) => sum + (p.total || 0), 0);
+    const total = data.reduce((sum: number, p: unknown): number => {
+      const presupuesto = p as { total?: number };
+      return sum + (presupuesto.total || 0);
+    }, 0);
     const promedio = data.length > 0 ? total / data.length : 0;
-    const mayor = Math.max(...data.map((p) => p.total || 0));
-    const menor = Math.min(...data.map((p) => p.total || 0));
+    const mayor = Math.max(...data.map((p: unknown): number => {
+      const presupuesto = p as { total?: number };
+      return presupuesto.total || 0;
+    }));
+    const menor = Math.min(...data.map((p: unknown): number => {
+      const presupuesto = p as { total?: number };
+      return presupuesto.total || 0;
+    }));
     const porFase = {
-      planeacion: data.filter((p) => p.fase === 'planeación').length,
-      ejecucion: data.filter((p) => p.fase === 'ejecución').length,
-      pausa: data.filter((p) => p.fase === 'pausa').length,
-      finalizado: data.filter((p) => p.fase === 'finalizado').length,
+      planeacion: data.filter((p: unknown): boolean => {
+        const presupuesto = p as { fase?: string };
+        return presupuesto.fase === 'planeación';
+      }).length,
+      ejecucion: data.filter((p: unknown): boolean => {
+        const presupuesto = p as { fase?: string };
+        return presupuesto.fase === 'ejecución';
+      }).length,
+      pausa: data.filter((p: unknown): boolean => {
+        const presupuesto = p as { fase?: string };
+        return presupuesto.fase === 'pausa';
+      }).length,
+      finalizado: data.filter((p: unknown): boolean => {
+        const presupuesto = p as { fase?: string };
+        return presupuesto.fase === 'finalizado';
+      }).length,
     };
 
     return {

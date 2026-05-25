@@ -1,14 +1,7 @@
 /**
  * useAppContext.ts - Hook para acceder al contexto global de la aplicación
+ * NOTA: La implementación del hook ya existe en AppContext.tsx
+ * Este archivo se mantiene para compatibilidad de importes
  */
 
-import { useContext } from 'react';
-import { AppContext } from '@/contexts/AppContext';
-
-export function useAppContext() {
-  const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useAppContext debe ser usado dentro de AppProvider');
-  }
-  return context;
-}
+export { useAppContext } from '@/contexts/AppContext';

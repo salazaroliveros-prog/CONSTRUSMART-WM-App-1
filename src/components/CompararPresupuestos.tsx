@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { exportarPresupuestoPDF } from '@/utils/exportPDF';
 import { Button } from '@/components/ui/button';
 import { LineaCalculada } from '@/services/CalculoService';
@@ -14,13 +13,26 @@ interface Presupuesto {
   [key: string]: unknown;
 }
 
-interface Presupuesto {
-  id: string;
-  proyecto: string;
-  cliente: string;
-  lineas?: LineaCalculada[];
-  total?: number;
-  [key: string]: unknown;
+interface ComparacionRow {
+  a?: LineaCalculada;
+  b?: LineaCalculada;
+}
+
+function mergeLineas(lineasA?: LineaCalculada[], lineasB?: LineaCalculada[]): ComparacionRow[] {
+  const map = new Map<string, ComparacionRow>();
+  
+  (lineasA || []).forEach(linea => {
+    const key = linea.codigo || linea.id;
+    map.set(key, { a: linea });
+  });
+  
+  (lineasB || []).forEach(linea => {
+    const key = linea.codigo || linea.id;
+    const existing = map.get(key) || {};
+    map.set(key, { ...existing, b: linea });
+  });
+  
+  return Array.from(map.values());
 }
 
 const CompararPresupuestos: React.FC<{
@@ -112,7 +124,7 @@ const CompararPresupuestos: React.FC<{
                 </tr>
               </thead>
               <tbody>
-                {mergeLineas(presA.lineas, presB.lineas).map((row, idx) => {
+                {mergeLineas(presA.lineas, presB.lineas).map((row: ComparacionRow, idx: number) => {
                   const diffCantidad = row.a?.cantidad !== row.b?.cantidad;
                   const diffUnitario = row.a?.costoUnitario !== row.b?.costoUnitario;
                   const diffSubtotal = row.a?.subtotal !== row.b?.subtotal;
