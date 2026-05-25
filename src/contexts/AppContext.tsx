@@ -32,6 +32,7 @@ interface AppContextType {
   authError: string | null;
   signIn: (email: string, password: string) => Promise<boolean>;
   signUp: (email: string, password: string, nombre: string) => Promise<boolean>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   user: User;
 
@@ -100,7 +101,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    const user = {
      nombre: session?.user?.user_metadata?.nombre || session?.user?.email?.split('@')[0] || 'Usuario',
      empresa: 'CONSTRUCTORA WM/M&S',
-     avatar: 'https://d64gsuwffb70l.cloudfront.net/6a106c672819eb11ecba36f6_1779461651195_cb50cf4b.png',
+     avatar: session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture || '',
    };
 
    const loadAll = useCallback(async (userId?: string) => {
@@ -344,6 +345,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
+  const signInWithGoogle = async () => {
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setView('login');
@@ -540,7 +545,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      view, setView, session, loading, authError, signIn, signUp, signOut, user,
+      view, setView, session, loading, authError, signIn, signUp, signInWithGoogle, signOut, user,
       clientes, addCliente, updateCliente, deleteCliente,
       proyectos, addProyecto, updateProyecto,
       transacciones, addTransaccion, deleteTransaccion,
