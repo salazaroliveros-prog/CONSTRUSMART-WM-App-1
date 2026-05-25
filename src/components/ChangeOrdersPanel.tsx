@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { requiereAprobacionEspecial, calcularImpacto } from '@/utils/changeOrders';
 import type { Presupuesto } from '@/types/supabase';
-import { AlertTriangle, CheckCircle, Clock, DollarSign } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -33,11 +33,11 @@ export const ChangeOrdersPanel: React.FC<ChangeOrdersPanelProps> = ({ presupuest
   const handleCrearOrden = async () => {
     if (!motivoNuevo.trim()) return;
     
-    const lineasNuevas = (presupuesto.lineas || []).map(l => ({
-      id: l.id,
-      codigo: l.codigo,
-      cantidad: l.cantidad,
-      unitario: l.costoUnitario || 0,
+    const lineasNuevas = (presupuesto.lineas || []).map((l: any) => ({
+      id: (l as any).id,
+      codigo: (l as any).codigo,
+      cantidad: (l as any).cantidad,
+      unitario: (l as any).costoUnitario || 0,
     }));
 
     await crearOrden(lineasNuevas, motivoNuevo);

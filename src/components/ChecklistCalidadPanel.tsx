@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useChecklistCalidad } from '@/hooks/useChecklistCalidad';
-import { puedeAvanzarFase } from '@/utils/checklistCalidad';
+
 import type { Presupuesto } from '@/types/supabase';
 import { AlertTriangle, CheckCircle, Lock } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
