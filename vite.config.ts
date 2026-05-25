@@ -19,12 +19,6 @@ export default defineConfig(({ mode }) => ({
         name: "CONSTRUSMART WM App",
         icons: [
           {
-            src: "/logo.png",
-            sizes: "192x192",
-            type: "image/png",
-            purpose: "any"
-          },
-          {
             src: "/icons/icon-192.png",
             sizes: "192x192",
             type: "image/png",
@@ -35,6 +29,12 @@ export default defineConfig(({ mode }) => ({
             sizes: "512x512",
             type: "image/png",
             purpose: "any maskable"
+          },
+          {
+            src: "/logo.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any"
           }
         ],
         start_url: "/",

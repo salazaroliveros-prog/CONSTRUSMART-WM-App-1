@@ -227,9 +227,9 @@ const ProyectosScreen: React.FC = () => {
               <thead className="bg-slate-100 border-b">
                 <tr>
                   <th className="text-left p-2 font-semibold text-slate-700">Proyecto</th>
-                  <th className="text-left p-2 font-semibold text-slate-700">Cliente</th>
+                  <th className="text-left p-2 font-semibold text-slate-700 hidden md:table-cell">Cliente</th>
                   <th className="text-center p-2 font-semibold text-slate-700">Estado</th>
-                  <th className="text-right p-2 font-semibold text-slate-700">Presupuesto</th>
+                  <th className="text-right p-2 font-semibold text-slate-700 hidden md:table-cell">Presupuesto</th>
                   <th className="text-center p-2 font-semibold text-slate-700">Avance (%)</th>
                   <th className="text-center p-2 font-semibold text-slate-700">Acciones</th>
                 </tr>
@@ -339,7 +339,7 @@ const ProyectoRow: React.FC<{
             className="text-sm"
           />
         </td>
-        <td className="p-2">
+        <td className="p-2 hidden md:table-cell">
           <Input 
             value={editData.cliente || ''} 
             onChange={e => onDataChange({ ...editData, cliente: e.target.value })}
@@ -356,7 +356,7 @@ const ProyectoRow: React.FC<{
             </SelectContent>
           </Select>
         </td>
-        <td className="p-2 text-right">
+        <td className="p-2 text-right hidden md:table-cell">
           <Input 
             type="number" 
             value={editData.presupuestoTotal || ''} 
@@ -387,13 +387,13 @@ const ProyectoRow: React.FC<{
   return (
     <tr className="hover:bg-slate-50 transition">
       <td className="p-2 font-medium text-slate-900">{proyecto.nombre}</td>
-      <td className="p-2 text-slate-600">{proyecto.cliente || '-'}</td>
+      <td className="p-2 text-slate-600 hidden md:table-cell">{proyecto.cliente || '-'}</td>
       <td className="p-2 text-center">
         <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${getEstadoColor(proyecto.estado)}`}>
           {proyecto.estado}
         </span>
       </td>
-      <td className="p-2 text-right font-medium text-slate-900">Q {proyecto.presupuestoTotal.toLocaleString('es-GT', { maximumFractionDigits: 0 })}</td>
+      <td className="p-2 text-right font-medium text-slate-900 hidden md:table-cell">Q {proyecto.presupuestoTotal.toLocaleString('es-GT', { maximumFractionDigits: 0 })}</td>
       <td className="p-2 text-center">
         <div className="flex items-center justify-center gap-2">
           <div className="flex-1 bg-slate-200 rounded-full h-1.5 max-w-[60px]">
