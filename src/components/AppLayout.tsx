@@ -4,6 +4,7 @@ import LoginScreen from '@/components/screens/LoginScreen';
 import Dashboard from '@/components/screens/Dashboard';
 import ClientesScreen from '@/features/clientes/components/ClientesScreen';
 import ProyectosScreen from '@/features/proyectos/components/ProyectosScreen';
+import PresupuestoScreen from '@/features/presupuestos/components/PresupuestoScreen';
 import FinancieroScreen from '@/features/financiero/components/FinancieroScreen';
 import TeamsScreen from '@/components/screens/TeamsScreen';
 import CommandPalette from '@/components/shared/CommandPalette';
@@ -22,8 +23,8 @@ const AppLayout: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800">
         <div className="text-center text-white">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 mb-3">
-            <Building2 className="w-8 h-8 text-emerald-300" />
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-white/10 mb-3 overflow-hidden">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain p-2" />
           </div>
           <h2 className="font-bold tracking-wide">CONSTRUCTORA WM/M&S</h2>
           <p className="text-emerald-300 italic text-sm">Edificando el Futuro</p>
