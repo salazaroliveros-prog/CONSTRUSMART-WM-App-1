@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 
@@ -62,13 +62,14 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ["react", "react-dom", "react-router-dom"],
-          query: ["@tanstack/react-query"],
-          recharts: ["recharts"],
-          icons: ["lucide-react"],
-          forms: ["react-hook-form", "@hookform/resolvers", "zod"],
-          embla: ["embla-carousel-react"],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react')) return 'vendor-react';
+            if (id.includes('recharts')) return 'vendor-charts';
+            if (id.includes('lucide')) return 'vendor-icons';
+            if (id.includes('zod') || id.includes('hook-form')) return 'vendor-forms';
+            return 'vendor-other';
+          }
         },
       },
     },

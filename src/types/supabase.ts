@@ -93,12 +93,31 @@ const PresupuestoSchema = z.object({
   updated_at: z.string().optional(),
 });
 
+const EquipoSchema = z.object({
+  id: z.string().optional(),
+  nombre: z.string().min(1, 'El nombre es requerido'),
+  user_id: z.string().min(1, 'user_id requerido'),
+  estado: z.enum(['activo', 'inactivo']).default('activo'),
+  descripcion: z.string().optional(),
+  created_at: z.string().optional(),
+});
+
+const EquipoMiembroSchema = z.object({
+  id: z.string().optional(),
+  equipo_id: z.string().min(1, 'equipo_id requerido'),
+  user_id: z.string().min(1, 'user_id requerido'),
+  rol: z.enum(['admin', 'miembro', 'visor']).default('miembro'),
+  created_at: z.string().optional(),
+});
+
 // ====== Tipos TypeScript inferidos de Zod ======
 export type DBCliente = z.infer<typeof ClienteSchema>;
 export type DBProyecto = z.infer<typeof ProyectoSchema>;
 export type DBTransaccion = z.infer<typeof TransaccionSchema>;
 export type DBActividad = z.infer<typeof ActividadSchema>;
 export type DBPresupuesto = z.infer<typeof PresupuestoSchema>;
+export type DBEquipo = z.infer<typeof EquipoSchema>;
+export type DBEquipoMiembro = z.infer<typeof EquipoMiembroSchema>;
 
 // ====== Tipos de interfaz para la aplicación (transformados) ======
 export interface Cliente {
@@ -184,12 +203,16 @@ export type CreateProyecto = Omit<Proyecto, 'id'>;
 export type CreateTransaccion = Omit<Transaccion, 'id'>;
 export type CreateActividad = Omit<Actividad, 'id'>;
 export type CreatePresupuesto = Omit<Presupuesto, 'id'>;
+export type CreateEquipo = Omit<Equipo, 'id' | 'created_at'>;
+export type CreateEquipoMiembro = Omit<EquipoMiembro, 'id' | 'created_at'>;
 
 export type UpdateCliente = Partial<CreateCliente>;
 export type UpdateProyecto = Partial<CreateProyecto>;
 export type UpdateTransaccion = Partial<CreateTransaccion>;
 export type UpdateActividad = Partial<CreateActividad>;
 export type UpdatePresupuesto = Partial<CreatePresupuesto>;
+export type UpdateEquipo = Partial<CreateEquipo>;
+export type UpdateEquipoMiembro = Partial<CreateEquipoMiembro>;
 
 export interface CreatePresupuestoInput {
   proyecto: string;
@@ -208,14 +231,16 @@ export interface CreatePresupuestoInput {
 export interface Equipo {
   id: string;
   nombre: string;
-  creador_id: string;
+  userId: string;
+  estado: 'activo' | 'inactivo';
+  descripcion?: string;
   created_at?: string;
 }
 
 export interface EquipoMiembro {
   id: string;
-  equipo_id: string;
-  user_id: string;
+  equipoId: string;
+  userId: string;
   rol: 'admin' | 'miembro' | 'visor';
   created_at?: string;
 }
@@ -428,4 +453,45 @@ export const presupuestoToDb = (presupuesto: UpdatePresupuesto): Partial<DBPresu
   out.fecha_inicio = presupuesto.fechaInicio || null;
   out.fecha_fin = presupuesto.fechaFin || null;
   return out as Partial<DBPresupuesto>;
+};
+
+// ====== Validadores para Equipos ======
+export const validateEquipo = (data: unknown): DBEquipo => {
+  return EquipoSchema.parse(data);
+};
+
+export const validateEquipoMiembro = (data: unknown): DBEquipoMiembro => {
+  return EquipoMiembroSchema.parse(data);
+};
+
+// ====== Transformadores para Equipos ======
+export const dbToEquipo = (db: DBRow): Equipo => ({
+  id: (db.id as string) || '',
+  nombre: (db.nombre as string) ?? '',
+  userId: (db.user_id as string) ?? '',
+  estado: (db.estado as 'activo' | 'inactivo') ?? 'activo',
+  descripcion: (db.descripcion as string) ?? '',
+  created_at: (db.created_at as string) ?? undefined,
+});
+
+export const equipoToDb = (equipo: UpdateEquipo): Partial<DBEquipo> => {
+  const out: DBRow = {};
+  if (equipo.nombre !== undefined) out.nombre = equipo.nombre;
+  if (equipo.estado !== undefined) out.estado = equipo.estado;
+  if (equipo.descripcion !== undefined) out.descripcion = equipo.descripcion;
+  return out as Partial<DBEquipo>;
+};
+
+export const dbToEquipoMiembro = (db: DBRow): EquipoMiembro => ({
+  id: (db.id as string) || '',
+  equipoId: (db.equipo_id as string) ?? '',
+  userId: (db.user_id as string) ?? '',
+  rol: (db.rol as 'admin' | 'miembro' | 'visor') ?? 'miembro',
+  created_at: (db.created_at as string) ?? undefined,
+});
+
+export const equipoMiembroToDb = (miembro: UpdateEquipoMiembro): Partial<DBEquipoMiembro> => {
+  const out: DBRow = {};
+  if (miembro.rol !== undefined) out.rol = miembro.rol;
+  return out as Partial<DBEquipoMiembro>;
 };
