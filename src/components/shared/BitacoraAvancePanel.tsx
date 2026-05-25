@@ -30,14 +30,24 @@ export const BitacoraAvancePanel: React.FC<BitacoraAvancePanelProps> = ({ presup
   const handleAdd = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.from('bitacora_avance').insert({
+      // 1. Insertar en bitácora
+      const { error: errorBitacora } = await supabase.from('bitacora_avance').insert({
         presupuesto_id: presupuestoId,
         avance_fisico: nuevoAvance.avance,
         descripcion: nuevoAvance.descripcion,
         fecha: new Date().toISOString()
       });
-      if (error) throw error;
-      toast.success('Avance registrado');
+      if (errorBitacora) throw errorBitacora;
+
+      // 2. Actualizar avance_fisico en la tabla presupuestos para reflejar en gráficas
+      const { error: errorPresupuesto } = await supabase
+        .from('presupuestos')
+        .update({ avance_fisico: nuevoAvance.avance })
+        .eq('id', presupuestoId);
+      
+      if (errorPresupuesto) throw errorPresupuesto;
+
+      toast.success('Avance registrado y presupuesto actualizado');
       setNuevoAvance({ avance: 0, descripcion: '' });
       await fetchAvances();
     } catch (e) {
