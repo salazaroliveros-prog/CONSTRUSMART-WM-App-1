@@ -25,7 +25,7 @@ export function usePresupuestos() {
       }
       
       // Aseguramos que data sea tratado como el tipo esperado antes de parsear
-      return (data || []).map(item => PresupuestoSchema.parse(item) as unknown as Presupuesto);
+      return (data || []).map((item: unknown) => PresupuestoSchema.parse(item) as unknown as Presupuesto);
     },
     staleTime: 30_000,
   });
@@ -37,7 +37,7 @@ export function useClientes() {
     queryFn: async (): Promise<Cliente[]> => {
       const { data, error } = await supabase.from('clientes').select('*').order('nombre');
       if (error) throw error;
-      return (data || []).map(item => ClienteSchema.parse(item) as unknown as Cliente);
+      return (data || []).map((item: unknown) => ClienteSchema.parse(item) as unknown as Cliente);
     },
     staleTime: 30_000,
   });
@@ -49,7 +49,7 @@ export function useTransacciones() {
     queryFn: async (): Promise<Transaccion[]> => {
       const { data, error } = await supabase.from('transacciones').select('*').order('fecha', { ascending: false });
       if (error) throw error;
-      return (data || []).map(item => TransaccionSchema.parse(item) as unknown as Transaccion);
+      return (data || []).map((item: unknown) => TransaccionSchema.parse(item) as unknown as Transaccion);
     },
     staleTime: 30_000,
   });
