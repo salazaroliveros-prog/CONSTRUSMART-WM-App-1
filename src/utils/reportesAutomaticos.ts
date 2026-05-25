@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import { exportCompleto } from './exportExcel';
-import type { Presupuesto, Transaccion, Cliente } from '@/types/supabase';
+import type { Presupuesto, Transaccion } from '@/types/supabase';
 import { toast } from 'sonner';
 
 export function reporteCierreFase(presupuesto: Presupuesto, transacciones: Transaccion[]) {

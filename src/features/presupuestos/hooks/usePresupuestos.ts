@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { presupuestoTransformer } from '@/types/supabase';
 import type { Presupuesto, Cliente, Transaccion } from '@/types/supabase';
+import { PresupuestoSchema, ClienteSchema, TransaccionSchema } from '@/lib/schemas';
 import { toast } from 'sonner';
 
 const KEYS = {
@@ -9,8 +9,6 @@ const KEYS = {
   clientes: ['clientes'] as const,
   transacciones: ['transacciones'] as const,
 };
-
-import { PresupuestoSchema } from '@/lib/schemas';
 
 export function usePresupuestos() {
   return useQuery({
@@ -20,21 +18,18 @@ export function usePresupuestos() {
       
       if (error) {
         console.error('Supabase Error:', error);
-        // Si el error es 403 (Forbidden), el usuario no tiene acceso (RLS)
         if (error.code === 'PGRST116' || error.message.includes('row-level security')) {
             throw new Error('No tienes permisos suficientes para ver estos datos.');
         }
         throw error;
       }
       
-      return (data || []).map(item => PresupuestoSchema.parse(item));
+      // Aseguramos que data sea tratado como el tipo esperado antes de parsear
+      return (data || []).map(item => PresupuestoSchema.parse(item) as unknown as Presupuesto);
     },
     staleTime: 30_000,
   });
 }
-
-import { PresupuestoSchema, ClienteSchema, TransaccionSchema } from '@/lib/schemas';
-import type { Cliente, Transaccion } from '@/types/supabase';
 
 export function useClientes() {
   return useQuery({
@@ -42,7 +37,7 @@ export function useClientes() {
     queryFn: async (): Promise<Cliente[]> => {
       const { data, error } = await supabase.from('clientes').select('*').order('nombre');
       if (error) throw error;
-      return (data || []).map(item => ClienteSchema.parse(item));
+      return (data || []).map(item => ClienteSchema.parse(item) as unknown as Cliente);
     },
     staleTime: 30_000,
   });
@@ -54,7 +49,7 @@ export function useTransacciones() {
     queryFn: async (): Promise<Transaccion[]> => {
       const { data, error } = await supabase.from('transacciones').select('*').order('fecha', { ascending: false });
       if (error) throw error;
-      return (data || []).map(item => TransaccionSchema.parse(item));
+      return (data || []).map(item => TransaccionSchema.parse(item) as unknown as Transaccion);
     },
     staleTime: 30_000,
   });
