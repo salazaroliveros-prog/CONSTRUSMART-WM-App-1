@@ -9,6 +9,7 @@ import HealthIndicator from '@/components/shared/HealthIndicator';
 import ProjectHeatMap from '@/components/shared/ProjectHeatMap';
 import ProjectTimeline from '@/components/shared/ProjectTimeline';
 import RealtimeFeed from '@/components/shared/RealtimeFeed';
+import GanttView from '@/components/shared/GanttView';
 import { Users, FolderKanban, Calculator, LineChart, Wallet, TrendingUp, TrendingDown, DollarSign, Folder, Percent, FileDown, Shield } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, AreaChart, Area } from 'recharts';
 import { exportCompleto } from '@/utils/exportExcel';
@@ -97,10 +98,11 @@ const Dashboard: React.FC = () => {
           </button>
         </div>
 
-        <div className="col-span-12 lg:col-span-4 lg:row-span-3">
+        <div className="col-span-12 lg:col-span-4 lg:row-span-4 space-y-2">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-2">
             <Calendar />
           </div>
+          <GanttView />
         </div>
 
         {/* Fila 3: Charts */}
