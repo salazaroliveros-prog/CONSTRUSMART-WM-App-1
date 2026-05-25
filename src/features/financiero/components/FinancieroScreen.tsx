@@ -108,8 +108,8 @@ const FinancieroScreen: React.FC = () => {
         </div>
 
         {/* Charts and Calendar Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <div className="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white rounded-xl shadow-md p-4">
               <h3 className="font-bold text-sm text-slate-800 mb-2">Gastos por Categoría</h3>
               <ResponsiveContainer width="100%" height={240}>
@@ -137,7 +137,7 @@ const FinancieroScreen: React.FC = () => {
           </div>
           <div className="bg-white rounded-xl shadow-md p-4">
             <h3 className="font-bold text-sm text-slate-800 mb-2">Calendario de Actividades</h3>
-            <div className="h-[240px]">
+            <div className="h-full">
                 <Calendar />
             </div>
           </div>
