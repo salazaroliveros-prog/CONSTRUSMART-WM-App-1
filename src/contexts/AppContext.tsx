@@ -5,13 +5,14 @@ import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { 
-  Cliente, Proyecto, Transaccion, Actividad, Presupuesto, CategoriaTransaccion,
-  CreateCliente, CreateProyecto, CreateTransaccion, CreateActividad, CreatePresupuesto,
-  UpdateCliente, UpdateProyecto, UpdateTransaccion, UpdateActividad, UpdatePresupuesto,
+  Cliente, Proyecto, Transaccion, Actividad, Presupuesto, CategoriaTransaccion, Equipo, EquipoMiembro,
+  CreateCliente, CreateProyecto, CreateTransaccion, CreateActividad, CreatePresupuesto, CreateEquipo, CreateEquipoMiembro,
+  UpdateCliente, UpdateProyecto, UpdateTransaccion, UpdateActividad, UpdatePresupuesto, UpdateEquipo, UpdateEquipoMiembro,
   CreatePresupuestoInput,
-  validateCliente, validateProyecto, validateTransaccion, validateActividad, validatePresupuesto,
+  validateCliente, validateProyecto, validateTransaccion, validateActividad, validatePresupuesto, validateEquipo, validateEquipoMiembro,
   dbToCliente, clienteToDb, dbToProyecto, proyectoToDb,
-  dbToTransaccion, transaccionToDb, dbToActividad, actividadToDb, dbToPresupuesto, presupuestoToDb
+  dbToTransaccion, transaccionToDb, dbToActividad, actividadToDb, dbToPresupuesto, presupuestoToDb,
+  dbToEquipo, equipoToDb, dbToEquipoMiembro, equipoMiembroToDb
 } from '@/types/supabase';
 
 export type { CategoriaTransaccion };
@@ -58,6 +59,16 @@ interface AppContextType {
   updatePresupuesto: (id: string, p: UpdatePresupuesto) => Promise<void>;
   transicionFase: (id: string, nuevaFase: Presupuesto['fase']) => Promise<void>;
 
+  equipos: Equipo[];
+  addEquipo: (e: CreateEquipo) => Promise<void>;
+  updateEquipo: (id: string, e: UpdateEquipo) => Promise<void>;
+  deleteEquipo: (id: string) => Promise<void>;
+
+  equipoMiembros: EquipoMiembro[];
+  addEquipoMiembro: (em: CreateEquipoMiembro) => Promise<void>;
+  updateEquipoMiembro: (id: string, em: UpdateEquipoMiembro) => Promise<void>;
+  deleteEquipoMiembro: (id: string) => Promise<void>;
+
   sidebarOpen: boolean;
   toggleSidebar: () => void;
   darkMode: boolean;
@@ -90,11 +101,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
    const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
    const [actividades, setActividades] = useState<Actividad[]>([]);
+   const [equipos, setEquipos] = useState<Equipo[]>([]);
+   const [equipoMiembros, setEquipoMiembros] = useState<EquipoMiembro[]>([]);
    const realtimeClientes = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
    const realtimeProyectos = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
    const realtimePresupuestos = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
    const realtimeTransacciones = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
    const realtimeActividades = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
+   const realtimeEquipos = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
+   const realtimeEquipoMiembros = useRef<ReturnType<ReturnType<typeof supabase.channel>> | null>(null);
    const initDoneRef = useRef(false);
    const mountedRef = useRef(true);
 
@@ -113,12 +128,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
        const PAGE_SIZE = 200;
        try {
-         const [cR, pR, prR, tR, aR] = await Promise.all([
+         const [cR, pR, prR, tR, aR, eR, emR] = await Promise.all([
            supabase.from('clientes').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE),
            supabase.from('proyectos').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE),
            supabase.from('presupuestos').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE),
            supabase.from('transacciones').select('*').eq('user_id', userId).order('fecha', { ascending: false }).limit(PAGE_SIZE),
-           supabase.from('actividades').select('*').eq('user_id', userId).order('fecha', { ascending: false }).limit(PAGE_SIZE)
+           supabase.from('actividades').select('*').eq('user_id', userId).order('fecha', { ascending: false }).limit(PAGE_SIZE),
+           supabase.from('equipos').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE),
+           supabase.from('equipo_miembros').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE)
          ]);
          
          setClientes((cR.data || []).map(dbToCliente));
@@ -126,6 +143,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
          setPresupuestos((prR.data || []).map(dbToPresupuesto));
          setTransacciones((tR.data || []).map(dbToTransaccion));
          setActividades((aR.data || []).map(dbToActividad));
+         setEquipos((eR.data || []).map(dbToEquipo));
+         setEquipoMiembros((emR.data || []).map(dbToEquipoMiembro));
        } catch (e) {
          console.error('Error cargando datos:', e);
          toast.error('Error al cargar datos de la base.');
@@ -273,6 +292,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
          handleRealtimeChange('actividades', payload);
        })
        .subscribe();
+
+     // Equipos realtime
+     if (realtimeEquipos.current) realtimeEquipos.current.unsubscribe();
+     realtimeEquipos.current = supabase
+       .channel('equipos')
+       .on('postgres_changes', {
+         event: '*',
+         schema: 'public',
+         table: 'equipos',
+         filter: `user_id=eq.${userId}`
+       }, (payload) => {
+         handleRealtimeChange('equipos', payload);
+       })
+       .subscribe();
+
+     // Equipo Miembros realtime
+     if (realtimeEquipoMiembros.current) realtimeEquipoMiembros.current.unsubscribe();
+     realtimeEquipoMiembros.current = supabase
+       .channel('equipo_miembros')
+       .on('postgres_changes', {
+         event: '*',
+         schema: 'public',
+         table: 'equipo_miembros',
+         filter: `user_id=eq.${userId}`
+       }, (payload) => {
+         handleRealtimeChange('equipo_miembros', payload);
+       })
+       .subscribe();
    };
 
   // Manejar cambios realtime
@@ -326,6 +373,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setActividades(prev => prev.map(x => x.id === realPayload.new.id ? dbToActividad(realPayload.new) : x));
         } else if (realPayload.eventType === 'DELETE') {
           setActividades(prev => prev.filter(x => x.id !== realPayload.old.id));
+        }
+        break;
+      case 'equipos':
+        if (realPayload.eventType === 'INSERT') {
+          setEquipos(prev => [dbToEquipo(realPayload.new), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE') {
+          setEquipos(prev => prev.map(x => x.id === realPayload.new.id ? dbToEquipo(realPayload.new) : x));
+        } else if (realPayload.eventType === 'DELETE') {
+          setEquipos(prev => prev.filter(x => x.id !== realPayload.old.id));
+        }
+        break;
+      case 'equipo_miembros':
+        if (realPayload.eventType === 'INSERT') {
+          setEquipoMiembros(prev => [dbToEquipoMiembro(realPayload.new), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE') {
+          setEquipoMiembros(prev => prev.map(x => x.id === realPayload.new.id ? dbToEquipoMiembro(realPayload.new) : x));
+        } else if (realPayload.eventType === 'DELETE') {
+          setEquipoMiembros(prev => prev.filter(x => x.id !== realPayload.old.id));
         }
         break;
     }
@@ -593,6 +658,84 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // ---------- CRUD Equipos ----------
+  const addEquipo = async (e: CreateEquipo) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    try {
+      const validated = validateEquipo({ ...e, user_id: session.user.id });
+      const { data, error } = await supabase.from('equipos').insert({ ...equipoToDb(validated), user_id: session.user.id }).select().single();
+      if (error) throw error;
+      if (data) setEquipos(p => [dbToEquipo(data), ...p]);
+      toast.success('Equipo guardado');
+    } catch (error) {
+      console.error('Error al agregar equipo:', error);
+      toast.error('Error al guardar equipo', { description: error instanceof Error ? error.message : 'Error desconocido' });
+      throw error;
+    }
+  };
+
+  const updateEquipo = async (id: string, e: UpdateEquipo) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    try {
+      const validated = validateEquipo({ ...e, id, user_id: session.user.id });
+      const { data, error } = await supabase.from('equipos').update(equipoToDb(validated)).eq('id', id).eq('user_id', session.user.id).select().single();
+      if (error) throw error;
+      if (data) setEquipos(p => p.map(x => x.id === id ? dbToEquipo(data) : x));
+      toast.success('Equipo actualizado');
+    } catch (error) {
+      console.error('Error al actualizar equipo:', error);
+      toast.error('Error al actualizar equipo', { description: error instanceof Error ? error.message : 'Error desconocido' });
+      throw error;
+    }
+  };
+
+  const deleteEquipo = async (id: string) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    const { error } = await supabase.from('equipos').delete().eq('id', id).eq('user_id', session.user.id);
+    if (error) { toast.error('Error al eliminar equipo'); throw error; }
+    setEquipos(p => p.filter(x => x.id !== id));
+    toast.success('Equipo eliminado');
+  };
+
+  // ---------- CRUD Equipo Miembros ----------
+  const addEquipoMiembro = async (em: CreateEquipoMiembro) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    try {
+      const validated = validateEquipoMiembro({ ...em, user_id: session.user.id });
+      const { data, error } = await supabase.from('equipo_miembros').insert({ ...equipoMiembroToDb(validated), user_id: session.user.id }).select().single();
+      if (error) throw error;
+      if (data) setEquipoMiembros(p => [dbToEquipoMiembro(data), ...p]);
+      toast.success('Miembro agregado al equipo');
+    } catch (error) {
+      console.error('Error al agregar miembro:', error);
+      toast.error('Error al agregar miembro', { description: error instanceof Error ? error.message : 'Error desconocido' });
+      throw error;
+    }
+  };
+
+  const updateEquipoMiembro = async (id: string, em: UpdateEquipoMiembro) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    try {
+      const validated = validateEquipoMiembro({ ...em, id, user_id: session.user.id });
+      const { data, error } = await supabase.from('equipo_miembros').update(equipoMiembroToDb(validated)).eq('id', id).select().single();
+      if (error) throw error;
+      if (data) setEquipoMiembros(p => p.map(x => x.id === id ? dbToEquipoMiembro(data) : x));
+      toast.success('Miembro actualizado');
+    } catch (error) {
+      console.error('Error al actualizar miembro:', error);
+      toast.error('Error al actualizar miembro', { description: error instanceof Error ? error.message : 'Error desconocido' });
+      throw error;
+    }
+  };
+
+  const deleteEquipoMiembro = async (id: string) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    const { error } = await supabase.from('equipo_miembros').delete().eq('id', id);
+    if (error) { toast.error('Error al eliminar miembro'); throw error; }
+    setEquipoMiembros(p => p.filter(x => x.id !== id));
+    toast.success('Miembro removido del equipo');
+  };
+
   return (
     <AppContext.Provider value={{
       view, setView, session, loading, authError, signIn, signUp, signInWithGoogle, signOut, user,
@@ -601,6 +744,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       transacciones, addTransaccion, deleteTransaccion,
       actividades, addActividad, deleteActividad,
       presupuestos, addPresupuesto, updatePresupuesto, transicionFase,
+      equipos, addEquipo, updateEquipo, deleteEquipo,
+      equipoMiembros, addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
       sidebarOpen, toggleSidebar: () => setSidebarOpen(p => !p),
       darkMode, toggleDarkMode: () => setDarkMode(p => !p),
     }}>
