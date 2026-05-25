@@ -46,7 +46,7 @@ const FinancieroScreen: React.FC = () => {
 
   const porCategoria = useMemo(() => {
     const data: Record<string, number> = {};
-    transacciones.filter(t => t.tipo === 'gasto').forEach(t => {
+    transacciones.filter(t => t.tipo === 'gasto' || t.categoria === 'trabajos-extra').forEach(t => {
       data[t.categoria] = (data[t.categoria] || 0) + t.costoTotal;
     });
     return Object.entries(data).map(([k, v]) => ({ name: categoriaLabels[k] || k, value: v }));

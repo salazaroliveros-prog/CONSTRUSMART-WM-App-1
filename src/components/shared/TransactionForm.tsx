@@ -13,7 +13,7 @@ const categorias: { v: CategoriaTransaccion; label: string }[] = [
   { v: 'fijos', label: 'Gastos Fijos' },
   { v: 'hogar', label: 'Hogar' },
   { v: 'aporte', label: 'Aporte' },
-  { v: 'trabajos-extra', label: 'Trabajos Extra' },
+  { v: 'trabajos-extra', label: 'Trabajos Extra (Planificación, Planos, 3D, Topografía)' },
 ];
 
 const TransactionForm: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
@@ -55,10 +55,11 @@ const TransactionForm: React.FC<{ compact?: boolean }> = ({ compact = false }) =
       </div>
 
       <form onSubmit={handleSubmit} className={`grid gap-2 ${compact ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'}`}>
-        <select value={form.proyectoId} onChange={e => setForm({ ...form, proyectoId: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg bg-slate-50">
+        <select value={form.proyectoId} onChange={e => setForm({ ...form, proyectoId: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg bg-slate-50 border-blue-200 focus:ring-2 focus:ring-blue-500" required>
+          <option value="">-- Seleccionar proyecto activo --</option>
           <option value="admin">— Administrativo / Operativo —</option>
           <option value="personal">— Gasto Personal —</option>
-          {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          {proyectos.filter(p => p.estado !== 'Finalizado').map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
         </select>
          <input placeholder="Descripción de la transacción" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg" required />
          <input type="number" placeholder="Ingrese la cantidad" value={form.cantidad} onChange={e => setForm({ ...form, cantidad: parseFloat(e.target.value) || 0 })} className="px-2 py-1.5 text-xs border rounded-lg" />
