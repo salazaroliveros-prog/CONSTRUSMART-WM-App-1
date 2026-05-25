@@ -124,10 +124,7 @@ CREATE TABLE IF NOT EXISTS consumo_materiales (
   cantidad_desperdicio NUMERIC(15,4) GENERATED ALWAYS AS 
     (cantidad_comprada - cantidad_consumida) STORED,
   porcentaje_desperdicio NUMERIC(5,2) GENERATED ALWAYS AS 
-    CASE WHEN cantidad_comprada > 0 
-      THEN ROUND(((cantidad_comprada - cantidad_consumida) / cantidad_comprada * 100)::numeric, 2)
-      ELSE 0 
-    END STORED,
+    (COALESCE(ROUND(((cantidad_comprada - cantidad_consumida)::numeric / NULLIF(cantidad_comprada, 0) * 100), 2), 0)) STORED,
   
   -- Alertas
   estado VARCHAR(20) DEFAULT 'activo',
