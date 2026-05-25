@@ -4,15 +4,17 @@
 
 Este documento guía la configuración completa de la base de datos Phase 3 en Supabase. Incluye 7 nuevas tablas, Row-Level Security (RLS), triggers de auditoría y funciones auxiliares.
 
-**Tiempo estimado:** 10-15 minutos  
-**Complejidad:** Media  
+**Tiempo estimado:** 10-15 minutos
+
+**Complejidad:** Media
+
 **Requisitos:** Acceso a Supabase SQL Editor
 
 ---
 
 ## 🗂️ Estructura de Tablas Phase 3
 
-```
+```text
 cambios_presupuesto (Change Orders)
     ├─ Auditoría de cambios
     ├─ Workflow de aprobación
@@ -78,7 +80,7 @@ transacciones_recurrentes (Cash Flow)
 
 ```sql
 -- Copiar SECCIÓN 1 completa
--- Incluye 5 ENUM types:
+-- Incluye 6 ENUM types:
 -- - cambio_estado
 -- - checklist_estado
 -- - fase_proyecto
@@ -88,6 +90,7 @@ transacciones_recurrentes (Cash Flow)
 ```
 
 **Pasos:**
+
 1. Abre [SUPABASE_PHASE3_COMPLETE.sql](./SUPABASE_PHASE3_COMPLETE.sql)
 2. Selecciona **SECCIÓN 1** (líneas de ENUM)
 3. Copia y pega en Supabase SQL Editor
@@ -105,7 +108,7 @@ transacciones_recurrentes (Cash Flow)
 Ejecutar en este ORDEN (una sección a la vez):
 
 | Orden | Sección | Tabla | Comando |
-|-------|---------|-------|---------|
+| --- | --- | --- | --- |
 | 1 | 2 | `cambios_presupuesto` | Copiar líneas 60-120 |
 | 2 | 3 | `consumo_materiales` | Copiar líneas 140-200 |
 | 3 | 4 | `caja_proyecto` | Copiar líneas 220-250 |
@@ -115,6 +118,7 @@ Ejecutar en este ORDEN (una sección a la vez):
 | 7 | 8 | `transacciones_recurrentes` | Copiar líneas 500-530 |
 
 **Pasos para cada tabla:**
+
 1. Copia la sección en el SQL Editor
 2. Haz clic **Run**
 3. Verifica: "Query executed successfully" ✅
@@ -135,6 +139,7 @@ Ejecutar en este ORDEN (una sección a la vez):
 ```
 
 **Pasos:**
+
 1. Selecciona SECCIÓN 9
 2. Copia y pega
 3. Haz clic **Run**
@@ -155,6 +160,7 @@ ALTER TABLE cambios_presupuesto ENABLE ROW LEVEL SECURITY;
 ```
 
 **Pasos:**
+
 1. Selecciona SECCIÓN 10
 2. Copia y pega
 3. Haz clic **Run**
@@ -173,7 +179,7 @@ ALTER TABLE cambios_presupuesto ENABLE ROW LEVEL SECURITY;
 Ejecutar en orden (una sección a la vez):
 
 | Sección | Tabla(s) |
-|---------|----------|
+| --- | --- |
 | 11 | `cambios_presupuesto` |
 | 12 | `consumo_materiales` |
 | 13 | `caja_proyecto` + `movimientos_caja` |
@@ -181,6 +187,7 @@ Ejecutar en orden (una sección a la vez):
 | 15 | `transacciones_recurrentes` |
 
 **Pasos para cada sección:**
+
 1. Copia la sección
 2. Pega en SQL Editor
 3. Haz clic **Run**
@@ -204,6 +211,7 @@ Ejecutar en orden (una sección a la vez):
 ```
 
 **Pasos:**
+
 1. Selecciona SECCIÓN 16
 2. Copia y pega
 3. Haz clic **Run**
@@ -223,6 +231,7 @@ Ejecutar en orden (una sección a la vez):
 ```
 
 **Pasos:**
+
 1. Selecciona SECCIÓN 17
 2. Copia y pega
 3. Haz clic **Run**
@@ -238,12 +247,13 @@ Ejecutar en orden (una sección a la vez):
 
 ```sql
 -- Verifica que todas las tablas fueron creadas
-SELECT tablename FROM pg_tables 
-WHERE schemaname = 'public' 
+SELECT tablename FROM pg_tables
+WHERE schemaname = 'public'
 AND tablename IN (...);
 ```
 
 **Pasos:**
+
 1. Selecciona SECCIÓN 18
 2. Copia y pega
 3. Haz clic **Run**
@@ -303,7 +313,8 @@ Los hooks y servicios ya importan de `src/types/supabase.ts`. Si regeneras los t
 
 ### ❌ Error: "Duplicate key value violates unique constraint"
 
-**Causa:** Ya existe la tabla o el ENUM  
+**Causa:** Ya existe la tabla o el ENUM
+
 **Solución:** Ejecuta con `IF NOT EXISTS`
 
 ```sql
@@ -313,19 +324,23 @@ CREATE TYPE IF NOT EXISTS cambio_estado AS ENUM (...)
 
 ### ❌ Error: "relation does not exist"
 
-**Causa:** Falta una tabla que otra referencia  
+**Causa:** Falta una tabla que otra referencia
+
 **Solución:** Ejecuta las secciones en orden (no saltees)
 
 ### ❌ Error: "permission denied"
 
-**Causa:** No tienes permisos en Supabase  
-**Solución:** 
+**Causa:** No tienes permisos en Supabase
+
+**Solución:**
+
 - Usa cuenta de admin
 - Verifica que no estás en modo "Viewer"
 
 ### ❌ Las políticas RLS no funcionan
 
-**Causa:** RLS no está habilitado  
+**Causa:** RLS no está habilitado
+
 **Solución:** Ejecuta SECCIÓN 10 (ALTER TABLE ... ENABLE ROW LEVEL SECURITY)
 
 ---
@@ -333,7 +348,7 @@ CREATE TYPE IF NOT EXISTS cambio_estado AS ENUM (...)
 ## 📊 Estadísticas de Ejecución
 
 | Componente | Tablas | Políticas | Triggers | Tiempo |
-|-----------|--------|-----------|----------|--------|
+| --- | --- | --- | --- | --- |
 | ENUM types | 6 | — | — | 30s |
 | Tablas | 7 | — | — | 2-3m |
 | Índices | 10+ | — | — | 30s |
@@ -369,5 +384,5 @@ Ahora puedes ejecutar la app y usar todos los paneles de control, seguimiento y 
 
 ---
 
-*Documento generado: 2026-05-25*  
+*Documento generado: 2026-05-25*
 *CONSTRUSMART WM - Sistema de Gestión Integral*
