@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAppContext } from '@/contexts/AppContext';
 import { RefreshCw } from 'lucide-react';
 
 interface ChangeEvent {
