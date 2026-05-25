@@ -35,10 +35,26 @@ DROP TRIGGER IF EXISTS trigger_updated_conciliaciones ON conciliaciones;
 DROP TRIGGER IF EXISTS trigger_updated_notificaciones ON notificaciones;
 
 -- ============================================================================
--- SECCIÓN 3: ELIMINAR POLICIES PROBLEMÁTICAS (si existen)
+-- SECCIÓN 3: ELIMINAR TODAS LAS POLÍTICAS EXISTENTES
 -- ============================================================================
 
--- Políticas de las nuevas tablas que podrían estar causando problemas
+-- Eliminar todas las políticas de las tablas problemáticas
+DROP POLICY IF EXISTS "equipos_select" ON equipos;
+DROP POLICY IF EXISTS "equipos_insert" ON equipos;
+DROP POLICY IF EXISTS "equipos_update" ON equipos;
+DROP POLICY IF EXISTS "equipos_delete" ON equipos;
+
+DROP POLICY IF EXISTS "presupuestos_select" ON presupuestos;
+DROP POLICY IF EXISTS "presupuestos_insert" ON presupuestos;
+DROP POLICY IF EXISTS "presupuestos_update" ON presupuestos;
+DROP POLICY IF EXISTS "presupuestos_delete" ON presupuestos;
+
+DROP POLICY IF EXISTS "equipo_miembros_select" ON equipo_miembros;
+DROP POLICY IF EXISTS "equipo_miembros_insert" ON equipo_miembros;
+DROP POLICY IF EXISTS "equipo_miembros_update" ON equipo_miembros;
+DROP POLICY IF EXISTS "equipo_miembros_delete" ON equipo_miembros;
+
+-- Políticas de las nuevas tablas
 DROP POLICY IF EXISTS "caja_proyecto_select" ON caja_proyecto;
 DROP POLICY IF EXISTS "caja_proyecto_insert" ON caja_proyecto;
 DROP POLICY IF EXISTS "caja_proyecto_update" ON caja_proyecto;
