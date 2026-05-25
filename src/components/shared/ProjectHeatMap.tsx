@@ -7,7 +7,7 @@ const ProjectHeatMap: React.FC = () => {
 
   const proyectos = useMemo(() => {
     return presupuestos.filter(p => p.fase === 'ejecución' || p.fase === 'finalizado').map(p => {
-      const txns = transacciones.filter(t => t.presupuestoId === p.id);
+      const txns = transacciones.filter(t => t.proyectoId === p.id);
       const ingresos = txns.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
       const gastos = txns.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
       const margen = ingresos - gastos;

@@ -24,7 +24,7 @@ export function exportPresupuestos(presupuestos: Presupuesto[], filename = 'pres
 export function exportTransacciones(transacciones: Transaccion[], presupuestos: Presupuesto[], filename = 'transacciones.xlsx') {
   const mapProyecto = Object.fromEntries(presupuestos.map(p => [p.id, p.proyecto]));
   const data = transacciones.map(t => ({
-    Proyecto: mapProyecto[t.presupuestoId] || t.presupuestoId,
+    Proyecto: mapProyecto[t.proyectoId] || t.proyectoId,
     Tipo: t.tipo,
     Fecha: t.fecha,
     Costo_Total: t.costoTotal,
@@ -55,7 +55,7 @@ export function exportCompleto(presupuestos: Presupuesto[], transacciones: Trans
 
   const mapProyecto = Object.fromEntries(presupuestos.map(p => [p.id, p.proyecto]));
   const txData = transacciones.map(t => ({
-    Proyecto: mapProyecto[t.presupuestoId] || t.presupuestoId,
+    Proyecto: mapProyecto[t.proyectoId] || t.proyectoId,
     Tipo: t.tipo,
     Fecha: t.fecha,
     Monto: t.costoTotal,

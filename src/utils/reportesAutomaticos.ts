@@ -4,7 +4,7 @@ import type { Presupuesto, Transaccion, Cliente } from '@/types/supabase';
 import { toast } from 'sonner';
 
 export function reporteCierreFase(presupuesto: Presupuesto, transacciones: Transaccion[]) {
-  const txns = transacciones.filter(t => t.presupuestoId === presupuesto.id);
+  const txns = transacciones.filter(t => t.proyectoId === presupuesto.id);
   const ingresos = txns.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
   const gastos = txns.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
   const margen = ingresos - gastos;
@@ -27,7 +27,7 @@ export function reporteCierreFase(presupuesto: Presupuesto, transacciones: Trans
 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), 'Cierre');
 
-  const detalle = [['Fecha', 'Tipo', 'Descripción', 'Categoría', 'Monto']];
+  const detalle: (string | number)[][] = [['Fecha', 'Tipo', 'Descripción', 'Categoría', 'Monto']];
   txns.forEach(t => detalle.push([t.fecha, t.tipo, t.descripcion || '', t.categoria, t.costoTotal]));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(detalle), 'Transacciones');
 
@@ -35,7 +35,7 @@ export function reporteCierreFase(presupuesto: Presupuesto, transacciones: Trans
   toast.success(`Reporte de cierre generado: ${presupuesto.proyecto}`);
 }
 
-export function reporteSemanal(presupuestos: Presupuesto[], transacciones: Transaccion[], clientes: Cliente[]) {
+export function reporteSemanal(presupuestos: Presupuesto[], transacciones: Transaccion[]) {
   const ahora = new Date();
   const semana = transacciones.filter(t => {
     const d = new Date(t.fecha);

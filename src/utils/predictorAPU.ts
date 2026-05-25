@@ -1,4 +1,3 @@
-import React from 'react';
 import type { Presupuesto } from '@/types/supabase';
 
 export interface Suggestion {
