@@ -17,7 +17,7 @@ const categorias: { v: CategoriaTransaccion; label: string }[] = [
 ];
 
 const TransactionForm: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
-  const { proyectos, addTransaccion } = useAppContext();
+  const { presupuestos, addTransaccion } = useAppContext();
   const [tipo, setTipo] = useState<'ingreso' | 'gasto'>('gasto');
   const [form, setForm] = useState({
     proyectoId: 'admin',
@@ -59,7 +59,7 @@ const TransactionForm: React.FC<{ compact?: boolean }> = ({ compact = false }) =
           <option value="">-- Seleccionar proyecto activo --</option>
           <option value="admin">— Administrativo / Operativo —</option>
           <option value="personal">— Gasto Personal —</option>
-          {proyectos.filter(p => p.estado !== 'Finalizado').map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          {presupuestos.filter(p => p.fase !== 'finalizado').map(p => <option key={p.id} value={p.id}>{p.proyecto}</option>)}
         </select>
          <input placeholder="Descripción de la transacción" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg" required />
          <input type="number" placeholder="Ingrese la cantidad" value={form.cantidad} onChange={e => setForm({ ...form, cantidad: parseFloat(e.target.value) || 0 })} className="px-2 py-1.5 text-xs border rounded-lg" />
