@@ -66,49 +66,67 @@ const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-slate-50 overflow-hidden">
       <Header showHome={false} title="Tablero Ejecutivo" />
-      <div className="flex-1 p-2 grid grid-cols-12 gap-2 max-w-[1600px] mx-auto w-full overflow-hidden">
-        <div className="col-span-12 grid grid-cols-8 gap-1 h-16">
-          {kpiData.map((k, i) => (
-            <div key={i} className="col-span-1">
-              <CompactKPI icon={k.icon} label={k.label} value={k.value} color={k.color} />
-            </div>
-          ))}
-        </div>
-        <div className="col-span-12 grid grid-cols-3 gap-2 flex-1 min-h-0">
-          <div className="col-span-2 grid grid-cols-2 gap-2">
-            <div className="bg-white rounded-lg shadow-sm p-2 flex flex-col min-h-0">
-              <h3 className="text-[10px] font-bold text-slate-600 uppercase">Distribución</h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={40} innerRadius={20} paddingAngle={2}>
-                    {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => `Q ${v.toLocaleString()}`} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-2 flex flex-col min-h-0">
-              <h3 className="text-[10px] font-bold text-slate-600 uppercase">Avance vs Financiero</h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                  <XAxis dataKey="name" tick={{ fontSize: 8 }} />
-                  <YAxis tick={{ fontSize: 8 }} />
-                  <Tooltip />
-                  <Bar dataKey="Avance" fill="#1E3A8A" radius={[2, 2, 0, 0]} />
-                  <Bar dataKey="Financiero" fill="#10B981" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="col-span-2 bg-white rounded-lg shadow-sm p-2 flex flex-col min-h-0">
-                <TransactionForm compact />
+      <div className="flex-1 overflow-y-auto w-full">
+        <div className="w-full mx-auto">
+          {/* KPI Grid - Responsive */}
+          <div className="p-2 sm:p-3 md:p-4">
+            <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-1 sm:gap-2">
+              {kpiData.map((k, i) => (
+                <div key={i}>
+                  <CompactKPI icon={k.icon} label={k.label} value={k.value} color={k.color} />
+                </div>
+              ))}
             </div>
           </div>
-          <div className="col-span-1 bg-white rounded-lg shadow-sm p-2 flex flex-col min-h-0">
-            <h3 className="text-[10px] font-bold text-slate-600 uppercase">Calendario</h3>
-            <div className="flex-1 overflow-hidden">
-                <Calendar />
+
+          {/* Main Content - Responsive Layout */}
+          <div className="p-2 sm:p-3 md:p-4 space-y-3 md:space-y-4">
+            {/* Mobile/Tablet Stack - Desktop Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+              {/* Charts Section - spans 2 cols on desktop */}
+              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                {/* Pie Chart */}
+                <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 flex flex-col h-64 sm:h-72 md:h-80">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-600 uppercase mb-2">Distribución</h3>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={Math.min(40, 60)} innerRadius={Math.min(20, 30)} paddingAngle={2}>
+                        {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => `Q ${v.toLocaleString()}`} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Bar Chart */}
+                <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 flex flex-col h-64 sm:h-72 md:h-80">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-600 uppercase mb-2">Avance vs Financiero</h3>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={barData} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={60} />
+                      <YAxis tick={{ fontSize: 10 }} />
+                      <Tooltip />
+                      <Bar dataKey="Avance" fill="#1E3A8A" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="Financiero" fill="#10B981" radius={[2, 2, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Transaction Form - Full width on mobile */}
+                <div className="sm:col-span-2 bg-white rounded-lg shadow-sm p-3 sm:p-4">
+                  <TransactionForm compact />
+                </div>
+              </div>
+
+              {/* Sidebar - Stacks on mobile */}
+              <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 h-auto md:h-auto">
+                <h3 className="text-xs sm:text-sm font-bold text-slate-600 uppercase mb-3">Calendario</h3>
+                <div className="w-full">
+                  <Calendar />
+                </div>
+              </div>
             </div>
           </div>
         </div>
