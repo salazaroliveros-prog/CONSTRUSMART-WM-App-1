@@ -107,7 +107,20 @@ CREATE TABLE IF NOT EXISTS public.bitacora_avance (
   created_at      timestamptz DEFAULT now()
 );
 
--- ... [Continuar con las demás tablas: equipos, equipo_miembros, renglones, materiales, etc.] ...
+CREATE TABLE IF NOT EXISTS public.renglones (
+  id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id           uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  codigo            text NOT NULL,
+  descripcion       text NOT NULL,
+  unidad            text,
+  rendimiento_mo    numeric DEFAULT 0,
+  costo_mo          numeric DEFAULT 0,
+  costo_eq          numeric DEFAULT 0,
+  materiales        jsonb DEFAULT '[]'::jsonb,
+  mano_obra         jsonb DEFAULT '[]'::jsonb,
+  equipos           jsonb DEFAULT '[]'::jsonb,
+  created_at        timestamptz DEFAULT now()
+);
 
 -- 5. HABILITAR RLS
 ALTER TABLE public.clientes ENABLE ROW LEVEL SECURITY;

@@ -38,8 +38,10 @@ const KPI: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: 
 
 const Dashboard: React.FC = () => {
   const { presupuestos, transacciones, loading } = useAppContext();
+  const [pagina, setPagina] = useState(0);
 
   const stats = useMemo(() => {
+    // ... (stats logic remains the same)
     const ingresos = transacciones.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
     const gastos = transacciones.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
     const activos = presupuestos.filter(p => p.fase === 'ejecución').length;
@@ -56,6 +58,17 @@ const Dashboard: React.FC = () => {
     const rentabilidadGeneral = ingresos > 0 ? ((ingresos - gastos) / ingresos * 100) : 0;
     return { ingresos, gastos, activos, planeacion, finalizados, pendiente, margen: ingresos - gastos, rentabilidadGeneral };
   }, [transacciones, presupuestos]);
+
+  const kpiData = useMemo(() => [
+    { icon: TrendingUp, label: 'Ingresos', value: `Q${(stats.ingresos / 1000).toFixed(1)}K`, color: 'emerald' as KPIColor },
+    { icon: TrendingDown, label: 'Gastos', value: `Q${(stats.gastos / 1000).toFixed(1)}K`, color: 'red' as KPIColor },
+    { icon: DollarSign, label: 'Margen', value: `Q${(stats.margen / 1000).toFixed(1)}K`, color: stats.margen >= 0 ? 'blue' as KPIColor : 'red' as KPIColor },
+    { icon: Percent, label: 'Rentabilidad', value: `${stats.rentabilidadGeneral.toFixed(1)}%`, color: stats.rentabilidadGeneral >= 10 ? 'emerald' as KPIColor : 'amber' as KPIColor },
+    { icon: FolderKanban, label: 'Activos', value: String(stats.activos), color: 'indigo' as KPIColor },
+    { icon: FolderKanban, label: 'Planeación', value: String(stats.planeacion), color: 'purple' as KPIColor },
+    { icon: FolderKanban, label: 'Finalizados', value: String(stats.finalizados), color: 'teal' as KPIColor },
+    { icon: DollarSign, label: 'Pendiente', value: `Q${(stats.pendiente / 1000).toFixed(0)}K`, color: 'amber' as KPIColor },
+  ], [stats]);
 
   const pieData = useMemo(() =>
     presupuestos.filter(p => p.fase === 'ejecución').map(p => ({ name: p.proyecto.slice(0, 16), value: p.total })),
@@ -77,74 +90,42 @@ const Dashboard: React.FC = () => {
     [presupuestos, transacciones]
   );
 
-  const kpiData = useMemo(() => [
-    { icon: TrendingUp, label: 'Ingresos', value: `Q${(stats.ingresos / 1000).toFixed(1)}K`, color: 'emerald' as KPIColor },
-    { icon: TrendingDown, label: 'Gastos', value: `Q${(stats.gastos / 1000).toFixed(1)}K`, color: 'red' as KPIColor },
-    { icon: DollarSign, label: 'Margen', value: `Q${(stats.margen / 1000).toFixed(1)}K`, color: stats.margen >= 0 ? 'blue' as KPIColor : 'red' as KPIColor },
-    { icon: Percent, label: 'Rentabilidad', value: `${stats.rentabilidadGeneral.toFixed(1)}%`, color: stats.rentabilidadGeneral >= 10 ? 'emerald' as KPIColor : 'amber' as KPIColor },
-    { icon: FolderKanban, label: 'Activos', value: String(stats.activos), color: 'indigo' as KPIColor },
-    { icon: FolderKanban, label: 'Planeación', value: String(stats.planeacion), color: 'purple' as KPIColor },
-    { icon: FolderKanban, label: 'Finalizados', value: String(stats.finalizados), color: 'teal' as KPIColor },
-    { icon: DollarSign, label: 'Pendiente', value: `Q${(stats.pendiente / 1000).toFixed(0)}K`, color: 'amber' as KPIColor },
-  ], [stats]);
-
   return (
     <PageShell showHome={false} title="Tablero Ejecutivo">
-      <div className="p-3 sm:p-4 md:p-5 max-w-[1600px] mx-auto space-y-4">
-        {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3">
-            <Skeleton className="h-20 w-full" count={8} />
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3 stagger-children">
-            {kpiData.map((k, i) => (
-              <KPI key={i} icon={k.icon} label={k.label} value={k.value} color={k.color} index={i} />
-            ))}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="glass-card rounded-xl p-4 flex flex-col h-72 sm:h-80 card-hover">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Distribución</h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} innerRadius={25} paddingAngle={3}>
-                    {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => `Q ${v.toLocaleString()}`} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="glass-card rounded-xl p-4 flex flex-col h-72 sm:h-80 card-hover">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Avance vs Financiero</h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barData} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={60} />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="Avance" fill="#1E3A8A" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="Financiero" fill="#10B981" radius={[3, 3, 0, 0]}>
-                    {barData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.desviacion === 'critico' ? '#EF4444' : entry.desviacion === 'advertencia' ? '#F59E0B' : '#10B981'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="sm:col-span-2 glass-card rounded-xl p-4 card-hover">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Registro Rápido</h3>
-              <TransactionForm compact />
-            </div>
-          </div>
-
-          <div className="glass-card rounded-xl p-4 card-hover">
-            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Calendario</h3>
-            <Calendar />
+      <div className="p-3 sm:p-5 max-w-[1600px] mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex gap-2">
+            <button onClick={() => setPagina(0)} className={`p-2 rounded-lg ${pagina === 0 ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}><LayoutDashboard className="w-5 h-5"/></button>
+            <button onClick={() => setPagina(1)} className={`p-2 rounded-lg ${pagina === 1 ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}><BarChart3 className="w-5 h-5"/></button>
           </div>
         </div>
+
+        {loading ? <Skeleton className="h-[400px] w-full" /> : (
+          pagina === 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger-children">
+              {kpiData.map((k, i) => (
+                <KPI key={i} icon={k.icon} label={k.label} value={k.value} color={k.color} index={i} />
+              ))}
+            </div>
+          ) : (
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="glass-card rounded-xl p-4 h-[400px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={barData}>
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="Financiero">
+                          {barData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.desviacion === 'critico' ? '#EF4444' : entry.desviacion === 'advertencia' ? '#F59E0B' : '#10B981'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                </div>
+             </div>
+          )
+        )}
       </div>
     </PageShell>
   );

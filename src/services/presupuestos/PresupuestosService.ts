@@ -8,22 +8,39 @@ import { toast } from 'sonner';
  */
 export const PresupuestosService = {
   /**
-   * Calcula el avance ponderado de los renglones
+   * Recalcula el presupuesto completo basado en sus renglones y sub-renglones.
+   * Motor paramétrico: Recalcula costos unitarios, materiales y mano de obra.
    */
-  calcularAvancePonderado(lineas: any[], renglonAvances: Record<string, number>): number {
-    const calcularSubtotal = (r: any) => r.cantidad * (r.costoMaterial + r.costoManoObra + r.costoHerramienta);
+  recalcularPresupuesto(presupuesto: any) {
+    const renglones = presupuesto.lineas || [];
+    let costoTotalDirecto = 0;
     
-    const total = lineas.reduce((s, r) => s + calcularSubtotal(r), 0);
-    if (total === 0) return 0;
-    
-    const ponderado = lineas.reduce((s, r) => {
-        const avance = renglonAvances[r.id] ?? r.avance ?? 0;
-        return s + (Number(avance) * calcularSubtotal(r));
-    }, 0) / total;
-    
-    return Math.round(ponderado);
-  },
+    const renglonesActualizados = renglones.map((r: any) => {
+      // Cálculo de sub-renglones
+      const costoMaterial = r.materiales.reduce((s: number, m: any) => s + (m.cantidad * m.costoUnitario), 0);
+      const costoMO = r.cantidad_mo * r.jornal;
+      const costoEquipo = r.cantidad_eq * r.costo_hora;
+      
+      const subtotal = costoMaterial + costoMO + costoEquipo;
+      costoTotalDirecto += subtotal;
+      
+      return { ...r, costoMaterial, costoMO, costoEquipo, subtotal };
+    });
 
+    const costoIndirectos = (costoTotalDirecto * (presupuesto.factor_indirectos || 0)) / 100;
+    const costoAdmin = (costoTotalDirecto * (presupuesto.factor_administrativos || 0)) / 100;
+    const imprevistos = (costoTotalDirecto * (presupuesto.factor_imprevistos || 0)) / 100;
+    const utilidad = ((costoTotalDirecto + costoIndirectos + costoAdmin + imprevistos) * (presupuesto.factor_utilidad || 0)) / 100;
+    
+    const total = costoTotalDirecto + costoIndirectos + costoAdmin + imprevistos + utilidad;
+
+    return {
+      lineas: renglonesActualizados,
+      costo_directo: costoTotalDirecto,
+      total: Math.round(total),
+      desglose: { costoIndirectos, costoAdmin, imprevistos, utilidad }
+    };
+  },
   /**
    * Analiza si un proyecto está excediendo su presupuesto basado en gastos reales.
    */
