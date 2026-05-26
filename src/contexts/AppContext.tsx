@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Session, RealtimeChannel } from '@supabase/supabase-js';
 import { toast } from 'sonner';
@@ -1183,20 +1183,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toast.success('Miembro removido del equipo');
   };
 
+  const toggleSidebar = useCallback(() => setSidebarOpen(p => !p), []);
+  const toggleDarkMode = useCallback(() => setDarkMode(p => !p), []);
+
+  const contextValue = useMemo(() => ({
+    view, setView, session, loading, authError, signIn, signUp, signInWithGoogle, signOut, user,
+    clientes, addCliente, updateCliente, deleteCliente,
+    proyectos, addProyecto, updateProyecto,
+    transacciones, addTransaccion, deleteTransaccion,
+    actividades, addActividad, deleteActividad,
+    presupuestos, addPresupuesto, updatePresupuesto, deletePresupuesto, transicionFase,
+    equipos, addEquipo, updateEquipo, deleteEquipo,
+    equipoMiembros, addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
+    sidebarOpen, toggleSidebar,
+    darkMode, toggleDarkMode,
+    isOnline, pendingCount,
+  }), [
+    view, session, loading, authError, user,
+    clientes, proyectos, transacciones, actividades, presupuestos, equipos, equipoMiembros,
+    sidebarOpen, darkMode, isOnline, pendingCount,
+  ]);
+
   return (
-    <AppContext.Provider value={{
-      view, setView, session, loading, authError, signIn, signUp, signInWithGoogle, signOut, user,
-      clientes, addCliente, updateCliente, deleteCliente,
-      proyectos, addProyecto, updateProyecto,
-      transacciones, addTransaccion, deleteTransaccion,
-      actividades, addActividad, deleteActividad,
-      presupuestos, addPresupuesto, updatePresupuesto, deletePresupuesto, transicionFase,
-      equipos, addEquipo, updateEquipo, deleteEquipo,
-      equipoMiembros, addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
-      sidebarOpen, toggleSidebar: () => setSidebarOpen(p => !p),
-      darkMode, toggleDarkMode: () => setDarkMode(p => !p),
-      isOnline, pendingCount,
-    }}>
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );
