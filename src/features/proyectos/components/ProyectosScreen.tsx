@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/lib/supabase';
 import type { Presupuesto } from '@/types/supabase';
 import PageShell from '@/components/shared/PageShell';
-import { Play, PauseCircle, CheckCircle, Folder, Filter, Edit3, Save, Trash2, X, ChevronDown, ChevronRight, DollarSign, TrendingUp, TrendingDown, Ruler } from 'lucide-react';
+import { Play, PauseCircle, CheckCircle, Folder, Filter, Edit3, Save, Trash2, X, ChevronDown, ChevronRight, DollarSign, TrendingUp, TrendingDown, Ruler, Percent } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Fase = Presupuesto['fase'];
@@ -47,6 +47,7 @@ interface RenglonDetalle {
   costoManoObra: number;
   costoHerramienta: number;
   rendimiento: number;
+  avance: number;
 }
 
 const ProyectosScreen: React.FC = () => {
@@ -58,6 +59,7 @@ const ProyectosScreen: React.FC = () => {
   const [editForm, setEditForm] = useState<EditForm>({
     ingresos: 0, gastos: 0, pendienteAportar: 0, avanceFisico: 0, avanceFinanciero: 0,
   });
+  const [renglonAvances, setRenglonAvances] = useState<Record<string, number>>({});
 
   const filtrados = useMemo(() => {
     let r = presupuestos;
@@ -116,11 +118,30 @@ const ProyectosScreen: React.FC = () => {
         costoManoObra: Number(r.costoManoObra) || 0,
         costoHerramienta: Number(r.costoHerramienta) || 0,
         rendimiento: Number(r.rendimiento) || 0,
+        avance: Number(r.avance) || 0,
       };
     });
   };
 
   const CalcularSubtotal = (r: RenglonDetalle) => r.cantidad * (r.costoMaterial + r.costoManoObra + r.costoHerramienta);
+  const avancePonderado = (renglones: RenglonDetalle[]) => {
+    const total = renglones.reduce((s, r) => s + CalcularSubtotal(r), 0);
+    if (total === 0) return 0;
+    return renglones.reduce((s, r) => s + (renglonAvances[r.id] ?? r.avance) * CalcularSubtotal(r), 0) / total;
+  };
+
+  const guardarAvancesRenglones = useCallback(async (presupuestoId: string, p: Presupuesto) => {
+    const current = parseLineas(p.lineas);
+    const updated = current.map(r => ({ ...r, avance: renglonAvances[r.id] ?? r.avance }));
+    const total = current.reduce((s, r) => s + CalcularSubtotal(r), 0);
+    const ponderado = total === 0 ? 0 : current.reduce((s, r) => s + (renglonAvances[r.id] ?? r.avance) * CalcularSubtotal(r), 0) / total;
+    try {
+      const { error } = await supabase.from('presupuestos').update({ lineas: updated as unknown as unknown[], avance_fisico: Math.round(ponderado) }).eq('id', presupuestoId);
+      if (error) throw error;
+      toast.success(`Avances guardados — Progreso general: ${Math.round(ponderado)}%`);
+      setRenglonAvances({});
+    } catch { toast.error('Error al guardar avances'); }
+  }, [renglonAvances]);
 
   return (
     <PageShell showHome={false} title="Proyectos por Fase">
@@ -306,41 +327,67 @@ const ProyectosScreen: React.FC = () => {
 
                         {/* Tabla de renglones */}
                         <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                          <div className="bg-slate-100 px-3 py-2 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
-                            Renglones de presupuesto ({renglones.length})
+                          <div className="bg-slate-100 px-3 py-2 flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                              Renglones de presupuesto ({renglones.length})
+                            </span>
+                            <span className="text-[10px] font-bold text-blue-700">
+                              Avance total: {Math.round(avancePonderado(renglones))}%
+                            </span>
                           </div>
-                          <div className="overflow-x-auto">
+                          <div className="overflow-x-auto max-h-80 overflow-y-auto">
                             <table className="w-full text-[11px]">
-                              <thead>
-                                <tr className="bg-slate-50 border-b border-slate-200">
+                              <thead className="sticky top-0 bg-slate-50">
+                                <tr className="border-b border-slate-200">
                                   <th className="text-left px-3 py-2 font-semibold text-slate-600">Código</th>
                                   <th className="text-left px-3 py-2 font-semibold text-slate-600">Descripción</th>
                                   <th className="text-right px-3 py-2 font-semibold text-slate-600">Cant.</th>
                                   <th className="text-right px-3 py-2 font-semibold text-slate-600">Unidad</th>
-                                  <th className="text-right px-3 py-2 font-semibold text-slate-600">Mat. (Q)</th>
-                                  <th className="text-right px-3 py-2 font-semibold text-slate-600">M.O. (Q)</th>
-                                  <th className="text-right px-3 py-2 font-semibold text-slate-600">Her. (Q)</th>
                                   <th className="text-right px-3 py-2 font-semibold text-slate-600">Subtotal (Q)</th>
+                                  <th className="text-center px-3 py-2 font-semibold text-slate-600">Avance %</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {renglones.map(r => (
-                                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50">
-                                    <td className="px-3 py-2 text-slate-500 font-mono">{r.codigo}</td>
-                                    <td className="px-3 py-2 font-medium text-slate-800">{r.descripcion}</td>
-                                    <td className="px-3 py-2 text-right text-slate-700">{r.cantidad}</td>
-                                    <td className="px-3 py-2 text-right text-slate-500">{r.unidad}</td>
-                                    <td className="px-3 py-2 text-right text-slate-700">{r.costoMaterial.toFixed(2)}</td>
-                                    <td className="px-3 py-2 text-right text-slate-700">{r.costoManoObra.toFixed(2)}</td>
-                                    <td className="px-3 py-2 text-right text-slate-700">{r.costoHerramienta.toFixed(2)}</td>
-                                    <td className="px-3 py-2 text-right font-bold text-blue-800">{CalcularSubtotal(r).toFixed(2)}</td>
-                                  </tr>
-                                ))}
+                                {renglones.map(r => {
+                                  const av = renglonAvances[r.id] ?? r.avance;
+                                  const sub = CalcularSubtotal(r);
+                                  return (
+                                    <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50">
+                                      <td className="px-3 py-2 text-slate-500 font-mono">{r.codigo}</td>
+                                      <td className="px-3 py-2 font-medium text-slate-800 max-w-[200px] truncate">{r.descripcion}</td>
+                                      <td className="px-3 py-2 text-right text-slate-700">{r.cantidad} <span className="text-slate-400">{r.unidad}</span></td>
+                                      <td className="px-3 py-2 text-right text-slate-500">{r.unidad}</td>
+                                      <td className="px-3 py-2 text-right font-medium text-blue-800">Q {sub.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
+                                      <td className="px-3 py-2 text-center">
+                                        <div className="flex items-center justify-center gap-1.5">
+                                          <input type="range" min={0} max={100} value={av}
+                                            onChange={e => setRenglonAvances(p => ({ ...p, [r.id]: Number(e.target.value) }))}
+                                            className="w-20 h-1.5 accent-blue-600 cursor-pointer" />
+                                          <input type="number" min={0} max={100} value={av}
+                                            onChange={e => setRenglonAvances(p => ({ ...p, [r.id]: Math.min(100, Math.max(0, Number(e.target.value) || 0)) }))}
+                                            className="w-12 px-1 py-0.5 text-[10px] border rounded text-right" />
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
                               </tbody>
                               <tfoot>
                                 <tr className="bg-blue-50">
-                                  <td colSpan={7} className="px-3 py-2 text-right font-bold text-slate-700">TOTAL RENGLONES</td>
+                                  <td colSpan={4} className="px-3 py-2 text-right font-bold text-slate-700">TOTAL RENGLONES</td>
                                   <td className="px-3 py-2 text-right font-bold text-blue-900">Q {totalRenglones.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
+                                  <td className="px-3 py-2 text-center font-bold text-blue-800">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <Percent className="w-3 h-3" />
+                                      {Math.round(avancePonderado(renglones))}%
+                                      {Object.keys(renglonAvances).length > 0 && (
+                                        <button onClick={() => guardarAvancesRenglones(p.id, p)}
+                                          className="ml-1 px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500 hover:bg-emerald-600 text-white">
+                                          Guardar
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
                                 </tr>
                               </tfoot>
                             </table>
