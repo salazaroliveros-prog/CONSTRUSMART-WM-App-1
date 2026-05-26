@@ -106,6 +106,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    const realtimeActividades = useRef<RealtimeChannel | null>(null);
    const realtimeEquipos = useRef<RealtimeChannel | null>(null);
    const realtimeEquipoMiembros = useRef<RealtimeChannel | null>(null);
+   const realtimeRenglones = useRef<RealtimeChannel | null>(null);
+   const realtimeRenglonUsage = useRef<RealtimeChannel | null>(null);
+   const realtimeRenglonPrecios = useRef<RealtimeChannel | null>(null);
+   const realtimeCambios = useRef<RealtimeChannel | null>(null);
+   const realtimeMateriales = useRef<RealtimeChannel | null>(null);
+   const realtimeMovimientos = useRef<RealtimeChannel | null>(null);
+   const realtimeConciliaciones = useRef<RealtimeChannel | null>(null);
+   const realtimePartidas = useRef<RealtimeChannel | null>(null);
+   const realtimeChecklist = useRef<RealtimeChannel | null>(null);
+   const realtimeNotificaciones = useRef<RealtimeChannel | null>(null);
    const initDoneRef = useRef(false);
    const mountedRef = useRef(true);
 
@@ -213,6 +223,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        if (realtimeTransacciones.current) realtimeTransacciones.current.unsubscribe();
         if (realtimeActividades.current) realtimeActividades.current.unsubscribe();
         if (realtimePresupuestos.current) realtimePresupuestos.current.unsubscribe();
+        if (realtimeRenglones.current) realtimeRenglones.current.unsubscribe();
+        if (realtimeRenglonUsage.current) realtimeRenglonUsage.current.unsubscribe();
+        if (realtimeRenglonPrecios.current) realtimeRenglonPrecios.current.unsubscribe();
+        if (realtimeCambios.current) realtimeCambios.current.unsubscribe();
+        if (realtimeMateriales.current) realtimeMateriales.current.unsubscribe();
+        if (realtimeMovimientos.current) realtimeMovimientos.current.unsubscribe();
+        if (realtimeConciliaciones.current) realtimeConciliaciones.current.unsubscribe();
+        if (realtimePartidas.current) realtimePartidas.current.unsubscribe();
+        if (realtimeChecklist.current) realtimeChecklist.current.unsubscribe();
+        if (realtimeNotificaciones.current) realtimeNotificaciones.current.unsubscribe();
       };
     // eslint-disable-next-line react-hooks/exhaustive-deps
    }, []);
@@ -315,6 +335,101 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        }, (payload) => {
          handleRealtimeChange('equipo_miembros', payload);
        })
+       .subscribe();
+
+     // Renglones realtime
+     if (realtimeRenglones.current) realtimeRenglones.current.unsubscribe();
+     realtimeRenglones.current = supabase
+       .channel('renglones')
+       .on('postgres_changes', {
+         event: '*', schema: 'public', table: 'renglones',
+         filter: `user_id=eq.${userId}`
+       }, () => { /* feature hook refreshes on mount */ })
+       .subscribe();
+
+     // Renglon usage realtime
+     if (realtimeRenglonUsage.current) realtimeRenglonUsage.current.unsubscribe();
+     realtimeRenglonUsage.current = supabase
+       .channel('renglon_usage')
+       .on('postgres_changes', {
+         event: '*', schema: 'public', table: 'renglon_usage',
+         filter: `user_id=eq.${userId}`
+       }, () => {})
+       .subscribe();
+
+     // Renglon precios historial (no user_id — RLS via renglones subquery)
+     if (realtimeRenglonPrecios.current) realtimeRenglonPrecios.current.unsubscribe();
+     realtimeRenglonPrecios.current = supabase
+       .channel('renglon_precios_historial')
+       .on('postgres_changes', {
+         event: '*', schema: 'public', table: 'renglon_precios_historial'
+       }, () => {})
+       .subscribe();
+
+     // Cambios presupuesto (no user_id — RLS via presupuestos subquery)
+     if (realtimeCambios.current) realtimeCambios.current.unsubscribe();
+     realtimeCambios.current = supabase
+       .channel('cambios_presupuesto')
+       .on('postgres_changes', {
+         event: '*', schema: 'public', table: 'cambios_presupuesto'
+       }, () => {})
+       .subscribe();
+
+     // Materiales proyecto (no user_id — RLS via presupuestos subquery)
+     if (realtimeMateriales.current) realtimeMateriales.current.unsubscribe();
+     realtimeMateriales.current = supabase
+       .channel('materiales_proyecto')
+       .on('postgres_changes', {
+         event: '*', schema: 'public', table: 'materiales_proyecto'
+       }, () => {})
+       .subscribe();
+
+     // Movimientos materiales (tiene user_id)
+     if (realtimeMovimientos.current) realtimeMovimientos.current.unsubscribe();
+     realtimeMovimientos.current = supabase
+       .channel('movimientos_materiales')
+       .on('postgres_changes', {
+         event: '*', schema: 'public', table: 'movimientos_materiales',
+         filter: `user_id=eq.${userId}`
+       }, () => {})
+       .subscribe();
+
+     // Conciliaciones (tiene user_id)
+     if (realtimeConciliaciones.current) realtimeConciliaciones.current.unsubscribe();
+     realtimeConciliaciones.current = supabase
+       .channel('conciliaciones')
+       .on('postgres_changes', {
+         event: '*', schema: 'public', table: 'conciliaciones',
+         filter: `user_id=eq.${userId}`
+       }, () => {})
+       .subscribe();
+
+     // Partidas conciliacion (no user_id — RLS via conciliaciones subquery)
+     if (realtimePartidas.current) realtimePartidas.current.unsubscribe();
+     realtimePartidas.current = supabase
+       .channel('partidas_conciliacion')
+       .on('postgres_changes', {
+         event: '*', schema: 'public', table: 'partidas_conciliacion'
+       }, () => {})
+       .subscribe();
+
+     // Checklist items (no user_id — RLS via presupuestos subquery)
+     if (realtimeChecklist.current) realtimeChecklist.current.unsubscribe();
+     realtimeChecklist.current = supabase
+       .channel('checklist_items')
+       .on('postgres_changes', {
+         event: '*', schema: 'public', table: 'checklist_items'
+       }, () => {})
+       .subscribe();
+
+     // Notificaciones (tiene user_id)
+     if (realtimeNotificaciones.current) realtimeNotificaciones.current.unsubscribe();
+     realtimeNotificaciones.current = supabase
+       .channel('notificaciones')
+       .on('postgres_changes', {
+         event: '*', schema: 'public', table: 'notificaciones',
+         filter: `user_id=eq.${userId}`
+       }, () => {})
        .subscribe();
    };
 

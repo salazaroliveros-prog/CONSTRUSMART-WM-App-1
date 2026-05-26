@@ -68,6 +68,63 @@ export interface HistorialPrecio {
   variacion: number;
 }
 
+type DBRow = Record<string, unknown>;
+
+export function dbToRenglon(db: DBRow): Renglon {
+  return {
+    id: (db.id as string) ?? '',
+    codigo: (db.codigo as string) ?? '',
+    descripcion: (db.descripcion as string) ?? '',
+    tipoRenglon: db.tipo_renglon as TipoRenglon | undefined,
+    unidad: (db.unidad as string) ?? '',
+    rendimiento: Number(db.rendimiento) || 0,
+    costoMaterial: Number(db.costo_material) || 0,
+    costoManoObra: Number(db.costo_mano_obra) || 0,
+    costoHerramienta: Number(db.costo_herramienta) || 0,
+    subrenglones: Array.isArray(db.subrenglones) ? db.subrenglones as SubRenglon[] : undefined,
+    materiales: Array.isArray(db.materiales) ? db.materiales as MaterialUnitario[] : undefined,
+    categoria: db.categoria as string | undefined,
+    etiquetas: Array.isArray(db.etiquetas) ? db.etiquetas as string[] : undefined,
+    tipologia: db.tipologia as string | undefined,
+    estimacionTiempo: db.estimacion_tiempo != null ? Number(db.estimacion_tiempo) : undefined,
+    dificultad: db.dificultad as 'baja' | 'media' | 'alta' | undefined,
+    equipoRequerido: Array.isArray(db.equipo_requerido) ? db.equipo_requerido as string[] : undefined,
+    notas: db.notas as string | undefined,
+    favorito: db.favorito === true,
+    frecuenciaUso: db.frecuencia_uso != null ? Number(db.frecuencia_uso) : undefined,
+    ultimoUso: db.ultimo_uso as string | undefined,
+    activo: db.activo !== false,
+    created_at: db.created_at as string | undefined,
+    updated_at: db.updated_at as string | undefined,
+  };
+}
+
+export function renglonToDb(renglon: Partial<Renglon>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (renglon.codigo !== undefined) out.codigo = renglon.codigo;
+  if (renglon.descripcion !== undefined) out.descripcion = renglon.descripcion;
+  if (renglon.tipoRenglon !== undefined) out.tipo_renglon = renglon.tipoRenglon;
+  if (renglon.unidad !== undefined) out.unidad = renglon.unidad;
+  if (renglon.rendimiento !== undefined) out.rendimiento = renglon.rendimiento;
+  if (renglon.costoMaterial !== undefined) out.costo_material = renglon.costoMaterial;
+  if (renglon.costoManoObra !== undefined) out.costo_mano_obra = renglon.costoManoObra;
+  if (renglon.costoHerramienta !== undefined) out.costo_herramienta = renglon.costoHerramienta;
+  if (renglon.subrenglones !== undefined) out.subrenglones = renglon.subrenglones;
+  if (renglon.materiales !== undefined) out.materiales = renglon.materiales;
+  if (renglon.categoria !== undefined) out.categoria = renglon.categoria;
+  if (renglon.etiquetas !== undefined) out.etiquetas = renglon.etiquetas;
+  if (renglon.tipologia !== undefined) out.tipologia = renglon.tipologia;
+  if (renglon.estimacionTiempo !== undefined) out.estimacion_tiempo = renglon.estimacionTiempo;
+  if (renglon.dificultad !== undefined) out.dificultad = renglon.dificultad;
+  if (renglon.equipoRequerido !== undefined) out.equipo_requerido = renglon.equipoRequerido;
+  if (renglon.notas !== undefined) out.notas = renglon.notas;
+  if (renglon.favorito !== undefined) out.favorito = renglon.favorito;
+  if (renglon.frecuenciaUso !== undefined) out.frecuencia_uso = renglon.frecuenciaUso;
+  if (renglon.ultimoUso !== undefined) out.ultimo_uso = renglon.ultimoUso;
+  if (renglon.activo !== undefined) out.activo = renglon.activo;
+  return out;
+}
+
 export interface ResultadoBusqueda {
   renglon: Renglon;
   relevancia: number;
@@ -145,7 +202,7 @@ export async function obtenerBibliotecaRenglones(userId: string): Promise<Renglo
       return RENGLONES_BASE;
     }
 
-    return data || RENGLONES_BASE;
+    return (data || []).map(dbToRenglon);
   } catch (error) {
     console.error('Error obteniendo biblioteca:', error);
     return RENGLONES_BASE;
@@ -215,7 +272,7 @@ export async function obtenerRenglonesFreuentes(
       .select('*')
       .in('id', ids);
 
-    return renglones || [];
+    return (renglones || []).map(dbToRenglon);
   } catch (error) {
     console.error('Error obteniendo renglones frecuentes:', error);
     return [];
@@ -227,13 +284,14 @@ export async function obtenerRenglonesFreuentes(
  */
 export async function crearRenglon(renglon: Omit<Renglon, 'id'>, userId: string): Promise<string | null> {
   try {
+    const payload = {
+      ...renglonToDb(renglon),
+      user_id: userId,
+      created_at: new Date().toISOString(),
+    };
     const { data, error } = await supabase
       .from('renglones')
-      .insert({
-        ...renglon,
-        user_id: userId,
-        created_at: new Date().toISOString(),
-      })
+      .insert(payload)
       .select('id')
       .single();
 
@@ -254,12 +312,13 @@ export async function actualizarRenglon(
   userId: string
 ): Promise<boolean> {
   try {
+    const payload = {
+      ...renglonToDb(cambios),
+      updated_at: new Date().toISOString(),
+    };
     const { error } = await supabase
       .from('renglones')
-      .update({
-        ...cambios,
-        updated_at: new Date().toISOString(),
-      })
+      .update(payload)
       .eq('id', id)
       .eq('user_id', userId);
 
@@ -303,10 +362,11 @@ export async function clonarRenglon(id: string, userId: string): Promise<string 
 
     if (!renglon) return null;
 
+    const renglonApp = dbToRenglon(renglon);
     const copia = {
-      ...renglon,
-      codigo: `${renglon.codigo}-COPIA`,
-      descripcion: `${renglon.descripcion} (Copia)`,
+      ...renglonApp,
+      codigo: `${renglonApp.codigo}-COPIA`,
+      descripcion: `${renglonApp.descripcion} (Copia)`,
       created_at: undefined,
       updated_at: undefined,
     };
@@ -540,9 +600,9 @@ export async function obtenerFavoritos(userId: string): Promise<Renglon[]> {
       .eq('user_id', userId)
       .eq('favorito', true)
       .eq('activo', true)
-      .order('frecuenciaUso', { ascending: false });
+      .order('frecuencia_uso', { ascending: false });
 
-    return data || [];
+    return (data || []).map(dbToRenglon);
   } catch (error) {
     console.error('Error obteniendo favoritos:', error);
     return [];

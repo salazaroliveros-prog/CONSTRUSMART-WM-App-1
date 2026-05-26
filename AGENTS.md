@@ -5,6 +5,7 @@
 ```bash
 npm run dev          # Vite on port 8080 (NOT 5173)
 npm run build        # production build
+npm run build:dev    # build with --mode development
 npm run lint         # eslint . --fix
 npm run typecheck    # tsc --noEmit
 npm test             # vitest
@@ -20,6 +21,10 @@ npm test             # vitest
 - **Path alias**: `@/` → `src/` (configured in both vite.config.ts and vitest.config.ts).
 - **PWA**: auto-updating service worker via `vite-plugin-pwa` — dev mode also enabled.
 - **Vercel**: SPA rewrites in `vercel.json`.
+- **Entrypoint chain**: `src/main.tsx` → `App.tsx` → `pages/Index.tsx` → `<AppProvider> <AppLayout />`.
+- **Features** dir: `src/features/{clientes,financiero,presupuestos,proyectos}/`, each with own `components/` and `hooks/`.
+- **Services** dir: `src/services/` (CalculoService, PresupuestoService, RenglonesService, ExportService).
+- **No CI workflows** exist (only dependabot for devcontainers). No automated PR checks besides local commands.
 
 ## Supabase — critical facts
 
@@ -28,10 +33,10 @@ npm test             # vitest
 VITE_SUPABASE_URL=<url>
 VITE_SUPABASE_ANON_KEY=<key>
 ```
-`.env` has real creds; `.env.example` has placeholders.
+`.env` has real creds (live Supabase project); `.env.example` has placeholders. **Do not commit `.env`.**
 
 ### 28 SQL files — only ONE matters
-Use **`SYNC_SUPABASE_FINAL.sql`** as the authoritative schema (now 17 tables, fully idempotent). Ignore all other `.sql` files.
+Use **`SYNC_SUPABASE_FINAL.sql`** as the authoritative schema (17 tables, fully idempotent). Ignore all other `.sql` files.
 
 ### 17 tables with full CRUD + RLS
 `clientes`, `proyectos`, `presupuestos`, `transacciones`, `actividades`, `equipos`, `equipo_miembros`,
@@ -46,7 +51,7 @@ Column already exists in `SYNC_SUPABASE_FINAL.sql` (CREATE + ALTER). `Presupuest
 ### `transacciones.proyecto_id` type
 Must stay `text` (not `uuid`) — the app writes `'admin'` as proyecto_id for office transactions.
 
-### 4 feature modules now connected to Supabase
+### 4 feature modules connected to Supabase
 | Module | Hook file | Tables used |
 |---|---|---|
 | Change Orders | `src/hooks/useChangeOrders.ts` | `cambios_presupuesto` |
@@ -66,6 +71,7 @@ Equipos: additional SELECT access for team members via subquery.
 - **eslint**: `no-unused-vars` OFF, `no-explicit-any` OFF, `react-refresh/only-export-components` OFF.
 - **Build chunks**: vendor-react, vendor-charts (recharts), vendor-icons (lucide), vendor-forms (zod/hook-form).
 - **vitest**: jsdom environment, `@` alias, `./src/setupTests.ts` (imports `@testing-library/jest-dom`).
+- **Tests**: 3 test files in `src/utils/` — `predictorAPU.test.ts`, `reportesAutomaticos.test.ts`, `validacionPresupuesto.test.ts`. No e2e tests.
 
 ## Two `usePresupuestos` hooks
 - `src/hooks/usePresupuestos.ts` — wraps `PresupuestoService` (calculations, export, comparisons).
