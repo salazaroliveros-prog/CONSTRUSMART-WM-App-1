@@ -130,11 +130,11 @@ const ProyectosScreen: React.FC = () => {
 
   const guardarAvancesRenglones = useCallback(async (presupuestoId: string, p: Presupuesto) => {
     const current = parseLineas(p.lineas);
-    const updated = current.map(r => ({ ...r, avance: renglonAvances[r.id] ?? r.avance }));
+    const updated = current.map(r => ({ ...r, avance: Number(renglonAvances[r.id] ?? r.avance || 0) }));
     const total = current.reduce((s, r) => s + CalcularSubtotal(r), 0);
-    const ponderado = total === 0 ? 0 : current.reduce((s, r) => s + (renglonAvances[r.id] ?? r.avance) * CalcularSubtotal(r), 0) / total;
+    const ponderado = total === 0 ? 0 : current.reduce((s, r) => s + (Number(renglonAvances[r.id] ?? r.avance || 0)) * CalcularSubtotal(r), 0) / total;
     try {
-      await updatePresupuesto(presupuestoId, { lineas: updated as unknown[], avanceFisico: Math.round(ponderado) });
+      await updatePresupuesto(presupuestoId, { lineas: updated, avanceFisico: Math.round(ponderado) });
       toast.success(`Avances guardados — Progreso general: ${Math.round(ponderado)}%`);
       setRenglonAvances({});
     } catch { toast.error('Error al guardar avances'); }
