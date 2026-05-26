@@ -26,6 +26,7 @@ $$;
 -- ============================================================
 
 DROP POLICY IF EXISTS "equipos_select" ON public.equipos;
+DROP POLICY IF EXISTS "equipos_select_v2" ON public.equipos;
 DROP POLICY IF EXISTS "equipos_insert" ON public.equipos;
 DROP POLICY IF EXISTS "equipos_update" ON public.equipos;
 DROP POLICY IF EXISTS "equipos_delete" ON public.equipos;
@@ -58,6 +59,8 @@ DROP POLICY IF EXISTS "equipo_miembros_insert" ON public.equipo_miembros;
 DROP POLICY IF EXISTS "equipo_miembros_update" ON public.equipo_miembros;
 DROP POLICY IF EXISTS "equipo_miembros_delete" ON public.equipo_miembros;
 DROP POLICY IF EXISTS "miembros_select" ON public.equipo_miembros;
+DROP POLICY IF EXISTS "miembros_select_own" ON public.equipo_miembros;
+DROP POLICY IF EXISTS "miembros_team_select" ON public.equipo_miembros;
 DROP POLICY IF EXISTS "miembros_insert" ON public.equipo_miembros;
 DROP POLICY IF EXISTS "miembros_delete" ON public.equipo_miembros;
 DROP POLICY IF EXISTS "Acceso propietario equipo_miembros" ON public.equipo_miembros;
@@ -91,6 +94,7 @@ CREATE POLICY "equipo_miembros_delete" ON public.equipo_miembros
 -- ============================================================
 
 DROP POLICY IF EXISTS "presupuestos_select_team" ON public.presupuestos;
+DROP POLICY IF EXISTS "presupuestos_select_team_v3" ON public.presupuestos;
 
 -- ============================================================
 -- PASO 5: Verificación — mostrar políticas resultantes
