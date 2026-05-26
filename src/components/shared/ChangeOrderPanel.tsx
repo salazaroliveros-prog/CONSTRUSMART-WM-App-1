@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ChangeOrderService } from '@/services/presupuestos/ChangeOrderService';
 import { useAppContext } from '@/contexts/AppContext';
-import { GitBranch, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
+import { GitBranch, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Cambio {
@@ -22,10 +22,14 @@ const ChangeOrderPanel: React.FC<{ presupuestoId: string; onVersionChange?: () =
   const [creando, setCreando] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const loadCambios = React.useCallback(async () => {
-    const { data } = await supabase.from('cambios_presupuesto')
-      .select('*').eq('presupuesto_id', presupuestoId).order('version', { ascending: false });
-    if (data) setCambios(data as Cambio[]);
+  const loadCambios = useCallback(async () => {
+    try {
+      const data = await ChangeOrderService.getCambios(presupuestoId);
+      setCambios(data as unknown as Cambio[]);
+    } catch (err) {
+      console.error(err);
+      toast.error('Error al cargar órdenes de cambio');
+    }
   }, [presupuestoId]);
 
   useEffect(() => { if (presupuestoId) loadCambios(); }, [presupuestoId, loadCambios]);
@@ -35,14 +39,7 @@ const ChangeOrderPanel: React.FC<{ presupuestoId: string; onVersionChange?: () =
     setCreando(true);
     try {
       const nextVersion = (cambios[0]?.version || 0) + 1;
-      const { error } = await supabase.from('cambios_presupuesto').insert({
-        presupuesto_id: presupuestoId,
-        version: nextVersion,
-        cambios: [{ campo: 'manual', anterior: null, nuevo: null }],
-        motivo: motivo.trim(),
-        estado: 'pendiente',
-      });
-      if (error) throw error;
+      await ChangeOrderService.crearCambio(presupuestoId, nextVersion, motivo.trim());
       toast.success(`Orden de cambio v${nextVersion} creada`);
       setMotivo('');
       await loadCambios();
@@ -57,7 +54,7 @@ const ChangeOrderPanel: React.FC<{ presupuestoId: string; onVersionChange?: () =
   const aprobarCambio = async (id: string) => {
     if (!session) return;
     try {
-      await supabase.from('cambios_presupuesto').update({ estado: 'aprobado', aprobado_por: session.user.id }).eq('id', id);
+      await ChangeOrderService.actualizarEstado(id, 'aprobado', session.user.id);
       toast.success('Cambio aprobado');
       await loadCambios();
     } catch { toast.error('Error al aprobar'); }
@@ -65,7 +62,7 @@ const ChangeOrderPanel: React.FC<{ presupuestoId: string; onVersionChange?: () =
 
   const rechazarCambio = async (id: string) => {
     try {
-      await supabase.from('cambios_presupuesto').update({ estado: 'rechazado' }).eq('id', id);
+      await ChangeOrderService.actualizarEstado(id, 'rechazado');
       toast.success('Cambio rechazado');
       await loadCambios();
     } catch { toast.error('Error al rechazar'); }

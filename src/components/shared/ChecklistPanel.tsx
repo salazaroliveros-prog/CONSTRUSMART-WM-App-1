@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { ChecklistService } from '@/services/presupuestos/ChecklistService';
 import { useAppContext } from '@/contexts/AppContext';
-import { CheckSquare, Square, Camera, Plus, Trash2 } from 'lucide-react';
+import { CheckSquare, Square, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ChecklistItem {
@@ -29,32 +29,32 @@ const ChecklistPanel: React.FC<{ presupuestoId: string; fase: string; onComplete
   const [nuevoItem, setNuevoItem] = useState('');
 
   const cargar = useCallback(async () => {
-    const { data } = await supabase.from('checklist_items').select('*')
-      .eq('presupuesto_id', presupuestoId).eq('fase', fase).order('created_at');
-    if (data) setItems(data as ChecklistItem[]);
+    try {
+      const data = await ChecklistService.getChecklist(presupuestoId, fase);
+      setItems(data as unknown as ChecklistItem[]);
+    } catch (err) {
+      console.error(err);
+      toast.error('Error al cargar checklist');
+    }
   }, [presupuestoId, fase]);
 
   useEffect(() => { if (presupuestoId && fase) cargar(); }, [presupuestoId, fase, cargar]);
 
   const agregarItem = async (texto: string) => {
-    if (!session) return;
-    const { error } = await supabase.from('checklist_items').insert({
-      presupuesto_id: presupuestoId, fase, item: texto,
-    });
-    if (error) { toast.error('Error al agregar item'); return; }
-    await cargar();
+    try {
+      await ChecklistService.addItem({ presupuesto_id: presupuestoId, fase, item: texto });
+      await cargar();
+    } catch (err) {
+      console.error(err);
+      toast.error('Error al agregar item');
+    }
   };
 
   const toggleItem = async (item: ChecklistItem) => {
     if (!session) return;
     const nuevo = !item.completado;
     try {
-      const { error } = await supabase.from('checklist_items').update({
-        completado: nuevo,
-        completado_por: nuevo ? session.user.id : null,
-        completado_en: nuevo ? new Date().toISOString() : null,
-      }).eq('id', item.id);
-      if (error) throw error;
+      await ChecklistService.toggleItem(item.id, nuevo, session.user.id);
       await cargar();
       onCompleteChange?.(items.every(i => i.completado || i.id === item.id));
     } catch (err) {
@@ -66,8 +66,7 @@ const ChecklistPanel: React.FC<{ presupuestoId: string; fase: string; onComplete
   const eliminarItem = async (id: string) => {
     if (!confirm('¿Eliminar este item del checklist?')) return;
     try {
-      const { error } = await supabase.from('checklist_items').delete().eq('id', id);
-      if (error) throw error;
+      await ChecklistService.deleteItem(id);
       await cargar();
     } catch (err) {
       toast.error('Error al eliminar item');
@@ -83,7 +82,6 @@ const ChecklistPanel: React.FC<{ presupuestoId: string; fase: string; onComplete
     for (const item of predef) {
       await agregarItem(item);
     }
-    await cargar();
   };
 
   return (

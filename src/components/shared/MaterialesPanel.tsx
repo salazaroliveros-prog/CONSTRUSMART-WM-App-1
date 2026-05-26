@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { MaterialesService } from '@/services/presupuestos/MaterialesService';
 import { Package, Plus, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -14,24 +14,36 @@ const MaterialesPanel: React.FC<Props> = ({ presupuestoId, onClose }) => {
   const [nuevo, setNuevo] = useState({ nombre: '', unidad: 'unidad', cantidad: 0 });
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from('materiales_proyecto').select('*').eq('presupuesto_id', presupuestoId);
-    if (data) setItems(data as Material[]);
+    try {
+      const data = await MaterialesService.getMateriales(presupuestoId);
+      setItems(data);
+    } catch (err) {
+      console.error(err);
+      toast.error('Error al cargar materiales');
+    }
   }, [presupuestoId]);
+
   useEffect(() => { if (presupuestoId) load(); }, [presupuestoId, load]);
 
   const agregar = async () => {
     if (!nuevo.nombre) return;
-    const { error } = await supabase.from('materiales_proyecto').insert({
-      presupuesto_id: presupuestoId, nombre: nuevo.nombre, unidad: nuevo.unidad, cantidad_estimada: nuevo.cantidad,
-    });
-    if (error) toast.error('Error al agregar material');
-    else { setNuevo({ nombre: '', unidad: 'unidad', cantidad: 0 }); await load(); }
+    try {
+      await MaterialesService.addMaterial({
+        presupuesto_id: presupuestoId,
+        nombre: nuevo.nombre,
+        unidad: nuevo.unidad,
+        cantidad_estimada: nuevo.cantidad,
+      });
+      setNuevo({ nombre: '', unidad: 'unidad', cantidad: 0 });
+      await load();
+    } catch (err) {
+      toast.error('Error al agregar material');
+    }
   };
 
   const registrarUso = async (id: string, cantidad: number) => {
     try {
-      const { error } = await supabase.from('movimientos_materiales').insert({ material_id: id, tipo: 'salida', cantidad });
-      if (error) throw error;
+      await MaterialesService.registrarUso(id, cantidad);
       toast.success('Uso registrado');
       await load();
     } catch (err) {
