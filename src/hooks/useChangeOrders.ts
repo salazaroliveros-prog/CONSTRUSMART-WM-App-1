@@ -58,14 +58,12 @@ export function useChangeOrders(presupuesto: Presupuesto) {
           changeOrders
         );
         
-        const userId = session?.user?.id;
         await supabase.from('cambios_presupuesto').insert({
           presupuesto_id: presupuesto.id,
           version: orden.version,
           cambios: orden.cambios,
           motivo: orden.descripcion,
           estado: 'pendiente',
-          aprobado_por: userId,
         });
 
         setChangeOrders(prev => [...prev, orden]);

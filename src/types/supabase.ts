@@ -179,12 +179,10 @@ export interface Presupuesto {
   id: string;
   user_id: string;
   proyecto: string;
-  proyecto_nombre?: string;
   cliente?: string;
   ubicacion?: string;
   tipologia?: string;
   fase: 'planeación' | 'ejecución' | 'pausa' | 'finalizado';
-  estado?: 'Planeación' | 'Ejecución' | 'Pausa' | 'Finalizado';
   proyectoId?: string;
   costo_directo?: number;
   costo_material?: number;
@@ -196,13 +194,11 @@ export interface Presupuesto {
   factor_utilidad: number;
   lineas: unknown[];
   avanceFisico?: number;
-  avance?: number;
   avanceFinanciero?: number;
   ingresos?: number;
   gastos?: number;
   pendienteAportar?: number;
   total: number;
-  dias_duracion?: number;
   fechaInicio: string;
   fechaFin: string;
   created_at?: string;
@@ -501,6 +497,7 @@ export const presupuestoToDb = (presupuesto: UpdatePresupuesto): Partial<DBPresu
   if (presupuesto.gastos !== undefined) out.gastos = presupuesto.gastos;
   if (presupuesto.pendienteAportar !== undefined) out.pendiente_aportar = presupuesto.pendienteAportar;
   if (presupuesto.total !== undefined) out.total = presupuesto.total;
+  if (presupuesto.costo_directo !== undefined) out.costo_directo = presupuesto.costo_directo;
   out.fecha_inicio = presupuesto.fechaInicio || null;
   out.fecha_fin = presupuesto.fechaFin || null;
   return out as Partial<DBPresupuesto>;
@@ -530,6 +527,7 @@ export const equipoToDb = (equipo: UpdateEquipo): Partial<DBEquipo> => {
   if (equipo.nombre !== undefined) out.nombre = equipo.nombre;
   if (equipo.estado !== undefined) out.estado = equipo.estado;
   if (equipo.descripcion !== undefined) out.descripcion = equipo.descripcion;
+  if (equipo.userId !== undefined) out.user_id = equipo.userId;
   return out as Partial<DBEquipo>;
 };
 
@@ -544,5 +542,7 @@ export const dbToEquipoMiembro = (db: DBRow): EquipoMiembro => ({
 export const equipoMiembroToDb = (miembro: UpdateEquipoMiembro): Partial<DBEquipoMiembro> => {
   const out: DBRow = {};
   if (miembro.rol !== undefined) out.rol = miembro.rol;
+  if (miembro.equipoId !== undefined) out.equipo_id = miembro.equipoId;
+  if (miembro.userId !== undefined) out.user_id = miembro.userId;
   return out as Partial<DBEquipoMiembro>;
 };
