@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import Header from '@/components/shared/Header';
+import PageShell from '@/components/shared/PageShell';
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
 import { Download, FileText, Play } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Area, AreaChart } from 'recharts';
@@ -58,9 +58,7 @@ const SeguimientoScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 animate-fadeIn">
-      <Header title="Seguimiento de Proyectos" />
-
+    <PageShell showHome={false} title="Seguimiento de Proyectos">
       <div className="p-3 sm:p-5 max-w-[1600px] mx-auto space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl shadow-md p-4 lg:col-span-2">
@@ -123,7 +121,7 @@ const SeguimientoScreen: React.FC = () => {
           <ProyectosTabla titulo="Proyectos Finalizados" proyectos={finalizados} color="emerald" />
         )}
       </div>
-    </div>
+    </PageShell>
   );
 };
 

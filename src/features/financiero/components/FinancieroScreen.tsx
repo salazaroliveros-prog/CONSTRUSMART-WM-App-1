@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import Header from '@/components/shared/Header';
+import PageShell from '@/components/shared/PageShell';
 import TransactionForm from '@/components/shared/TransactionForm';
 import Calendar from '@/components/shared/Calendar'; // Importamos el calendario
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
@@ -94,9 +94,7 @@ const FinancieroScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 animate-fadeIn">
-      <Header title="Control de Planilla, Gastos Operativos y Personales" />
-
+    <PageShell showHome={false} title="Control de Planilla, Gastos Operativos y Personales">
       <div className="p-3 sm:p-5 max-w-[1600px] mx-auto space-y-4">
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -220,7 +218,7 @@ const FinancieroScreen: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 };
 

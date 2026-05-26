@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Cliente } from '@/types/supabase';
-import Header from '@/components/shared/Header';
+import PageShell from '@/components/shared/PageShell';
 import { Plus, Search, Trash2, Edit2, Phone, Mail, MapPin, Download, X } from 'lucide-react';
 import { downloadCSV } from '@/lib/exporters';
 
@@ -73,9 +73,7 @@ const ClientesScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 animate-fadeIn">
-      <Header title="Gestión de Clientes" />
-
+    <PageShell showHome={false} title="Gestión de Clientes">
       <div className="p-3 sm:p-5 max-w-7xl mx-auto">
         <div className="bg-white rounded-xl shadow-md p-4 mb-4 flex flex-wrap items-center gap-3 justify-between">
           <div className="flex flex-wrap items-center gap-2 flex-1">
@@ -168,7 +166,7 @@ const ClientesScreen: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 };
 
