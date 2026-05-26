@@ -43,10 +43,15 @@ const Dashboard: React.FC = () => {
     const activos = presupuestos.filter(p => p.fase === 'ejecución').length;
     const planeacion = presupuestos.filter(p => p.fase === 'planeación').length;
     const finalizados = presupuestos.filter(p => p.fase === 'finalizado').length;
-    const pendiente = presupuestos.reduce((s, p) => s + p.pendienteAportar, 0);
-    const totalIngresosProyectos = presupuestos.reduce((s, p) => s + p.ingresos, 0);
-    const totalGastosProyectos = presupuestos.reduce((s, p) => s + p.gastos, 0);
-    const rentabilidadGeneral = totalIngresosProyectos > 0 ? ((totalIngresosProyectos - totalGastosProyectos) / totalIngresosProyectos * 100) : 0;
+    const ingresosPorProyecto: Record<string, number> = {};
+    transacciones.filter(t => t.tipo === 'ingreso').forEach(t => {
+      ingresosPorProyecto[t.proyectoId] = (ingresosPorProyecto[t.proyectoId] || 0) + t.costoTotal;
+    });
+    const pendiente = presupuestos.reduce((s, p) => {
+      const recibido = ingresosPorProyecto[p.id] || 0;
+      return s + Math.max(0, (p.total || 0) - recibido);
+    }, 0);
+    const rentabilidadGeneral = ingresos > 0 ? ((ingresos - gastos) / ingresos * 100) : 0;
     return { ingresos, gastos, activos, planeacion, finalizados, pendiente, margen: ingresos - gastos, rentabilidadGeneral };
   }, [transacciones, presupuestos]);
 
