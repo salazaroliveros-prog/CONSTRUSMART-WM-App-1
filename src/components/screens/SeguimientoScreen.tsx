@@ -1,13 +1,27 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
+import { PlanillaService } from '@/services/seguimiento/PlanillaService';
+import { GanttService } from '@/services/seguimiento/GanttService';
 import PageShell from '@/components/shared/PageShell';
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
-import { Download, FileText, Play } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Area, AreaChart } from 'recharts';
+import { Download, FileText, Play, Users, Clock, Filter } from 'lucide-react';
 import type { Presupuesto } from '@/types/supabase';
 
 const SeguimientoScreen: React.FC = () => {
   const { presupuestos, transacciones, transicionFase } = useAppContext();
+  const [selectedProyecto, setSelectedProyecto] = useState<string | null>(null);
+
+  const rutaCritica = useMemo(() => {
+    if (!selectedProyecto) return [];
+    const p = presupuestos.find(pr => pr.id === selectedProyecto);
+    return p ? GanttService.calcularRutaCritica(p.lineas, 30) : [];
+  }, [selectedProyecto, presupuestos]);
+
+  const gastosPersonal = useMemo(() => {
+    if (!selectedProyecto) return 0;
+    return transacciones.filter(t => t.proyectoId === selectedProyecto && t.categoria === 'mano-obra')
+                        .reduce((acc, t) => acc + t.costoTotal, 0);
+  }, [selectedProyecto, transacciones]);
 
   const ejecucion = presupuestos.filter(p => p.fase === 'ejecución');
   const planeacion = presupuestos.filter(p => p.fase === 'planeación');
@@ -61,46 +75,41 @@ const SeguimientoScreen: React.FC = () => {
   return (
     <PageShell showHome={false} title="Seguimiento de Proyectos">
       <div className="p-3 sm:p-5 max-w-[1600px] mx-auto space-y-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl shadow-md p-4 lg:col-span-2">
-            <h3 className="font-bold text-sm text-slate-800 mb-2">Flujo de Ingresos vs Gastos (Mensual)</h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={flujoMensual}>
-                <defs>
-                  <linearGradient id="gi" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
-                  </linearGradient>
-                  <linearGradient id="gg" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `Q${(v/1000).toFixed(0)}K`} />
-                <Tooltip formatter={(v: number) => fmtQ(v)} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Area type="monotone" dataKey="ingresos" stroke="#10B981" fill="url(#gi)" name="Ingresos" />
-                <Area type="monotone" dataKey="gastos" stroke="#EF4444" fill="url(#gg)" name="Gastos" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-md p-4">
-            <h3 className="font-bold text-sm text-slate-800 mb-2">Avance Físico vs Financiero</h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={avanceData} layout="vertical" margin={{ left: 50 }}>
-                <XAxis type="number" tick={{ fontSize: 9 }} domain={[0, 100]} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} width={80} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Bar dataKey="Físico" fill="#1E3A8A" />
-                <Bar dataKey="Financiero" fill="#10B981" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        {/* Selector de Proyecto */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border flex items-center gap-4">
+          <Filter className="w-4 h-4 text-slate-500" />
+          <select onChange={(e) => setSelectedProyecto(e.target.value)} className="flex-1 p-2 border rounded-lg text-sm" value={selectedProyecto || ''}>
+            <option value="">Seleccione un proyecto...</option>
+            {presupuestos.map(p => <option key={p.id} value={p.id}>{p.proyecto}</option>)}
+          </select>
         </div>
+
+        {selectedProyecto && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Gantt / Ruta Crítica */}
+            <div className="lg:col-span-2 bg-white p-4 rounded-xl shadow-sm border">
+               <h3 className="text-xs font-bold uppercase mb-4 flex items-center gap-2"><Clock className="w-4 h-4 text-blue-600"/> Ruta Crítica</h3>
+               {rutaCritica.length > 0 ? rutaCritica.map((r: any) => (
+                 <div key={r.id} className="flex justify-between p-2 border-b text-[11px]">
+                   <span>{r.descripcion}</span>
+                   <span className={r.esRutaCritica ? 'text-red-600 font-bold' : 'text-slate-500'}>Prioridad Alta</span>
+                 </div>
+               )) : <div className="text-center py-4 text-slate-400 text-xs">Sin renglones en ruta crítica</div>}
+            </div>
+
+            {/* Panel de Personal */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border">
+               <h3 className="text-xs font-bold uppercase mb-4 flex items-center gap-2"><Users className="w-4 h-4 text-emerald-600"/> Control de Planilla</h3>
+               <div className="p-3 bg-blue-50 rounded-lg">
+                 <div className="text-[10px] text-blue-600 uppercase font-semibold">Inversión Personal</div>
+                 <div className="text-lg font-bold text-blue-900">{fmtQ(gastosPersonal)}</div>
+               </div>
+            </div>
+          </div>
+        )}
+        
+        {/* ... (mantener el resto de la pantalla de proyectos original) ... */}
+
 
         <div className="flex justify-end gap-2">
           <button onClick={handleExportCSV} className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-sm font-semibold">

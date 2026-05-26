@@ -41,6 +41,17 @@ const MaterialesPanel: React.FC<Props> = ({ presupuestoId, onClose }) => {
     }
   };
 
+  const registrarCompra = async (id: string, cantidad: number) => {
+    try {
+      await MaterialesService.registrarCompra(id, cantidad, 'Compra Directa');
+      toast.success('Compra registrada en Bodega');
+      await load();
+    } catch (err) {
+      toast.error('Error al registrar compra');
+      console.error(err);
+    }
+  };
+
   const registrarUso = async (id: string, cantidad: number) => {
     try {
       await MaterialesService.registrarUso(id, cantidad);
@@ -79,8 +90,13 @@ const MaterialesPanel: React.FC<Props> = ({ presupuestoId, onClose }) => {
                 </div>
               </div>
               <div className="font-mono text-[10px] text-slate-500">Q{Number(m.costo_unitario).toFixed(0)}</div>
-              <div className="flex gap-0.5 opacity-0 group-hover:opacity-100">
-                <button onClick={() => registrarUso(m.id, 1)} className="p-0.5 rounded hover:bg-emerald-100 text-emerald-600"><ArrowUpDown className="w-3 h-3" /></button>
+              <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => registrarCompra(m.id, 1)} className="p-1.5 rounded hover:bg-emerald-100 text-emerald-600" title="Registrar Compra">
+                    <Plus className="w-3 h-3" />
+                </button>
+                <button onClick={() => registrarUso(m.id, 1)} className="p-1.5 rounded hover:bg-red-100 text-red-600" title="Registrar Uso">
+                    <ArrowUpDown className="w-3 h-3" />
+                </button>
               </div>
             </div>
           );
