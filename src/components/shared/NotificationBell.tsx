@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
 import { Bell, BellDot, X, Check, Info, AlertTriangle, CheckCircle, AlertCircle, Trash2 } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { NotificationService } from '@/services/equipos/NotificationService';
