@@ -297,7 +297,7 @@ const PresupuestoScreen: React.FC = () => {
                 <ChecklistPanel presupuestoId={savedPresupuestoId} fase={faseAlGuardar} />
               </div>
               <MaterialesPanel presupuestoId={savedPresupuestoId} />
-              <BitacoraAvancePanel presupuestoId={savedPresupuestoId} />
+              <BitacoraAvancePanel presupuestoId={savedPresupuestoId} onAvanceChange={async (af) => { await updatePresupuesto(savedPresupuestoId, { avanceFisico: af }); }} />
             </>
           )}
 

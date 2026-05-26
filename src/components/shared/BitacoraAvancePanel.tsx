@@ -6,9 +6,10 @@ import { Avance, AvanceSchema } from '@/lib/schemas';
 
 interface BitacoraAvancePanelProps {
   presupuestoId: string;
+  onAvanceChange?: (avanceFisico: number) => Promise<void>;
 }
 
-export const BitacoraAvancePanel: React.FC<BitacoraAvancePanelProps> = ({ presupuestoId }) => {
+export const BitacoraAvancePanel: React.FC<BitacoraAvancePanelProps> = ({ presupuestoId, onAvanceChange }) => {
   const [avances, setAvances] = useState<Avance[]>([]);
   const [nuevoAvance, setNuevoAvance] = useState({ avance: 0, descripcion: '' });
   const [loading, setLoading] = useState(false);
@@ -42,11 +43,15 @@ export const BitacoraAvancePanel: React.FC<BitacoraAvancePanelProps> = ({ presup
       });
       if (errorBitacora) throw errorBitacora;
 
-      const { error: errorPresupuesto } = await supabase
-        .from('presupuestos')
-        .update({ avance_fisico: nuevoAvance.avance })
-        .eq('id', presupuestoId);
-      if (errorPresupuesto) throw errorPresupuesto;
+      if (onAvanceChange) {
+        await onAvanceChange(nuevoAvance.avance);
+      } else {
+        const { error: errorPresupuesto } = await supabase
+          .from('presupuestos')
+          .update({ avance_fisico: nuevoAvance.avance })
+          .eq('id', presupuestoId);
+        if (errorPresupuesto) throw errorPresupuesto;
+      }
 
       toast.success('Avance registrado y presupuesto actualizado');
       setNuevoAvance({ avance: 0, descripcion: '' });

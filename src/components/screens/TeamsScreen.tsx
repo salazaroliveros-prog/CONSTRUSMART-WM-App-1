@@ -129,14 +129,14 @@ const TeamsScreen: React.FC = () => {
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <Users className="w-4 h-4" /> {eq.nombre}
               </h3>
-              {eq.creador_id === session?.user?.id && (
+              {eq.userId === session?.user?.id && (
                 <span className="text-[10px] bg-emerald-500 px-2 py-0.5 rounded-full">Propietario</span>
               )}
             </div>
 
             <div className="p-3">
               {/* Invitar */}
-              {eq.creador_id === session?.user?.id && (
+              {eq.userId === session?.user?.id && (
                 <div className="mb-3">
                   {inviteTeamId === eq.id ? (
                     <div className="flex gap-2">
@@ -182,7 +182,7 @@ const TeamsScreen: React.FC = () => {
                       <Icon className="w-4 h-4 text-slate-400" />
                       <span className="text-sm flex-1">{m.user_id.slice(0, 8)}...</span>
                       <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">{rolLabels[m.rol]}</span>
-                      {eq.creador_id === session?.user?.id && (
+                      {eq.userId === session?.user?.id && (
                         <button onClick={() => handleRemoveMember(m.id)} className="text-red-400 hover:text-red-600 p-1">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
