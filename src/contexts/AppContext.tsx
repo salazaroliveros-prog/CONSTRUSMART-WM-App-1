@@ -7,9 +7,9 @@ import {
   CreateCliente, CreateProyecto, CreateTransaccion, CreateActividad, CreatePresupuesto, CreateEquipo, CreateEquipoMiembro,
   UpdateCliente, UpdateProyecto, UpdatePresupuesto, UpdateEquipo, UpdateEquipoMiembro,
   CreatePresupuestoInput,
-  validateCliente, validateProyecto, validateTransaccion, validateActividad, validateEquipo, validateEquipoMiembro,
+  validateCliente, validateProyecto, validateEquipo, validateEquipoMiembro,
   dbToCliente, clienteToDb, dbToProyecto, proyectoToDb,
-  dbToTransaccion, transaccionToDb, dbToActividad, actividadToDb, dbToPresupuesto, presupuestoToDb,
+  dbToTransaccion, dbToActividad, dbToPresupuesto, presupuestoToDb,
   dbToEquipo, equipoToDb, dbToEquipoMiembro, equipoMiembroToDb
 } from '@/types/supabase';
 import {
@@ -801,8 +801,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!session) { toast.error('Sesión no encontrada'); return; }
     const userId = session.user.id;
     try {
-      const validated = validateTransaccion({ ...t, user_id: userId });
-      const dbRecord = { ...transaccionToDb(validated), user_id: userId };
+      const dbRecord = {
+        user_id: userId,
+        tipo: t.tipo,
+        descripcion: t.descripcion || null,
+        cantidad: t.cantidad ?? 1,
+        unidad: t.unidad || null,
+        categoria: t.categoria,
+        costo_unitario: t.costoUnitario ?? 0,
+        costo_total: t.costoTotal ?? 0,
+        fecha: t.fecha || new Date().toISOString().split('T')[0],
+        proyecto_id: t.proyectoId ?? 'admin',
+      };
       if (!isOnline) {
         addPendingMutation({ table: 'transacciones', action: 'INSERT', data: dbRecord, userId });
         const optimistic = dbToTransaccion({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
@@ -852,8 +862,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!session) { toast.error('Sesión no encontrada'); return; }
     const userId = session.user.id;
     try {
-      const validated = validateActividad({ ...a, user_id: userId });
-      const dbRecord = { ...actividadToDb(validated), user_id: userId };
+      const dbRecord = {
+        user_id: userId,
+        titulo: a.titulo,
+        fecha: a.fecha,
+        hora: a.hora || null,
+        descripcion: a.descripcion || null,
+        presupuesto_id: a.presupuestoId || null,
+      };
       if (!isOnline) {
         addPendingMutation({ table: 'actividades', action: 'INSERT', data: dbRecord, userId });
         const optimistic = dbToActividad({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
