@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS public.presupuestos (
   updated_at             timestamptz DEFAULT now()
 );
 
--- 4. MÓDULO FINANCIERO / AVANCE
+-- 4. MÓDULO FINANCIERO / AVANCE / PLANILLAS
 CREATE TABLE IF NOT EXISTS public.transacciones (
   id             uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id        uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS public.transacciones (
   costo_total    numeric DEFAULT 0,
   fecha          date DEFAULT CURRENT_DATE,
   proyecto_id    text,
+  empleado_id    text, -- NUEVO: Para trazabilidad de planillas
   created_at     timestamptz DEFAULT now()
 );
 
@@ -104,6 +105,7 @@ CREATE TABLE IF NOT EXISTS public.bitacora_avance (
   fecha           date DEFAULT CURRENT_DATE,
   avance          numeric NOT NULL DEFAULT 0,
   notas           text,
+  recursos_usados jsonb DEFAULT '[]'::jsonb, -- NUEVO: Para seguimiento de personal/equipo
   created_at      timestamptz DEFAULT now()
 );
 

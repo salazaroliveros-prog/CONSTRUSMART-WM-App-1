@@ -34,12 +34,24 @@ export const BodegaService = {
   },
 
   /**
-   * Registra una compra/entrada de material
+   * Registra una compra de materiales y actualiza el stock estimado
    */
-  async registrarEntrada(materialId: string, cantidad: number, referencia: string) {
+  async registrarCompra(materialId: string, cantidad: number, referencia: string) {
     const { error } = await supabase
       .from('movimientos_materiales')
-      .insert({ material_id: materialId, tipo: 'entrada', cantidad, referencia });
+      .insert({ 
+        material_id: materialId, 
+        tipo: 'entrada', 
+        cantidad, 
+        referencia 
+      });
     if (error) throw error;
-  }
-};
+    
+    // Actualizar cantidad_utilizada como proxy de stock disponible/comprado
+    const { error: updErr } = await supabase
+      .from('materiales_proyecto')
+      .update({ cantidad_utilizada: supabase.rpc('increment_cantidad', { row_id: materialId, delta: cantidad }) })
+      .eq('id', materialId);
+    if (updErr) throw updErr;
+  },
+

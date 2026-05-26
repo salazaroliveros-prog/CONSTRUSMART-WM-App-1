@@ -97,6 +97,7 @@ const Dashboard: React.FC = () => {
           <div className="flex gap-2">
             <button onClick={() => setPagina(0)} className={`p-2 rounded-lg ${pagina === 0 ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}><LayoutDashboard className="w-5 h-5"/></button>
             <button onClick={() => setPagina(1)} className={`p-2 rounded-lg ${pagina === 1 ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}><BarChart3 className="w-5 h-5"/></button>
+            <button onClick={() => setPagina(2)} className={`p-2 rounded-lg ${pagina === 2 ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}><Package className="w-5 h-5"/></button>
           </div>
         </div>
 
@@ -107,7 +108,7 @@ const Dashboard: React.FC = () => {
                 <KPI key={i} icon={k.icon} label={k.label} value={k.value} color={k.color} index={i} />
               ))}
             </div>
-          ) : (
+          ) : pagina === 1 ? (
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="glass-card rounded-xl p-4 h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -123,6 +124,27 @@ const Dashboard: React.FC = () => {
                       </BarChart>
                     </ResponsiveContainer>
                 </div>
+             </div>
+          ) : (
+             <div className="animate-in fade-in duration-500 bg-white p-4 rounded-xl shadow-sm border">
+               <h3 className="text-xs font-bold uppercase mb-4 text-slate-700">Stock Actual vs Estimado</h3>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 {presupuestos.slice(0, 5).map(p => (
+                   <div key={p.id} className="p-3 border rounded-lg text-[11px]">
+                     <div className="font-bold mb-2">{p.proyecto}</div>
+                     <div className="space-y-1">
+                       <div className="flex justify-between">
+                         <span className="text-slate-500">Uso Presupuestado:</span>
+                         <span className="font-semibold text-emerald-600">Q {(p.ingresos || 0).toLocaleString()}</span>
+                       </div>
+                       <div className="flex justify-between">
+                         <span className="text-slate-500">Compras Realizadas:</span>
+                         <span className="font-semibold text-blue-600">Q {(p.gastos || 0).toLocaleString()}</span>
+                       </div>
+                     </div>
+                   </div>
+                 ))}
+               </div>
              </div>
           )
         )}
