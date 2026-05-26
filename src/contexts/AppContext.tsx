@@ -1,5 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { FinancieroService } from '@/services/financiero/FinancieroService';
+import { PresupuestosService } from '@/services/presupuestos/PresupuestosService';
+import { ProyectosService } from '@/services/proyectos/ProyectosService';
+import { EquiposService } from '@/services/equipos/EquiposService';
 import type { Session, RealtimeChannel } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { 
@@ -819,22 +823,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------- CRUD Transacciones ----------
   const addTransaccion = async (t: CreateTransaccion) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
-    const userId = session.user.id;
     try {
-      // Validar antes de procesar
-      const validated = validateTransaccion({ ...t, user_id: userId });
       const dbRecord = {
-        user_id: userId,
-        tipo: validated.tipo,
-        descripcion: validated.descripcion || null,
-        cantidad: validated.cantidad ?? 1,
-        unidad: validated.unidad || null,
-        categoria: validated.categoria,
-        costo_unitario: validated.costo_unitario ?? 0,
-        costo_total: validated.costo_total ?? 0,
-        fecha: validated.fecha || new Date().toISOString().split('T')[0],
-        proyecto_id: validated.proyecto_id ?? null, // Dejamos como null si es 'admin'/'personal'
+        user_id: session.user.id,
+        tipo: t.tipo,
+        descripcion: t.descripcion || null,
+        cantidad: t.cantidad ?? 1,
+        unidad: t.unidad || null,
+        categoria: t.categoria,
+        costo_unitario: t.costoUnitario ?? 0,
+        costo_total: t.costoTotal ?? 0,
+        fecha: t.fecha || new Date().toISOString().split('T')[0],
+        proyecto_id: t.proyectoId || null,
       };
+      
+      if (!isOnline) {
+        addPendingMutation({ table: 'transacciones', action: 'INSERT', data: dbRecord, userId: session.user.id });
+        const optimistic = dbToTransaccion({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
+        setTransacciones(p => [optimistic, ...p]);
+        saveCachedData('transacciones', session.user.id, [optimistic, ...transacciones]);
+        setPendingCount(getPendingCount(session.user.id));
+        toast.success('Guardado localmente (sin conexión)');
+        return;
+      }
+      
+      const data = await FinancieroService.registrarTransaccion(dbRecord as any);
+      if (data) {
+        const mapped = dbToTransaccion(data);
+        setTransacciones(p => [mapped, ...p]);
+        saveCachedData('transacciones', session.user.id, [mapped, ...transacciones]);
+        toast.success('Transacción registrada');
+      }
+    } catch (error) {
+      console.error('Error al agregar transacción:', error);
+      toast.error('Error al registrar transacción');
+      throw error;
+    }
+  };
       
       if (!isOnline) {
         addPendingMutation({ table: 'transacciones', action: 'INSERT', data: dbRecord, userId });
