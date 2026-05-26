@@ -51,7 +51,7 @@ interface RenglonDetalle {
 }
 
 const ProyectosScreen: React.FC = () => {
-  const { presupuestos, updatePresupuesto, transicionFase } = useAppContext();
+  const { presupuestos, updatePresupuesto, transicionFase, deletePresupuesto } = useAppContext();
   const [filtroFase, setFiltroFase] = useState<Fase | 'todas'>('todas');
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -97,9 +97,7 @@ const ProyectosScreen: React.FC = () => {
   const handleDelete = async (id: string, proyecto: string) => {
     if (!window.confirm(`¿Eliminar el proyecto "${proyecto}"? Esta acción no se puede deshacer.`)) return;
     try {
-      const { error } = await supabase.from('presupuestos').delete().eq('id', id);
-      if (error) throw error;
-      toast.success('Proyecto eliminado');
+      await deletePresupuesto(id);
     } catch {
       toast.error('Error al eliminar proyecto');
     }

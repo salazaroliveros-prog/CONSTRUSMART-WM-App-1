@@ -60,6 +60,7 @@ interface AppContextType {
   presupuestos: Presupuesto[];
   addPresupuesto: (p: CreatePresupuestoInput) => Promise<string | null>;
   updatePresupuesto: (id: string, p: UpdatePresupuesto) => Promise<void>;
+  deletePresupuesto: (id: string) => Promise<void>;
   transicionFase: (id: string, nuevaFase: Presupuesto['fase']) => Promise<void>;
 
   equipos: Equipo[];
@@ -780,19 +781,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const deleteProyecto = async (id: string) => {
+  const deletePresupuesto = async (id: string) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
     const userId = session.user.id;
     if (!isOnline) {
-      addPendingMutation({ table: 'proyectos', action: 'DELETE', data: {}, filters: { id, user_id: userId }, userId });
-      setProyectos(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('proyectos', userId, filtered); return filtered; });
+      addPendingMutation({ table: 'presupuestos', action: 'DELETE', data: {}, filters: { id, user_id: userId }, userId });
+      setPresupuestos(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('presupuestos', userId, filtered); return filtered; });
       setPendingCount(getPendingCount(userId));
       toast.success('Eliminado localmente (sin conexión)');
       return;
     }
-    const { error } = await supabase.from('proyectos').delete().eq('id', id).eq('user_id', userId);
+    const { error } = await supabase.from('presupuestos').delete().eq('id', id).eq('user_id', userId);
     if (error) { toast.error('Error al eliminar proyecto'); throw error; }
-    setProyectos(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('proyectos', userId, filtered); return filtered; });
+    setPresupuestos(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('presupuestos', userId, filtered); return filtered; });
     toast.success('Proyecto eliminado');
   };
 
@@ -1190,7 +1191,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       proyectos, addProyecto, updateProyecto, deleteProyecto,
       transacciones, addTransaccion, deleteTransaccion,
       actividades, addActividad, deleteActividad,
-      presupuestos, addPresupuesto, updatePresupuesto, transicionFase,
+      presupuestos, addPresupuesto, updatePresupuesto, deletePresupuesto, transicionFase,
       equipos, addEquipo, updateEquipo, deleteEquipo,
       equipoMiembros, addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
       sidebarOpen, toggleSidebar: () => setSidebarOpen(p => !p),
