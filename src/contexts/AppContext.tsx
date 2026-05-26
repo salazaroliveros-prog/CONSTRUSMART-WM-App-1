@@ -7,7 +7,7 @@ import {
   CreateCliente, CreateProyecto, CreateTransaccion, CreateActividad, CreatePresupuesto, CreateEquipo, CreateEquipoMiembro,
   UpdateCliente, UpdateProyecto, UpdatePresupuesto, UpdateEquipo, UpdateEquipoMiembro,
   CreatePresupuestoInput,
-  validateEquipo, validateEquipoMiembro,
+  validateEquipo, validateEquipoMiembro, validateTransaccion,
   dbToCliente, clienteToDb, dbToProyecto, proyectoToDb,
   dbToTransaccion, dbToActividad, dbToPresupuesto, presupuestoToDb,
   dbToEquipo, equipoToDb, dbToEquipoMiembro, equipoMiembroToDb
@@ -821,18 +821,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!session) { toast.error('Sesión no encontrada'); return; }
     const userId = session.user.id;
     try {
+      // Validar antes de procesar
+      const validated = validateTransaccion({ ...t, user_id: userId });
       const dbRecord = {
         user_id: userId,
-        tipo: t.tipo,
-        descripcion: t.descripcion || null,
-        cantidad: t.cantidad ?? 1,
-        unidad: t.unidad || null,
-        categoria: t.categoria,
-        costo_unitario: t.costoUnitario ?? 0,
-        costo_total: t.costoTotal ?? 0,
-        fecha: t.fecha || new Date().toISOString().split('T')[0],
-        proyecto_id: t.proyectoId ?? 'admin',
+        tipo: validated.tipo,
+        descripcion: validated.descripcion || null,
+        cantidad: validated.cantidad ?? 1,
+        unidad: validated.unidad || null,
+        categoria: validated.categoria,
+        costo_unitario: validated.costo_unitario ?? 0,
+        costo_total: validated.costo_total ?? 0,
+        fecha: validated.fecha || new Date().toISOString().split('T')[0],
+        proyecto_id: validated.proyecto_id ?? null, // Dejamos como null si es 'admin'/'personal'
       };
+      
       if (!isOnline) {
         addPendingMutation({ table: 'transacciones', action: 'INSERT', data: dbRecord, userId });
         const optimistic = dbToTransaccion({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
