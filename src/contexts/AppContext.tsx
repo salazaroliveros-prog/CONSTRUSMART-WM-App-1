@@ -7,7 +7,7 @@ import {
   CreateCliente, CreateProyecto, CreateTransaccion, CreateActividad, CreatePresupuesto, CreateEquipo, CreateEquipoMiembro,
   UpdateCliente, UpdateProyecto, UpdatePresupuesto, UpdateEquipo, UpdateEquipoMiembro,
   CreatePresupuestoInput,
-  validateCliente, validateProyecto, validateEquipo, validateEquipoMiembro,
+  validateEquipo, validateEquipoMiembro,
   dbToCliente, clienteToDb, dbToProyecto, proyectoToDb,
   dbToTransaccion, dbToActividad, dbToPresupuesto, presupuestoToDb,
   dbToEquipo, equipoToDb, dbToEquipoMiembro, equipoMiembroToDb
@@ -653,8 +653,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!session) { toast.error('Sesión no encontrada'); return; }
     const userId = session.user.id;
     try {
-      const validated = validateCliente({ ...c, user_id: userId });
-      const dbRecord = { ...clienteToDb(validated), user_id: userId };
+      const dbRecord = {
+        user_id: userId,
+        nombre: c.nombre,
+        telefono: c.telefono || null,
+        email: c.email || null,
+        direccion: c.direccion || null,
+        tipo_proyecto: c.tipoProyecto || 'Residencial',
+        estado: c.estado || 'Potencial',
+        notas: c.notas || null,
+        fecha: c.fecha || new Date().toISOString().split('T')[0],
+      };
       if (!isOnline) {
         addPendingMutation({ table: 'clientes', action: 'INSERT', data: dbRecord, userId });
         const optimistic = dbToCliente({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
@@ -683,8 +692,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!session) { toast.error('Sesión no encontrada'); return; }
     const userId = session.user.id;
     try {
-      const validated = validateCliente({ ...c, id, user_id: userId });
-      const dbRecord = clienteToDb(validated);
+      const dbRecord = clienteToDb(c);
       if (!isOnline) {
         addPendingMutation({ table: 'clientes', action: 'UPDATE', data: dbRecord, filters: { id, user_id: userId }, userId });
         setClientes(p => { const updated = p.map(x => x.id === id ? { ...x, ...c } : x); saveCachedData('clientes', userId, updated); return updated; });
@@ -727,8 +735,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!session) { toast.error('Sesión no encontrada'); return; }
     const userId = session.user.id;
     try {
-      const validated = validateProyecto({ ...p, user_id: userId });
-      const dbRecord = { ...proyectoToDb(validated), user_id: userId };
+      const dbRecord = {
+        user_id: userId,
+        nombre: p.nombre,
+        cliente: p.cliente || null,
+        tipo: p.tipo || null,
+        estado: p.estado || 'Planeación',
+        presupuesto_total: p.presupuestoTotal ?? 0,
+        avance_fisico: p.avanceFisico ?? 0,
+        avance_financiero: p.avanceFinanciero ?? 0,
+        ingresos: p.ingresos ?? 0,
+        gastos: p.gastos ?? 0,
+        pendiente_aportar: p.pendienteAportar ?? 0,
+        fecha_inicio: p.fechaInicio || null,
+        fecha_fin: p.fechaFin || null,
+      };
       if (!isOnline) {
         addPendingMutation({ table: 'proyectos', action: 'INSERT', data: dbRecord, userId });
         const optimistic = dbToProyecto({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
@@ -757,8 +778,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!session) { toast.error('Sesión no encontrada'); return; }
     const userId = session.user.id;
     try {
-      const validated = validateProyecto({ ...p, id, user_id: userId });
-      const dbRecord = proyectoToDb(validated);
+      const dbRecord = proyectoToDb(p);
       if (!isOnline) {
         addPendingMutation({ table: 'proyectos', action: 'UPDATE', data: dbRecord, filters: { id, user_id: userId }, userId });
         setProyectos(prev => { const updated = prev.map(x => x.id === id ? { ...x, ...p } : x); saveCachedData('proyectos', userId, updated); return updated; });

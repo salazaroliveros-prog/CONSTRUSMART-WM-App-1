@@ -19,26 +19,18 @@ const rolLabels: Record<string, string> = {
 };
 
 const TeamsScreen: React.FC = () => {
-  const { session, addEquipo, addEquipoMiembro, deleteEquipoMiembro } = useAppContext();
-  const [equipos, setEquipos] = useState<(Equipo & { miembros: (EquipoMiembro & { email?: string })[] })[]>([]);
+  const { session, equipos, equipoMiembros, addEquipo, addEquipoMiembro, deleteEquipoMiembro } = useAppContext();
   const [nuevoEquipo, setNuevoEquipo] = useState('');
   const [creando, setCreando] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteTeamId, setInviteTeamId] = useState<string | null>(null);
 
-  const loadEquipos = useCallback(async () => {
-    if (!session) return;
-    const { data: equiposData } = await supabase.from('equipos').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
-    if (!equiposData) return;
-
-    const enriched = await Promise.all(equiposData.map(async (e: Equipo) => {
-      const { data: miembros } = await supabase.from('equipo_miembros').select('*').eq('equipo_id', e.id);
-      return { ...e, miembros: miembros || [] };
+  const equiposConMiembros = useMemo(() => {
+    return equipos.map(e => ({
+      ...e,
+      miembros: equipoMiembros.filter(m => m.equipo_id === e.id)
     }));
-    setEquipos(enriched);
-  }, [session]);
-
-  useEffect(() => { if (session) loadEquipos(); }, [session, loadEquipos]);
+  }, [equipos, equipoMiembros]);
 
   const handleCrear = async () => {
     if (!session) return;
@@ -56,7 +48,6 @@ const TeamsScreen: React.FC = () => {
       await addEquipo({ nombre, user_id: session.user.id } as CreateEquipo);
       toast.success(`Equipo "${nombre}" creado`);
       setNuevoEquipo('');
-      await loadEquipos();
     } catch (err) {
       toast.error('Error al crear equipo');
       console.error(err);
@@ -77,7 +68,6 @@ const TeamsScreen: React.FC = () => {
       toast.success('Miembro agregado');
       setInviteEmail('');
       setInviteTeamId(null);
-      await loadEquipos();
     } catch (err) {
       toast.error('Error al invitar. Verifica el ID del usuario.');
       console.error(err);
@@ -89,7 +79,6 @@ const TeamsScreen: React.FC = () => {
     try {
       await deleteEquipoMiembro(miembroId);
       toast.success('Miembro removido');
-      await loadEquipos();
     } catch (err) {
       toast.error('Error al remover miembro');
       console.error(err);
@@ -123,20 +112,20 @@ const TeamsScreen: React.FC = () => {
         </div>
 
         {/* Lista de equipos */}
-        {equipos.map(eq => (
+        {equiposConMiembros.map(eq => (
           <div key={eq.id} className="bg-white rounded-xl shadow-md overflow-hidden">
             <div className="bg-gradient-to-r from-blue-800 to-blue-700 text-white p-3 flex items-center justify-between">
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <Users className="w-4 h-4" /> {eq.nombre}
               </h3>
-              {eq.userId === session?.user?.id && (
+              {eq.user_id === session?.user?.id && (
                 <span className="text-[10px] bg-emerald-500 px-2 py-0.5 rounded-full">Propietario</span>
               )}
             </div>
 
             <div className="p-3">
               {/* Invitar */}
-              {eq.userId === session?.user?.id && (
+              {eq.user_id === session?.user?.id && (
                 <div className="mb-3">
                   {inviteTeamId === eq.id ? (
                     <div className="flex gap-2">
@@ -182,7 +171,7 @@ const TeamsScreen: React.FC = () => {
                       <Icon className="w-4 h-4 text-slate-400" />
                       <span className="text-sm flex-1">{m.user_id.slice(0, 8)}...</span>
                       <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">{rolLabels[m.rol]}</span>
-                      {eq.userId === session?.user?.id && (
+                      {eq.user_id === session?.user?.id && (
                         <button onClick={() => handleRemoveMember(m.id)} className="text-red-400 hover:text-red-600 p-1">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -195,7 +184,7 @@ const TeamsScreen: React.FC = () => {
           </div>
         ))}
 
-        {equipos.length === 0 && (
+        {equiposConMiembros.length === 0 && (
           <div className="text-center py-12 text-slate-400">
             <Users className="w-12 h-12 mx-auto mb-2 opacity-30" />
             <p className="text-sm">No hay equipos. Crea uno para empezar a colaborar.</p>
