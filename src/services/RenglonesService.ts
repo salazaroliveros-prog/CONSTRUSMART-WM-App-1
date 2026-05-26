@@ -296,6 +296,20 @@ export async function crearRenglon(renglon: Omit<Renglon, 'id'>, userId: string)
       .single();
 
     if (error) throw error;
+
+    // Registrar precio inicial en historial
+    if (data?.id) {
+      const costoTotal = (renglon.costoMaterial ?? 0) + (renglon.costoManoObra ?? 0) + (renglon.costoHerramienta ?? 0);
+      if (costoTotal > 0) {
+        await supabase.from('renglon_precios_historial').insert({
+          renglon_id: data.id,
+          costo: costoTotal,
+          fecha: new Date().toISOString(),
+          user_id: userId,
+        }).catch(e => console.warn('Error registrando precio inicial:', e));
+      }
+    }
+
     return data?.id || null;
   } catch (error) {
     console.error('Error creando renglon:', error);
@@ -323,6 +337,27 @@ export async function actualizarRenglon(
       .eq('user_id', userId);
 
     if (error) throw error;
+
+    // Registrar historial si cambiaron precios
+    const tieneCambioPrecio =
+      cambios.costoMaterial !== undefined ||
+      cambios.costoManoObra !== undefined ||
+      cambios.costoHerramienta !== undefined;
+    if (tieneCambioPrecio) {
+      const costoTotal =
+        (cambios.costoMaterial ?? 0) +
+        (cambios.costoManoObra ?? 0) +
+        (cambios.costoHerramienta ?? 0);
+      if (costoTotal > 0) {
+        await supabase.from('renglon_precios_historial').insert({
+          renglon_id: id,
+          costo: costoTotal,
+          fecha: new Date().toISOString(),
+          user_id: userId,
+        }).catch(e => console.warn('Error registrando historial de precio:', e));
+      }
+    }
+
     return true;
   } catch (error) {
     console.error('Error actualizando renglon:', error);

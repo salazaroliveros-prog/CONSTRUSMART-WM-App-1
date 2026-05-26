@@ -12,6 +12,7 @@ import {
   type ChangeOrder 
 } from '@/utils/changeOrders';
 import type { Presupuesto } from '@/types/supabase';
+import { crearNotificacion } from '@/utils/notificaciones';
 
 export function useChangeOrders(presupuesto: Presupuesto) {
   const { session } = useAppContext();
@@ -68,6 +69,9 @@ export function useChangeOrders(presupuesto: Presupuesto) {
         });
 
         setChangeOrders(prev => [...prev, orden]);
+        if (session?.user.id) {
+          crearNotificacion(session.user.id, 'alerta', 'Orden de cambio creada', motivo);
+        }
         return orden;
       } finally {
         setLoading(false);
@@ -85,8 +89,11 @@ export function useChangeOrders(presupuesto: Presupuesto) {
       );
       setChangeOrders(updated);
       await supabase.from('cambios_presupuesto').update({ estado: 'aprobado' }).eq('id', ordenId);
+      if (session?.user.id) {
+        crearNotificacion(session.user.id, 'exito', 'Orden de cambio aprobada');
+      }
     },
-    [changeOrders]
+    [changeOrders, session]
   );
 
   const rechazar = useCallback(
@@ -98,8 +105,11 @@ export function useChangeOrders(presupuesto: Presupuesto) {
       );
       setChangeOrders(updated);
       await supabase.from('cambios_presupuesto').update({ estado: 'rechazado' }).eq('id', ordenId);
+      if (session?.user.id) {
+        crearNotificacion(session.user.id, 'warning', 'Orden de cambio rechazada', motivo);
+      }
     },
-    [changeOrders]
+    [changeOrders, session]
   );
 
   return { changeOrders, crearOrden, aprobar, rechazar, loading };

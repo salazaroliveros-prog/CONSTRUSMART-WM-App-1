@@ -16,7 +16,7 @@ npm test             # vitest
 
 - **React 18 SPA** with Vite 8, TypeScript, Tailwind CSS, Shadcn/ui.
 - **State**: AppContext (`src/contexts/AppContext.tsx`) is the main data hub — CRUD, auth, and Realtime subscriptions.
-- **TanStack Query** is imported but **not actually used** — all data flows through AppContext.
+- **TanStack Query**: AppContext (`src/contexts/AppContext.tsx`) is the main data hub. TanStack Query is also used in `src/features/presupuestos/hooks/usePresupuestos.ts` (`useQuery`/`useMutation`) but most data flows through AppContext + Supabase directly + offline cache.
 - **Supabase** (`@supabase/supabase-js` v2) for auth, DB, and Realtime.
 - **Path alias**: `@/` → `src/` (configured in both vite.config.ts and vitest.config.ts).
 - **PWA**: auto-updating service worker via `vite-plugin-pwa` — dev mode also enabled.
@@ -71,6 +71,7 @@ Equipos: additional SELECT access for team members via subquery.
 - **eslint**: `no-unused-vars` OFF, `no-explicit-any` OFF, `react-refresh/only-export-components` OFF.
 - **Build chunks**: vendor-react, vendor-charts (recharts), vendor-icons (lucide), vendor-forms (zod/hook-form).
 - **vitest**: jsdom environment, `@` alias, `./src/setupTests.ts` (imports `@testing-library/jest-dom`).
+- **TypeScript strictness**: `tsconfig.app.json` sets `strict: true`, `noUnusedLocals`, `noUnusedParameters`, `noImplicitAny` — so `npm run typecheck` catches things eslint ignores.
 - **Tests**: 3 test files in `src/utils/` — `predictorAPU.test.ts`, `reportesAutomaticos.test.ts`, `validacionPresupuesto.test.ts`. No e2e tests.
 
 ## Two `usePresupuestos` hooks

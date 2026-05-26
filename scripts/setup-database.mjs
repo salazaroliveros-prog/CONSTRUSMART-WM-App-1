@@ -75,6 +75,8 @@ async function main() {
 
   // Leer SQL
   const sql = readFileSync(sqlPath, 'utf-8');
+  const fixPath = resolve(__dirname, '..', 'scripts', 'fix-rls-recursion.sql');
+  const fixSql = readFileSync(fixPath, 'utf-8');
 
   // Ejecutar
   console.log('📦 Ejecutando SYNC_SUPABASE_FINAL.sql...');
@@ -82,7 +84,9 @@ async function main() {
 
   try {
     await client.query(sql);
-    console.log('✅ SQL ejecutado correctamente\n');
+    console.log('✅ SYNC_SUPABASE_FINAL.sql ejecutado\n');
+    await client.query(fixSql);
+    console.log('✅ Fix RLS recursion aplicado\n');
   } catch (err) {
     // Errores de "already exists" son esperados (idempotente)
     if (err.message.includes('already exists')) {

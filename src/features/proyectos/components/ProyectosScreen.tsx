@@ -2,9 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import type { Presupuesto } from '@/types/supabase';
 import Header from '@/components/shared/Header';
-import { Play, PauseCircle, CheckCircle, Folder, Filter } from 'lucide-react';
-// fmtQ no se usa, así que se elimina de la importación
-
+import { Play, PauseCircle, CheckCircle, Folder, Filter, Edit3, Save, Trash2, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 type Fase = Presupuesto['fase'];
 const nextFase: Record<Fase, { label: string; icon: React.ComponentType<{ className?: string }>; color: string; fase: Fase } | null> = {
@@ -29,10 +28,22 @@ const faseBadgeColors: Record<Fase, string> = {
 
 const FASES: Fase[] = ['planeación', 'ejecución', 'pausa', 'finalizado'];
 
+interface EditForm {
+  ingresos: number;
+  gastos: number;
+  pendienteAportar: number;
+  avanceFisico: number;
+  avanceFinanciero: number;
+}
+
 const ProyectosScreen: React.FC = () => {
-  const { presupuestos, transicionFase } = useAppContext();
+  const { presupuestos, updatePresupuesto, deleteProyecto, transicionFase } = useAppContext();
   const [filtroFase, setFiltroFase] = useState<Fase | 'todas'>('todas');
   const [search, setSearch] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<EditForm>({
+    ingresos: 0, gastos: 0, pendienteAportar: 0, avanceFisico: 0, avanceFinanciero: 0,
+  });
 
   const filtrados = useMemo(() => {
     let r = presupuestos;
@@ -45,6 +56,36 @@ const ProyectosScreen: React.FC = () => {
     total: presupuestos.length,
     porFase: Object.fromEntries(FASES.map(f => [f, presupuestos.filter(p => p.fase === f).length])) as Record<Fase, number>,
   }), [presupuestos]);
+
+  const startEditing = (p: Presupuesto) => {
+    setEditingId(p.id);
+    setEditForm({
+      ingresos: p.ingresos ?? 0,
+      gastos: p.gastos ?? 0,
+      pendienteAportar: p.pendienteAportar ?? 0,
+      avanceFisico: p.avanceFisico ?? 0,
+      avanceFinanciero: p.avanceFinanciero ?? 0,
+    });
+  };
+
+  const saveEditing = async (id: string) => {
+    try {
+      await updatePresupuesto(id, editForm);
+      setEditingId(null);
+      toast.success('Datos financieros actualizados');
+    } catch {
+      toast.error('Error al actualizar');
+    }
+  };
+
+  const handleDelete = async (id: string, proyecto: string) => {
+    if (!window.confirm(`¿Eliminar el proyecto "${proyecto}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await deleteProyecto(id);
+    } catch {
+      toast.error('Error al eliminar proyecto');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 animate-fadeIn">
@@ -84,6 +125,7 @@ const ProyectosScreen: React.FC = () => {
             if (filtroFase !== 'todas' && filtroFase !== f) return null;
             return items.map(p => {
               const accion = nextFase[p.fase];
+              const isEditing = editingId === p.id;
               return (
                 <div key={p.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md transition">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -93,30 +135,90 @@ const ProyectosScreen: React.FC = () => {
                         <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${faseColors[p.fase]}`}>{faseLabels[p.fase]}</span>
                       </div>
                       <div className="text-xs text-slate-500 mt-1">{p.cliente || 'Sin cliente'} · {p.tipologia || 'General'}</div>
-                      <div className="flex gap-4 mt-2 text-xs text-slate-600 flex-wrap">
-                        <span>Total: <strong className="text-blue-900">Q {(p.total || 0).toLocaleString()}</strong></span>
-                        <span>Avance: <strong>{p.avanceFisico || 0}%</strong></span>
-                        <span>Ingresos: <strong className="text-emerald-700">Q {(p.ingresos || 0).toLocaleString()}</strong></span>
-                        <span>Gastos: <strong className="text-red-700">Q {(p.gastos || 0).toLocaleString()}</strong></span>
-                      </div>
-                      {p.fase === 'ejecución' && (
+
+                      {isEditing ? (
+                        <div className="mt-2 grid grid-cols-2 md:grid-cols-5 gap-2">
+                          <div>
+                            <label className="text-[9px] font-semibold text-slate-500">Ingresos (Q)</label>
+                            <input type="number" value={editForm.ingresos}
+                              onChange={e => setEditForm(f => ({ ...f, ingresos: parseFloat(e.target.value) || 0 }))}
+                              className="w-full px-2 py-1 text-xs border rounded" />
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-semibold text-slate-500">Gastos (Q)</label>
+                            <input type="number" value={editForm.gastos}
+                              onChange={e => setEditForm(f => ({ ...f, gastos: parseFloat(e.target.value) || 0 }))}
+                              className="w-full px-2 py-1 text-xs border rounded" />
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-semibold text-slate-500">Pendiente (Q)</label>
+                            <input type="number" value={editForm.pendienteAportar}
+                              onChange={e => setEditForm(f => ({ ...f, pendienteAportar: parseFloat(e.target.value) || 0 }))}
+                              className="w-full px-2 py-1 text-xs border rounded" />
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-semibold text-slate-500">Avance Físico %</label>
+                            <input type="number" min={0} max={100} value={editForm.avanceFisico}
+                              onChange={e => setEditForm(f => ({ ...f, avanceFisico: parseFloat(e.target.value) || 0 }))}
+                              className="w-full px-2 py-1 text-xs border rounded" />
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-semibold text-slate-500">Avance Financiero %</label>
+                            <input type="number" min={0} max={100} value={editForm.avanceFinanciero}
+                              onChange={e => setEditForm(f => ({ ...f, avanceFinanciero: parseFloat(e.target.value) || 0 }))}
+                              className="w-full px-2 py-1 text-xs border rounded" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex gap-4 mt-2 text-xs text-slate-600 flex-wrap">
+                          <span>Total: <strong className="text-blue-900">Q {(p.total || 0).toLocaleString()}</strong></span>
+                          <span>Avance: <strong>{p.avanceFisico || 0}%</strong></span>
+                          <span>Ingresos: <strong className="text-emerald-700">Q {(p.ingresos || 0).toLocaleString()}</strong></span>
+                          <span>Gastos: <strong className="text-red-700">Q {(p.gastos || 0).toLocaleString()}</strong></span>
+                          <span>Pendiente: <strong className="text-amber-700">Q {(p.pendienteAportar || 0).toLocaleString()}</strong></span>
+                        </div>
+                      )}
+                      {p.fase === 'ejecución' && !isEditing && (
                         <div className="mt-2 bg-slate-100 rounded-full h-1.5 max-w-[200px] overflow-hidden">
                           <div className="bg-blue-600 h-full rounded-full" style={{ width: `${p.avanceFisico || 0}%` }} />
                         </div>
                       )}
                     </div>
                     <div className="flex gap-2 shrink-0">
-                      {accion && (
-                        <button onClick={() => transicionFase(p.id, accion.fase)}
-                          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white ${accion.color} transition`}>
-                          <accion.icon className="w-3.5 h-3.5" /> {accion.label}
-                        </button>
-                      )}
-                      {p.fase !== 'finalizado' && (
-                        <button onClick={() => transicionFase(p.id, 'finalizado')}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition">
-                          <CheckCircle className="w-3.5 h-3.5" /> Finalizar
-                        </button>
+                      {isEditing ? (
+                        <>
+                          <button onClick={() => saveEditing(p.id)}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition">
+                            <Save className="w-3.5 h-3.5" /> Guardar
+                          </button>
+                          <button onClick={() => setEditingId(null)}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-300 hover:bg-slate-400 text-slate-700 transition">
+                            <X className="w-3.5 h-3.5" /> Cancelar
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => startEditing(p)}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+                            <Edit3 className="w-3.5 h-3.5" /> Editar
+                          </button>
+                          {accion && (
+                            <button onClick={() => transicionFase(p.id, accion.fase)}
+                              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white ${accion.color} transition`}>
+                              <accion.icon className="w-3.5 h-3.5" /> {accion.label}
+                            </button>
+                          )}
+                          {p.fase !== 'finalizado' && (
+                            <button onClick={() => transicionFase(p.id, 'finalizado')}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition">
+                              <CheckCircle className="w-3.5 h-3.5" /> Finalizar
+                            </button>
+                          )}
+                          <button onClick={() => handleDelete(p.id, p.proyecto)}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 hover:bg-red-200 text-red-600 transition">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
