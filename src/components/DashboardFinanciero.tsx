@@ -27,30 +27,30 @@ export const DashboardFinanciero: React.FC<DashboardFinancieroProps> = ({
   // const { resumen: cashflow } = useCashflowProyectado(...
 
   // Analizar anomalías
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const costoDirecto = (presupuesto.lineas as any[] || []).reduce(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (sum: number, l: any) => sum + ((l.costoMaterial || 0) + (l.costoManoObra || 0) + (l.costoHerramienta || 0)) * l.cantidad,
     0
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const totalMaterial = (presupuesto.lineas as any[] || []).reduce(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (sum: number, l: any) => sum + (l.costoMaterial || 0) * l.cantidad,
     0
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const totalManoObra = (presupuesto.lineas as any[] || []).reduce(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (sum: number, l: any) => sum + (l.costoManoObra || 0) * l.cantidad,
     0
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const totalHerramienta = (presupuesto.lineas as any[] || []).reduce(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (sum: number, l: any) => sum + (l.costoHerramienta || 0) * l.cantidad,
     0
   );

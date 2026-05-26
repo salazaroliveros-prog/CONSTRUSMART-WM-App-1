@@ -22,7 +22,6 @@ export function usePresenciaPresupuesto(presupuestoId: string | null, user: { no
   useEffect(() => {
     if (!presupuestoId || !user?.id) return;
     const canal = supabase.channel('presencia_presupuesto_' + presupuestoId);
-    const presenceKey = user.id + '-' + presupuestoId;
     const presencePayload: PresenciaUsuario = {
       userId: user.id,
       nombre: user.nombre,
@@ -41,7 +40,7 @@ export function usePresenciaPresupuesto(presupuestoId: string | null, user: { no
         });
       }
     };
-    canal.on('broadcast', handler);
+    canal.on('broadcast', { event: 'join' }, handler);
     canal.subscribe();
     // Cleanup
     return () => {

@@ -65,37 +65,59 @@ const ChartContainer = React.forwardRef<
 })
 ChartContainer.displayName = "Chart"
 
+// Genera CSS seguro para variables de color — sin dangerouslySetInnerHTML
+function buildChartCss(
+  id: string,
+  colorConfig: [string, ChartConfig[string]][]
+): string {
+  const safeColor = (val: string) =>
+    /^(#[0-9a-fA-F]{3,8}|rgb\(|rgba\(|hsl\(|hsla\(|oklch\(|var\(--)[^;{}]*$/.test(val.trim())
+      ? val.trim()
+      : 'transparent'
+
+  return Object.entries(THEMES)
+    .map(([theme, prefix]) =>
+      `${prefix} [data-chart=${id}] {\n` +
+      colorConfig
+        .map(([key, itemConfig]) => {
+          const color =
+            itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
+            itemConfig.color
+          return color ? `  --color-${key}: ${safeColor(color)};` : null
+        })
+        .filter(Boolean)
+        .join('\n') +
+      '\n}'
+    )
+    .join('\n')
+}
+
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(
-    ([_, config]) => config.theme || config.color
-  )
+    ([, c]) => c.theme || c.color
+  ) as [string, ChartConfig[string]][]
 
-  if (!colorConfig.length) {
-    return null
-  }
+  const styleRef = React.useRef<HTMLStyleElement | null>(null)
+  const cssKey = JSON.stringify(colorConfig)
 
-  return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
-  })
-  .join("\n")}
-}
-`
-          )
-          .join("\n"),
-      }}
-    />
-  )
+  React.useEffect(() => {
+    if (!colorConfig.length) return
+
+    if (!styleRef.current) {
+      styleRef.current = document.createElement('style')
+      document.head.appendChild(styleRef.current)
+    }
+    styleRef.current.textContent = buildChartCss(id, colorConfig)
+
+    return () => {
+      if (styleRef.current) {
+        styleRef.current.textContent = ''
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, cssKey])
+
+  return null
 }
 
 const ChartTooltip = RechartsPrimitive.Tooltip

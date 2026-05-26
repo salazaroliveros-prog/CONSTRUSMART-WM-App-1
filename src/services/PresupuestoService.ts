@@ -165,14 +165,13 @@ export async function guardarPresupuesto(
 ): Promise<string | null> {
   try {
     // Calcular totales
-    const lineasCalculadas: LineaCalculada[] = presupuesto.lineas.map((linea: unknown) => {
-      const l = linea as { id: string; costoMaterial: number; costoManoObra: number; costoHerramienta: number; cantidad: number; rendimiento?: number };
+    const lineasCalculadas: LineaCalculada[] = presupuesto.lineas.map((linea) => {
       return {
-        id: l.id,
-        costoUnitario: l.costoMaterial + l.costoManoObra + l.costoHerramienta,
-        cantidad: l.cantidad,
-        subtotal: (l.costoMaterial + l.costoManoObra + l.costoHerramienta) * l.cantidad,
-        estimacionDias: Math.ceil((l.cantidad || 0) / (l.rendimiento || 1)),
+        id: linea.id,
+        costoUnitario: linea.costoMaterial + linea.costoManoObra + linea.costoHerramienta,
+        cantidad: linea.cantidad,
+        subtotal: (linea.costoMaterial + linea.costoManoObra + linea.costoHerramienta) * linea.cantidad,
+        estimacionDias: Math.ceil((linea.cantidad || 0) / (linea.rendimiento || 1)),
       };
     });
 

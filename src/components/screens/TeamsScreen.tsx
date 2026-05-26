@@ -1,4 +1,3 @@
-import { EquipoSchema } from '@/lib/schemas';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/lib/supabase';
@@ -44,24 +43,23 @@ const TeamsScreen: React.FC = () => {
   const handleCrear = async () => {
     if (!session) return;
     
-    // Validación con Zod
-    const result = EquipoSchema.safeParse({ nombre: nuevoEquipo.trim() });
-    if (!result.success) {
-      toast.error(result.error.errors[0].message);
+    const nombre = nuevoEquipo.trim();
+    if (!nombre || nombre.length < 1) {
+      toast.error('El nombre del equipo es requerido');
       return;
     }
 
-    if (!confirm(`¿Estás seguro de crear el equipo "${result.data.nombre}"?`)) return;
+    if (!confirm(`¿Estás seguro de crear el equipo "${nombre}"?`)) return;
 
     setCreando(true);
     try {
       const { error } = await supabase.from('equipos').insert({
-        nombre: result.data.nombre,
+        nombre,
         user_id: session.user.id,
         creador_id: session.user.id,
       });
       if (error) throw error;
-      toast.success(`Equipo "${result.data.nombre}" creado`);
+      toast.success(`Equipo "${nombre}" creado`);
       setNuevoEquipo('');
       await loadEquipos();
     } catch (err) {

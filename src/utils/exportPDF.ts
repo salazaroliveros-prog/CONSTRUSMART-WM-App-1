@@ -11,7 +11,7 @@ export async function exportarPresupuestoPDF(elementId: string, fileName = 'pres
   if (!element) throw new Error('Elemento no encontrado para exportar PDF');
 
   // Opciones recomendadas para html2pdf
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const opt: any = {
     margin:       0.5,
     filename:     fileName,

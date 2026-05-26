@@ -3,8 +3,8 @@
  * Hook especializado para gestión de la biblioteca de renglones
  */
 
-import { useState, useCallback, useEffect, useContext } from 'react';
-import { AppContext } from '@/contexts/AppContext';
+import { useState, useCallback, useEffect } from 'react';
+import { useAppContext } from '@/contexts/AppContext';
 import {
   obtenerBibliotecaRenglones,
   buscarRenglones,
@@ -26,13 +26,13 @@ export interface UseRenglonesOptions {
 }
 
 export function useRenglones(options: UseRenglonesOptions = {}) {
-  const { user } = useContext(AppContext);
+  const { session } = useAppContext();
   const [renglones, setRenglones] = useState<Renglon[]>(RENGLONES_BASE);
   const [renglonesFreuentes, setRenglonesFreuentes] = useState<Renglon[]>([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const userId = user?.id || '';
+  const userId = session?.user.id || '';
 
   // Cargar biblioteca
   const cargar = useCallback(async () => {

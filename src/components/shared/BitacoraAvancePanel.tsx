@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { Plus, Trash2, Calendar as CalIcon, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, TrendingUp } from 'lucide-react';
 import { Avance, AvanceSchema } from '@/lib/schemas';
 
 interface BitacoraAvancePanelProps {

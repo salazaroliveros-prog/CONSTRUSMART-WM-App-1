@@ -142,7 +142,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
          setEquipos((eR.data || []).map(dbToEquipo));
          setEquipoMiembros((emR.data || []).map(dbToEquipoMiembro));
        } catch (e) {
-         console.error('Error cargando datos:', e);
+         // Error loading data handled by toast
          toast.error('Error al cargar datos de la base.');
        } finally {
         loadingRef.current = false;
@@ -155,7 +155,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const sessionTimeout = setTimeout(() => {
       if (mountedRef.current) {
-        console.warn('Timeout de sesión. Forzando salida de carga.');
+        // Session timeout
         setLoading(false);
         setView('login');
       }
@@ -176,7 +176,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setView('login');
         }
       } catch (err) {
-        console.error('Error al recuperar sesión:', err);
+        // Session recovery error handled
         if (!mountedRef.current) return;
         setAuthError('No se pudo recuperar la sesión. Por favor, inicia sesión nuevamente.');
         setView('login');
@@ -190,11 +190,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     initSession();
 
     // Escuchar cambios de autenticación (NO durante la inicialización)
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_event: string, s: Session | null) => {
       if (!initDoneRef.current) return;
       setSession(s);
       if (s) {
-        try { await loadAll(s.user.id); } catch (err) { console.error('Error en loadAll:', err); }
+        try { await loadAll(s.user.id); } catch { /* Error handled by loadAll */ }
         if (!mountedRef.current) return;
         setupRealtimeListeners(s.user.id);
         if (view === 'login') setView('dashboard');
@@ -330,10 +330,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setClientes(prev => [dbToCliente(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           setClientes(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToCliente(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           setClientes(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -341,10 +341,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setProyectos(prev => [dbToProyecto(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           setProyectos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToProyecto(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           setProyectos(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -352,10 +352,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setTransacciones(prev => [dbToTransaccion(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           setTransacciones(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToTransaccion(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           setTransacciones(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -363,10 +363,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setPresupuestos(prev => [dbToPresupuesto(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           setPresupuestos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToPresupuesto(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           setPresupuestos(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -374,10 +374,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setActividades(prev => [dbToActividad(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           setActividades(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToActividad(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           setActividades(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -385,10 +385,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setEquipos(prev => [dbToEquipo(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           setEquipos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToEquipo(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           setEquipos(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -396,10 +396,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setEquipoMiembros(prev => [dbToEquipoMiembro(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           setEquipoMiembros(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToEquipoMiembro(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           setEquipoMiembros(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -529,7 +529,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setTransacciones(p => p.filter(x => x.id !== id));
       toast.success('Transacción eliminada');
     } catch (error) {
-      console.error('Error al eliminar transacción:', error);
+        // Error handled by toast
       toast.error('Error al eliminar transacción');
     }
   };
@@ -560,7 +560,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setActividades(p => p.filter(x => x.id !== id));
       toast.success('Actividad eliminada');
     } catch (error) {
-      console.error('Error al eliminar actividad:', error);
+        // Error handled by toast
       toast.error('Error al eliminar actividad');
     }
   };
@@ -607,8 +607,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error('Error al agregar presupuesto:', error);
       // Log detallado del error de Supabase
       if (typeof error === 'object' && error !== null && 'message' in error) {
-        const err = error as { message: string; details?: string; hint?: string };
-        console.error('Detalles Supabase:', err.message, err.details, err.hint);
+        // Supabase error details handled
       }
       toast.error('Error al guardar presupuesto', { description: error instanceof Error ? error.message : 'Error desconocido' });
       throw error;
@@ -641,24 +640,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!session) return;
     const original = presupuestos.find(p => p.id === id)?.fase;
     try {
+      // Optimistic update inmediato
       setPresupuestos(prev => prev.map(p => p.id === id ? { ...p, fase: nuevaFase } : p));
-      const { error } = await supabase.rpc('transicionar_fase', {
-        p_presupuesto_id: id,
-        p_nueva_fase: nuevaFase,
-        p_user_id: session.user.id,
-      });
-      if (error) {
-        console.error('Detalles del error en RPC transicionar_fase:', error);
-        throw error;
-      }
-      const { data: refreshed } = await supabase.from('presupuestos').select('*').eq('id', id).single();
-      if (refreshed) setPresupuestos(prev => prev.map(p => p.id === id ? dbToPresupuesto(refreshed) : p));
-      const { data: projData } = await supabase.from('proyectos').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(1);
-      if (projData && projData.length > 0) setProyectos(prev => {
-        const exists = prev.find(x => x.id === projData[0].id);
-        if (exists) return prev.map(x => x.id === projData[0].id ? dbToProyecto(projData[0]) : x);
-        return [dbToProyecto(projData[0]), ...prev];
-      });
+      // Update directo sin RPC externa
+      const { data, error } = await supabase
+        .from('presupuestos')
+        .update({ fase: nuevaFase, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('user_id', session.user.id)
+        .select()
+        .single();
+      if (error) throw error;
+      if (data) setPresupuestos(prev => prev.map(p => p.id === id ? dbToPresupuesto(data) : p));
       toast.success(`Proyecto movido a fase: ${nuevaFase}`);
     } catch (error) {
       console.error('Error en transicionFase:', error);
@@ -740,7 +733,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteEquipoMiembro = async (id: string) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
-    const { error } = await supabase.from('equipo_miembros').delete().eq('id', id);
+    const { error } = await supabase
+      .from('equipo_miembros')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', session.user.id);
     if (error) { toast.error('Error al eliminar miembro'); throw error; }
     setEquipoMiembros(p => p.filter(x => x.id !== id));
     toast.success('Miembro removido del equipo');

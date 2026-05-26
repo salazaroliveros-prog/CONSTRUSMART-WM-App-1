@@ -54,16 +54,16 @@ export function crearChangeOrder(
   // Comparar líneas
   const lineasAnteriores = presupuesto_actual.lineas || [];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   lineasNuevas.forEach((nueva: any) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const anterior = lineasAnteriores.find((l: any) => l.id === nueva.id);
     
     if (anterior) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const costoAnt = (anterior as any).costoUnitario || 0;
       const costaNvo = nueva.unitario;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const cantAnt = (anterior as any).cantidad || 0;
       const cantNva = nueva.cantidad;
 
