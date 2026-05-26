@@ -29,8 +29,15 @@ const MaterialesPanel: React.FC<Props> = ({ presupuestoId, onClose }) => {
   };
 
   const registrarUso = async (id: string, cantidad: number) => {
-    await supabase.from('movimientos_materiales').insert({ material_id: id, tipo: 'salida', cantidad });
-    await load();
+    try {
+      const { error } = await supabase.from('movimientos_materiales').insert({ material_id: id, tipo: 'salida', cantidad });
+      if (error) throw error;
+      toast.success('Uso registrado');
+      await load();
+    } catch (err) {
+      toast.error('Error al registrar uso de material');
+      console.error(err);
+    }
   };
 
   return (

@@ -9,10 +9,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useChecklistCalidad } from '@/hooks/useChecklistCalidad';
+import { useAppContext } from '@/contexts/AppContext';
 
 import type { Presupuesto } from '@/types/supabase';
 import { AlertTriangle, CheckCircle, Lock } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { toast } from 'sonner';
 
 interface ChecklistCalidadPanelProps {
   presupuesto: Presupuesto;
@@ -23,6 +25,7 @@ export const ChecklistCalidadPanel: React.FC<ChecklistCalidadPanelProps> = ({
 }) => {
   const { checklists, crearParaFase, completar, descompletar, verificarAvance, generarResumenChecklist } =
     useChecklistCalidad(presupuesto.id, presupuesto.tipologia || 'general');
+  const { transicionFase } = useAppContext();
   const [checklistActivo, setChecklistActivo] = useState<string | null>(null);
 
   const handleCrearChecklist = (fase: 'planeación' | 'ejecución' | 'finalizado') => {
@@ -212,7 +215,24 @@ export const ChecklistCalidadPanel: React.FC<ChecklistCalidadPanelProps> = ({
 
               {/* Botón de avance */}
               {verificarAvance(checklistActual.id).autorizado && (
-                <Button className="w-full bg-green-600 hover:bg-green-700">
+                <Button
+                  onClick={async () => {
+                    const fases = ['planeación', 'ejecución', 'finalizado'];
+                    const idx = fases.indexOf(checklistActual.fase);
+                    if (idx < 0 || idx >= fases.length - 1) {
+                      toast.info('El proyecto ya está en la fase final');
+                      return;
+                    }
+                    const siguiente = fases[idx + 1];
+                    try {
+                      await transicionFase(presupuesto.id, siguiente);
+                      toast.success(`Proyecto avanzó a fase "${siguiente}"`);
+                    } catch {
+                      toast.error('Error al avanzar de fase');
+                    }
+                  }}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
                   Avanzar a Siguiente Fase
                 </Button>
               )}

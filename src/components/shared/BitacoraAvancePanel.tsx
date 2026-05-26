@@ -19,7 +19,7 @@ export const BitacoraAvancePanel: React.FC<BitacoraAvancePanelProps> = ({ presup
       .select('*')
       .eq('presupuesto_id', presupuestoId)
       .order('fecha', { ascending: false });
-    
+
     if (!error && data) {
       setAvances(data.map(a => AvanceSchema.parse(a)));
     }
@@ -28,9 +28,12 @@ export const BitacoraAvancePanel: React.FC<BitacoraAvancePanelProps> = ({ presup
   useEffect(() => { fetchAvances(); }, [fetchAvances]);
 
   const handleAdd = async () => {
+    if (nuevoAvance.avance <= 0) {
+      toast.error('El avance debe ser mayor a 0');
+      return;
+    }
     setLoading(true);
     try {
-      // 1. Insertar en bitácora
       const { error: errorBitacora } = await supabase.from('bitacora_avance').insert({
         presupuesto_id: presupuestoId,
         avance_fisico: nuevoAvance.avance,
@@ -39,12 +42,10 @@ export const BitacoraAvancePanel: React.FC<BitacoraAvancePanelProps> = ({ presup
       });
       if (errorBitacora) throw errorBitacora;
 
-      // 2. Actualizar avance_fisico en la tabla presupuestos para reflejar en gráficas
       const { error: errorPresupuesto } = await supabase
         .from('presupuestos')
         .update({ avance_fisico: nuevoAvance.avance })
         .eq('id', presupuestoId);
-      
       if (errorPresupuesto) throw errorPresupuesto;
 
       toast.success('Avance registrado y presupuesto actualizado');
@@ -52,18 +53,22 @@ export const BitacoraAvancePanel: React.FC<BitacoraAvancePanelProps> = ({ presup
       await fetchAvances();
     } catch (e) {
       toast.error('Error al guardar avance');
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
+    if (!confirm('¿Eliminar este registro de avance?')) return;
     try {
-      await supabase.from('bitacora_avance').delete().eq('id', id);
+      const { error } = await supabase.from('bitacora_avance').delete().eq('id', id);
+      if (error) throw error;
       toast.success('Registro eliminado');
       await fetchAvances();
     } catch (e) {
       toast.error('Error al eliminar');
+      console.error(e);
     }
   };
 

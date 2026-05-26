@@ -48,18 +48,31 @@ const ChecklistPanel: React.FC<{ presupuestoId: string; fase: string; onComplete
   const toggleItem = async (item: ChecklistItem) => {
     if (!session) return;
     const nuevo = !item.completado;
-    await supabase.from('checklist_items').update({
-      completado: nuevo,
-      completado_por: nuevo ? session.user.id : null,
-      completado_en: nuevo ? new Date().toISOString() : null,
-    }).eq('id', item.id);
-    await cargar();
-    onCompleteChange?.(items.every(i => i.completado));
+    try {
+      const { error } = await supabase.from('checklist_items').update({
+        completado: nuevo,
+        completado_por: nuevo ? session.user.id : null,
+        completado_en: nuevo ? new Date().toISOString() : null,
+      }).eq('id', item.id);
+      if (error) throw error;
+      await cargar();
+      onCompleteChange?.(items.every(i => i.completado || i.id === item.id));
+    } catch (err) {
+      toast.error('Error al actualizar item');
+      console.error(err);
+    }
   };
 
   const eliminarItem = async (id: string) => {
-    await supabase.from('checklist_items').delete().eq('id', id);
-    await cargar();
+    if (!confirm('¿Eliminar este item del checklist?')) return;
+    try {
+      const { error } = await supabase.from('checklist_items').delete().eq('id', id);
+      if (error) throw error;
+      await cargar();
+    } catch (err) {
+      toast.error('Error al eliminar item');
+      console.error(err);
+    }
   };
 
   const completados = items.filter(i => i.completado).length;
