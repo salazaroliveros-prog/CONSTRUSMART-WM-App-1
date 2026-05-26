@@ -26,13 +26,15 @@ const Calendar: React.FC = () => {
         const diff = fechaActividad.getTime() - ahora.getTime();
         // Notificar si faltan entre 5 y 10 minutos
         if (diff > 300000 && diff < 600000) {
+          const titulo = String(act.titulo).replace(/[<>&"'\r\n]/g, '');
+          const hora = String(act.hora).replace(/[^0-9:]/g, '');
           if (Notification.permission === "granted") {
             new Notification("Recordatorio de WM/M&S", {
-              body: `Tu actividad "${act.titulo}" inicia pronto a las ${act.hora}`,
+              body: `Tu actividad "${titulo}" inicia pronto a las ${hora}`,
               icon: '/logo.png'
             });
           }
-          toast.info(`Recordatorio: ${act.titulo} a las ${act.hora}`);
+          toast.info(`Recordatorio: ${titulo} a las ${hora}`);
         }
       });
     }, 60000);

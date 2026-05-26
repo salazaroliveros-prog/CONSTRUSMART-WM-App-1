@@ -58,7 +58,7 @@ export interface UseEquiposAcciones {
  */
 export function useEquipos(): UseEquiposState & UseEquiposAcciones {
   const context = useAppContext();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const { equipos = [], equipoMiembros = [], session, agregarEquipo, actualizarEquipo, eliminarEquipo, agregarEquipoMiembro, actualizarEquipoMiembro, eliminarEquipoMiembro } = context as any;
   const { toast } = useToast();
   const [equipoActual, setEquipoActual] = useState<Equipo | null>(null);

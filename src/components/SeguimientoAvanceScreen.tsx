@@ -20,11 +20,9 @@ import {
   DollarSign,
   CheckSquare,
   FileText,
-  ChevronDown,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { useAppContext } from '@/contexts/AppContext';
 import { DashboardFinanciero } from './DashboardFinanciero';
 import { ChangeOrdersPanel } from './ChangeOrdersPanel';
@@ -32,7 +30,7 @@ import { TrazabilidadMaterialesPanel } from './TrazabilidadMaterialesPanel';
 import { ConciliacionBancariaPanel } from './ConciliacionBancariaPanel';
 import { ChecklistCalidadPanel } from './ChecklistCalidadPanel';
 import { ReportesAutomaticosPanel } from './ReportesAutomaticosPanel';
-import type { Presupuesto, Transaccion } from '@/types/supabase';
+import type { Transaccion } from '@/types/supabase';
 
 interface SeguimientoAvanceScreenProps {
   presupuestoId?: string;
@@ -153,8 +151,6 @@ export const SeguimientoAvanceScreen: React.FC<SeguimientoAvanceScreenProps> = (
             <TabsContent value="dashboard" className="mt-0">
               <DashboardFinanciero
                 presupuesto={presupuestoActual}
-                transacciones={transacciones}
-                presupuestos={presupuestos}
               />
             </TabsContent>
 

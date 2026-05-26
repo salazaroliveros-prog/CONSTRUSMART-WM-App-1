@@ -8,25 +8,33 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useTrazabilidadMateriales } from '@/hooks/useTrazabilidadMateriales';
 import type { Presupuesto } from '@/types/supabase';
-import { AlertTriangle, CheckCircle, TrendingDown } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { AlertTriangle } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 interface TrazabilidadMaterialesPanelProps {
   presupuesto: Presupuesto;
 }
 
 export const TrazabilidadMaterialesPanel: React.FC<TrazabilidadMaterialesPanelProps> = ({ presupuesto }) => {
-  const { materiales, agregarMaterial, registrarCompra, registrarConsumo, resumen } = useTrazabilidadMateriales();
+  const { materiales, agregarMaterial, resumen } = useTrazabilidadMateriales();
+
+  type LineaPresupuesto = {
+    codigo?: string;
+    cantidad?: number;
+    unidad?: string;
+    costoMaterial?: number;
+  };
 
   // Inicializar materiales al cargar presupuesto
   React.useEffect(() => {
-    (presupuesto.lineas || []).forEach(linea => {
+    const lineas = Array.isArray(presupuesto.lineas) ? (presupuesto.lineas as LineaPresupuesto[]) : [];
+    lineas.forEach((linea) => {
       agregarMaterial(
         linea.codigo || '',
         presupuesto.id,
-        linea.cantidad,
+        linea.cantidad ?? 0,
         linea.unidad || 'und',
-        linea.costoMaterial || 0
+        linea.costoMaterial ?? 0
       );
     });
   }, [presupuesto.id, presupuesto.lineas, agregarMaterial]);
@@ -34,7 +42,7 @@ export const TrazabilidadMaterialesPanel: React.FC<TrazabilidadMaterialesPanelPr
   const datosComposicion = [
     { name: 'Presupuestado', value: resumen.total_presupuestado },
     { name: 'Comprado', value: resumen.total_comprado },
-    { name: 'Consumido', value: resumen.total_consumida },
+    { name: 'Consumido', value: resumen.total_consumido },
   ];
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b'];
@@ -56,13 +64,13 @@ export const TrazabilidadMaterialesPanel: React.FC<TrazabilidadMaterialesPanelPr
             <div className="p-3 bg-green-50 rounded-lg">
               <p className="text-xs text-green-600 font-medium">Comprado</p>
               <p className="text-2xl font-bold">Q{resumen.total_comprado.toLocaleString()}</p>
-              <p className={`text-xs mt-1 ${resumen.porcentaje_variacion > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                {resumen.porcentaje_variacion > 0 ? '+' : ''}{resumen.porcentaje_variacion.toFixed(1)}%
+              <p className={`text-xs mt-1 ${resumen.porcentaje_variacion_costo > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {resumen.porcentaje_variacion_costo > 0 ? '+' : ''}{resumen.porcentaje_variacion_costo.toFixed(1)}%
               </p>
             </div>
             <div className="p-3 bg-orange-50 rounded-lg">
               <p className="text-xs text-orange-600 font-medium">Consumido</p>
-              <p className="text-2xl font-bold">Q{resumen.total_consumida.toLocaleString()}</p>
+              <p className="text-2xl font-bold">Q{resumen.total_consumido.toLocaleString()}</p>
             </div>
             <div className={`p-3 rounded-lg ${resumen.porcentaje_desperdicio > 10 ? 'bg-red-50' : 'bg-green-50'}`}>
               <p className={`text-xs font-medium ${resumen.porcentaje_desperdicio > 10 ? 'text-red-600' : 'text-green-600'}`}>

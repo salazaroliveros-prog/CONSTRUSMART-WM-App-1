@@ -208,7 +208,7 @@ export async function obtenerRenglonesFreuentes(
 
     if (error) return [];
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const ids = data?.map((d: any) => d.renglon_id) || [];
     const { data: renglones } = await supabase
       .from('renglones')
@@ -350,9 +350,13 @@ export async function importarRenglonesDesdeCSV(
 
       const id = await crearRenglon(renglon, userId);
       if (id) exitosos++;
-      else errores.push(`Fila: ${linea} - Error desconocido`);
+      else {
+        const lineaSanitizada = linea.replace(/[\r\n\t]/g, ' ').slice(0, 200);
+        errores.push(`Fila: ${lineaSanitizada} - Error desconocido`);
+      }
     } catch (error) {
-      errores.push(`Fila: ${linea} - ${String(error)}`);
+      const lineaSanitizada = linea.replace(/[\r\n\t]/g, ' ').slice(0, 200);
+      errores.push(`Fila: ${lineaSanitizada} - ${String(error)}`);
     }
   }
 

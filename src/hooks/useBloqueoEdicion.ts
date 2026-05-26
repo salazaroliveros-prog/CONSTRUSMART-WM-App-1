@@ -24,7 +24,7 @@ export function useBloqueoEdicion(presupuestoId: string | null, userId: string) 
         }
       }
     };
-    canal.on('broadcast', handler);
+    canal.on('broadcast', { event: 'lock' }, handler);
     canal.subscribe();
     return () => {
       canal.unsubscribe();

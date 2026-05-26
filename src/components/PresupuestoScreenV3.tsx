@@ -78,7 +78,7 @@ const PresupuestoScreenV3: React.FC = () => {
                   <div className="space-y-2">
                     {presupuestos.map((p) => (
                       <div key={p.id} className="p-3 border rounded hover:bg-slate-50">
-                        <p className="font-medium">{p.nombre || 'Sin nombre'}</p>
+                        <p className="font-medium">{p.proyecto || 'Sin nombre'}</p>
                         <p className="text-sm text-slate-600">ID: {p.id}</p>
                       </div>
                     ))}

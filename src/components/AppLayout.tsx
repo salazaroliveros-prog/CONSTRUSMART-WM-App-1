@@ -10,7 +10,7 @@ import SeguimientoScreen from '@/components/screens/SeguimientoScreen';
 import TeamsScreen from '@/components/screens/TeamsScreen';
 import CommandPalette from '@/components/shared/CommandPalette';
 // import { FloatingMenu } from '@/components/shared/FloatingMenu'; // Eliminado ya que ahora está en Header
-import { Building2, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const viewOrder = ['login', 'dashboard', 'clientes', 'presupuesto', 'proyectos', 'seguimiento', 'financiero', 'equipos'];
 
