@@ -1,8 +1,10 @@
+import { CashFlowService } from '@/services/financiero/CashFlowService';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import React, { useMemo, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import PageShell from '@/components/shared/PageShell';
 import TransactionForm from '@/components/shared/TransactionForm';
-import Calendar from '@/components/shared/Calendar'; // Importamos el calendario
+import Calendar from '@/components/shared/Calendar';
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
 import { Download, FileText, Trash2, TrendingUp, TrendingDown, Wallet, Filter, FileDown, Scan } from 'lucide-react';
 import OCRFactura from '@/components/shared/OCRFactura';
@@ -25,6 +27,7 @@ const categoriaLabels: Record<string, string> = {
 
 const FinancieroScreen: React.FC = () => {
   const { transacciones, presupuestos, deleteTransaccion } = useAppContext();
+  const proyeccion = useMemo(() => CashFlowService.proyectarTendencia(transacciones), [transacciones]);
   const [filterTipo, setFilterTipo] = useState<'todos' | 'ingreso' | 'gasto'>('todos');
   const [filterCat, setFilterCat] = useState<string>('todos');
   const [filterProy, setFilterProy] = useState<string>('todos');
@@ -95,6 +98,22 @@ const FinancieroScreen: React.FC = () => {
   return (
     <PageShell showHome={false} title="Control de Planilla, Gastos Operativos y Personales">
       <div className="p-3 sm:p-5 max-w-[1600px] mx-auto space-y-4">
+        {/* Proyecciones */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-none shadow-sm">
+            <CardHeader className="py-3"><CardTitle className="text-[10px] font-bold uppercase text-slate-500">Proyección 30 Días</CardTitle></CardHeader>
+            <CardContent className="py-2 text-xl font-bold text-blue-900">{fmtQ(proyeccion.dias30)}</CardContent>
+          </Card>
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-none shadow-sm">
+            <CardHeader className="py-3"><CardTitle className="text-[10px] font-bold uppercase text-slate-500">Proyección 60 Días</CardTitle></CardHeader>
+            <CardContent className="py-2 text-xl font-bold text-blue-900">{fmtQ(proyeccion.dias60)}</CardContent>
+          </Card>
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-none shadow-sm">
+            <CardHeader className="py-3"><CardTitle className="text-[10px] font-bold uppercase text-slate-500">Proyección 90 Días</CardTitle></CardHeader>
+            <CardContent className="py-2 text-xl font-bold text-blue-900">{fmtQ(proyeccion.dias90)}</CardContent>
+          </Card>
+        </div>
+
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <KPICard icon={TrendingUp} label="Ingresos" value={fmtQ(stats.ingresos)} color="from-emerald-500 to-emerald-600" />
