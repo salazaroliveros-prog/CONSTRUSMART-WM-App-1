@@ -11,6 +11,7 @@ const SeguimientoScreen: React.FC = () => {
 
   const ejecucion = presupuestos.filter(p => p.fase === 'ejecución');
   const planeacion = presupuestos.filter(p => p.fase === 'planeación');
+  const pausa = presupuestos.filter(p => p.fase === 'pausa');
   const finalizados = presupuestos.filter(p => p.fase === 'finalizado');
 
   const flujoMensual = useMemo(() => {
@@ -117,6 +118,9 @@ const SeguimientoScreen: React.FC = () => {
 
         <ProyectosTabla titulo="Proyectos en Planeación" proyectos={planeacion} color="amber" onAction={(p) => transicionFase(p.id, 'ejecución')} actionLabel={() => 'Iniciar'} />
 
+        {pausa.length > 0 && (
+          <ProyectosTabla titulo="Proyectos en Pausa" proyectos={pausa} color="amber" onAction={(p) => transicionFase(p.id, 'ejecución')} actionLabel={() => 'Reanudar'} />
+        )}
         {finalizados.length > 0 && (
           <ProyectosTabla titulo="Proyectos Finalizados" proyectos={finalizados} color="emerald" />
         )}

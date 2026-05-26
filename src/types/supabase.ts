@@ -472,6 +472,7 @@ export const dbToPresupuesto = (db: DBRow): Presupuesto => ({
   ingresos: typeof db.ingresos === 'number' ? db.ingresos : Number(db.ingresos) || 0,
   gastos: typeof db.gastos === 'number' ? db.gastos : Number(db.gastos) || 0,
   pendienteAportar: typeof db.pendiente_aportar === 'number' ? db.pendiente_aportar : Number(db.pendiente_aportar) || 0,
+  costo_directo: typeof db.costo_directo === 'number' ? db.costo_directo : Number(db.costo_directo) || 0,
   total: typeof db.total === 'number' ? db.total : Number(db.total) || 0,
   fechaInicio: (db.fecha_inicio as string) ?? '',
   fechaFin: (db.fecha_fin as string) ?? '',

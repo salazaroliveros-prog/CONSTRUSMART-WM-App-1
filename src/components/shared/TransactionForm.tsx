@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { useAppContext, CategoriaTransaccion } from '@/contexts/AppContext';
+import { useAppContext } from '@/contexts/AppContext';
+import type { Transaccion } from '@/types/supabase';
 import { Plus, DollarSign, TrendingDown, TrendingUp } from 'lucide-react';
 
-const categorias: { v: CategoriaTransaccion; label: string }[] = [
+const categorias: { v: Transaccion['categoria']; label: string }[] = [
   { v: 'materiales', label: 'Materiales' },
   { v: 'mano-obra', label: 'Mano de Obra' },
   { v: 'herramienta', label: 'Herramienta' },
@@ -24,7 +25,7 @@ const TransactionForm: React.FC<{ compact?: boolean }> = ({ compact = false }) =
     descripcion: '',
     cantidad: 1,
     unidad: 'global',
-    categoria: 'materiales' as CategoriaTransaccion,
+    categoria: 'materiales' as Transaccion['categoria'],
     costoUnitario: 0,
     fecha: new Date().toISOString().split('T')[0],
   });
@@ -64,7 +65,7 @@ const TransactionForm: React.FC<{ compact?: boolean }> = ({ compact = false }) =
          <input placeholder="Descripción de la transacción" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg" required />
          <input type="number" placeholder="Ingrese la cantidad" value={form.cantidad} onChange={e => setForm({ ...form, cantidad: parseFloat(e.target.value) || 0 })} className="px-2 py-1.5 text-xs border rounded-lg" />
          <input placeholder="Ingrese la unidad (ej: m², kg, unidad)" value={form.unidad} onChange={e => setForm({ ...form, unidad: e.target.value })} className="px-2 py-1.5 text-xs border rounded-lg" />
-        <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value as CategoriaTransaccion })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg bg-slate-50">
+        <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value as Transaccion['categoria'] })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg bg-slate-50">
           {categorias.map(c => <option key={c.v} value={c.v}>{c.label}</option>)}
         </select>
          <input type="number" placeholder="Ingrese el costo unitario" value={form.costoUnitario} onChange={e => setForm({ ...form, costoUnitario: parseFloat(e.target.value) || 0 })} className="px-2 py-1.5 text-xs border rounded-lg" />
