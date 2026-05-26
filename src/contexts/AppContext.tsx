@@ -823,9 +823,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------- CRUD Transacciones ----------
   const addTransaccion = async (t: CreateTransaccion) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
     try {
       const dbRecord = {
-        user_id: session.user.id,
+        user_id: userId,
         tipo: t.tipo,
         descripcion: t.descripcion || null,
         cantidad: t.cantidad ?? 1,
@@ -838,30 +839,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       
       if (!isOnline) {
-        addPendingMutation({ table: 'transacciones', action: 'INSERT', data: dbRecord, userId: session.user.id });
-        const optimistic = dbToTransaccion({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
-        setTransacciones(p => [optimistic, ...p]);
-        saveCachedData('transacciones', session.user.id, [optimistic, ...transacciones]);
-        setPendingCount(getPendingCount(session.user.id));
-        toast.success('Guardado localmente (sin conexión)');
-        return;
-      }
-      
-      const data = await FinancieroService.registrarTransaccion(dbRecord as any);
-      if (data) {
-        const mapped = dbToTransaccion(data);
-        setTransacciones(p => [mapped, ...p]);
-        saveCachedData('transacciones', session.user.id, [mapped, ...transacciones]);
-        toast.success('Transacción registrada');
-      }
-    } catch (error) {
-      console.error('Error al agregar transacción:', error);
-      toast.error('Error al registrar transacción');
-      throw error;
-    }
-  };
-      
-      if (!isOnline) {
         addPendingMutation({ table: 'transacciones', action: 'INSERT', data: dbRecord, userId });
         const optimistic = dbToTransaccion({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
         setTransacciones(p => [optimistic, ...p]);
@@ -870,8 +847,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast.success('Guardado localmente (sin conexión)');
         return;
       }
-      const { data, error } = await supabase.from('transacciones').insert(dbRecord).select().single();
-      if (error) throw error;
+      
+      const data = await FinancieroService.registrarTransaccion(dbRecord as any);
       if (data) {
         const mapped = dbToTransaccion(data);
         setTransacciones(p => [mapped, ...p]);
@@ -880,7 +857,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch (error) {
       console.error('Error al agregar transacción:', error);
-      toast.error('Error al registrar transacción', { description: error instanceof Error ? error.message : 'Error desconocido' });
+      toast.error('Error al registrar transacción');
       throw error;
     }
   };

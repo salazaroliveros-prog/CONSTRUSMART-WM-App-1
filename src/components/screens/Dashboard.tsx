@@ -1,3 +1,4 @@
+import { Skeleton } from '@/components/ui/skeleton/Skeleton';
 import React, { useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import PageShell from '@/components/shared/PageShell';
@@ -35,7 +36,7 @@ const KPI: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: 
 };
 
 const Dashboard: React.FC = () => {
-  const { presupuestos, transacciones } = useAppContext();
+  const { presupuestos, transacciones, loading } = useAppContext();
 
   const stats = useMemo(() => {
     const ingresos = transacciones.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
@@ -84,11 +85,17 @@ const Dashboard: React.FC = () => {
   return (
     <PageShell showHome={false} title="Tablero Ejecutivo">
       <div className="p-3 sm:p-4 md:p-5 max-w-[1600px] mx-auto space-y-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3 stagger-children">
-          {kpiData.map((k, i) => (
-            <KPI key={i} icon={k.icon} label={k.label} value={k.value} color={k.color} index={i} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3">
+            <Skeleton className="h-20 w-full" count={8} />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3 stagger-children">
+            {kpiData.map((k, i) => (
+              <KPI key={i} icon={k.icon} label={k.label} value={k.value} color={k.color} index={i} />
+            ))}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
