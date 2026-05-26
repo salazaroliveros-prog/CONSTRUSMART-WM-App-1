@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Bell, BellDot, X, Check, Info, AlertTriangle, CheckCircle, AlertCircle, Trash2 } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
+import { NotificationService } from '@/services/equipos/NotificationService';
 import { toast } from 'sonner';
 
 interface Notif {
@@ -13,9 +14,7 @@ interface Notif {
   created_at: string;
 }
 
-const iconMap = {
-  info: Info, alerta: AlertTriangle, exito: CheckCircle, warning: AlertCircle,
-};
+const iconMap = { info: Info, alerta: AlertTriangle, exito: CheckCircle, warning: AlertCircle };
 const colorMap = {
   info: 'bg-blue-100 text-blue-700', alerta: 'bg-amber-100 text-amber-700',
   exito: 'bg-emerald-100 text-emerald-700', warning: 'bg-red-100 text-red-700',
@@ -28,9 +27,12 @@ const NotificationBell: React.FC = () => {
 
   const cargar = useCallback(async () => {
     if (!session) return;
-    const { data } = await supabase.from('notificaciones').select('*')
-      .eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(20);
-    if (data) setNotifs(data as Notif[]);
+    try {
+      const data = await NotificationService.getNotificaciones(session.user.id);
+      setNotifs(data as unknown as Notif[]);
+    } catch (err) {
+      console.error('Error al cargar notificaciones:', err);
+    }
   }, [session]);
 
   useEffect(() => {
@@ -45,8 +47,7 @@ const NotificationBell: React.FC = () => {
 
   const marcarLeido = async (id: string) => {
     try {
-      const { error } = await supabase.from('notificaciones').update({ leido: true }).eq('id', id);
-      if (error) throw error;
+      await NotificationService.marcarLeido(id);
       setNotifs(prev => prev.map(n => n.id === id ? { ...n, leido: true } : n));
     } catch (err) {
       console.error('Error al marcar como leído:', err);
@@ -55,8 +56,7 @@ const NotificationBell: React.FC = () => {
 
   const eliminar = async (id: string) => {
     try {
-      const { error } = await supabase.from('notificaciones').delete().eq('id', id);
-      if (error) throw error;
+      await NotificationService.eliminar(id);
       setNotifs(prev => prev.filter(n => n.id !== id));
     } catch (err) {
       toast.error('Error al eliminar notificación');
