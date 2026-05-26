@@ -78,6 +78,36 @@ Built into AppContext via `src/services/offline.ts`.
 - **Auto-sync**: on `online` event, pending mutations replay in order against Supabase. After all sync, fresh data is fetched. Sync happens automatically via `useEffect` on `[isOnline, session?.user.id]`.
 - **Edge case**: if the Supabase project lacks some tables (500), those tables load from cache or stay empty.
 
+## Vercel deployment
+
+- **Auto-deploy from GitHub**: every push to `main` triggers automatic deployment to **2 projects**: `construsmart-wm-app-1` and `app-presupuestos-y-control-de-obras-vol-5`.
+- **No `.vercel` directory** in repo — project config is managed via Vercel dashboard.
+- **vercel.json**: SPA catch-all rewrite, manifest.webmanifest headers.
+
+## Known component issues (audit findings fixed)
+
+| # | Component | Issue | Fix |
+|---|---|---|---|
+| 1 | `useConciliacionBancaria.ts` | Upsert usaba `id: proyecto_id` (UUID conflict) | Migrado a columna `proyecto_id text` con UNIQUE index. Usa `.maybeSingle()`. |
+| 2 | `SYNC_SUPABASE_FINAL.sql` | `conciliaciones` sin `proyecto_id` | Agregado `ALTER TABLE` + UNIQUE index. |
+| 3 | `supabase.ts` — `CreatePresupuestoInput` | No incluía `costo_directo` | Agregado campo opcional. |
+| 4 | `AppContext.tsx` — `addPresupuesto` | Hardcodeaba `costo_directo: 0` | Cambiado a `p.costo_directo ?? 0`. |
+| 5 | `TeamsScreen.tsx` | CRUD usaba `supabase` directo (sin offline) | Migrado a `addEquipo/deleteEquipoMiembro` de AppContext. |
+| 6 | `ChecklistCalidadPanel.tsx` | Botón "Avanzar a Siguiente Fase" sin `onClick` | Agregado handler que llama `transicionFase`. |
+| 7 | `MaterialesPanel.tsx` | `registrarUso` sin error handling | Agregado `try/catch` con toast. |
+| 8 | `BitacoraAvancePanel.tsx` | `handleDelete` sin confirmación ni error handling | Agregado confirm + try/catch. |
+| 9 | `ChecklistPanel.tsx` | `toggleItem`/`eliminarItem` sin error handling | Agregado try/catch; eliminar pide confirmación. |
+| 10 | `NotificationBell.tsx` | `marcarLeido`/`eliminar` sin error handling | Agregado try/catch. |
+
+## Action buttons reference
+
+Siempre que un componente necesite CRUD, debe usar los métodos de **AppContext** para soporte offline. Los siguientes paneles aún usan `supabase` directo y necesitan migración futura:
+- `BitacoraAvancePanel.tsx` — tabla `bitacora_avance` (no está en AppContext)
+- `ChecklistPanel.tsx` — tabla `checklist_items`
+- `MaterialesPanel.tsx` — tablas `materiales_proyecto`, `movimientos_materiales`
+- `ChangeOrderPanel.tsx` (legacy) — tabla `cambios_presupuesto`
+- `NotificationBell.tsx` — tabla `notificaciones`
+
 ## Config quirks
 
 - **eslint**: `no-unused-vars` OFF, `no-explicit-any` OFF, `react-refresh/only-export-components` OFF.
