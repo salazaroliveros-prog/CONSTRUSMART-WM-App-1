@@ -47,7 +47,6 @@ interface AppContextType {
   proyectos: Proyecto[];
   addProyecto: (p: CreateProyecto) => Promise<void>;
   updateProyecto: (id: string, p: UpdateProyecto) => Promise<void>;
-  deleteProyecto: (id: string) => Promise<void>;
 
   transacciones: Transaccion[];
   addTransaccion: (t: CreateTransaccion) => Promise<void>;
@@ -1188,7 +1187,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       view, setView, session, loading, authError, signIn, signUp, signInWithGoogle, signOut, user,
       clientes, addCliente, updateCliente, deleteCliente,
-      proyectos, addProyecto, updateProyecto, deleteProyecto,
+      proyectos, addProyecto, updateProyecto,
       transacciones, addTransaccion, deleteTransaccion,
       actividades, addActividad, deleteActividad,
       presupuestos, addPresupuesto, updatePresupuesto, deletePresupuesto, transicionFase,
