@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
+import { supabase } from '@/lib/supabase';
 import type { Presupuesto } from '@/types/supabase';
 import PageShell from '@/components/shared/PageShell';
-import { Play, PauseCircle, CheckCircle, Folder, Filter, Edit3, Save, Trash2, X } from 'lucide-react';
+import { Play, PauseCircle, CheckCircle, Folder, Filter, Edit3, Save, Trash2, X, ChevronDown, ChevronRight, DollarSign, TrendingUp, TrendingDown, Ruler } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Fase = Presupuesto['fase'];
@@ -36,11 +37,24 @@ interface EditForm {
   avanceFinanciero: number;
 }
 
+interface RenglonDetalle {
+  id: string;
+  codigo: string;
+  descripcion: string;
+  unidad: string;
+  cantidad: number;
+  costoMaterial: number;
+  costoManoObra: number;
+  costoHerramienta: number;
+  rendimiento: number;
+}
+
 const ProyectosScreen: React.FC = () => {
-  const { presupuestos, updatePresupuesto, deleteProyecto, transicionFase } = useAppContext();
+  const { presupuestos, updatePresupuesto, transicionFase } = useAppContext();
   const [filtroFase, setFiltroFase] = useState<Fase | 'todas'>('todas');
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({
     ingresos: 0, gastos: 0, pendienteAportar: 0, avanceFisico: 0, avanceFinanciero: 0,
   });
@@ -81,11 +95,32 @@ const ProyectosScreen: React.FC = () => {
   const handleDelete = async (id: string, proyecto: string) => {
     if (!window.confirm(`¿Eliminar el proyecto "${proyecto}"? Esta acción no se puede deshacer.`)) return;
     try {
-      await deleteProyecto(id);
+      const { error } = await supabase.from('presupuestos').delete().eq('id', id);
+      if (error) throw error;
+      toast.success('Proyecto eliminado');
     } catch {
       toast.error('Error al eliminar proyecto');
     }
   };
+
+  const parseLineas = (lineas: unknown[]): RenglonDetalle[] => {
+    return (lineas || []).map(l => {
+      const r = l as Record<string, unknown>;
+      return {
+        id: String(r.id || ''),
+        codigo: String(r.codigo || ''),
+        descripcion: String(r.descripcion || ''),
+        unidad: String(r.unidad || ''),
+        cantidad: Number(r.cantidad) || 0,
+        costoMaterial: Number(r.costoMaterial) || 0,
+        costoManoObra: Number(r.costoManoObra) || 0,
+        costoHerramienta: Number(r.costoHerramienta) || 0,
+        rendimiento: Number(r.rendimiento) || 0,
+      };
+    });
+  };
+
+  const CalcularSubtotal = (r: RenglonDetalle) => r.cantidad * (r.costoMaterial + r.costoManoObra + r.costoHerramienta);
 
   return (
     <PageShell showHome={false} title="Proyectos por Fase">
@@ -125,102 +160,215 @@ const ProyectosScreen: React.FC = () => {
             return items.map(p => {
               const accion = nextFase[p.fase];
               const isEditing = editingId === p.id;
+              const isExpanded = expandedId === p.id;
+              const renglones = parseLineas(p.lineas);
+              const totalRenglones = renglones.reduce((s, r) => s + CalcularSubtotal(r), 0);
               return (
-                <div key={p.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md transition">
-                  <div className="flex items-start justify-between gap-3 flex-wrap">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-bold text-slate-900 text-sm">{p.proyecto}</h3>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${faseColors[p.fase]}`}>{faseLabels[p.fase]}</span>
-                      </div>
-                      <div className="text-xs text-slate-500 mt-1">{p.cliente || 'Sin cliente'} · {p.tipologia || 'General'}</div>
+                <div key={p.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition">
+                  {/* Cabecera */}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-bold text-slate-900 text-sm">{p.proyecto}</h3>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${faseColors[p.fase]}`}>{faseLabels[p.fase]}</span>
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">{p.cliente || 'Sin cliente'} · {p.tipologia || 'General'}</div>
 
-                      {isEditing ? (
-                        <div className="mt-2 grid grid-cols-2 md:grid-cols-5 gap-2">
-                          <div>
-                            <label className="text-[9px] font-semibold text-slate-500">Ingresos (Q)</label>
-                            <input type="number" value={editForm.ingresos}
-                              onChange={e => setEditForm(f => ({ ...f, ingresos: parseFloat(e.target.value) || 0 }))}
-                              className="w-full px-2 py-1 text-xs border rounded" />
+                        {isEditing ? (
+                          <div className="mt-2 grid grid-cols-2 md:grid-cols-5 gap-2">
+                            <div>
+                              <label className="text-[9px] font-semibold text-slate-500">Ingresos (Q)</label>
+                              <input type="number" value={editForm.ingresos}
+                                onChange={e => setEditForm(f => ({ ...f, ingresos: parseFloat(e.target.value) || 0 }))}
+                                className="w-full px-2 py-1 text-xs border rounded" />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-semibold text-slate-500">Gastos (Q)</label>
+                              <input type="number" value={editForm.gastos}
+                                onChange={e => setEditForm(f => ({ ...f, gastos: parseFloat(e.target.value) || 0 }))}
+                                className="w-full px-2 py-1 text-xs border rounded" />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-semibold text-slate-500">Pendiente (Q)</label>
+                              <input type="number" value={editForm.pendienteAportar}
+                                onChange={e => setEditForm(f => ({ ...f, pendienteAportar: parseFloat(e.target.value) || 0 }))}
+                                className="w-full px-2 py-1 text-xs border rounded" />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-semibold text-slate-500">Avance Físico %</label>
+                              <input type="number" min={0} max={100} value={editForm.avanceFisico}
+                                onChange={e => setEditForm(f => ({ ...f, avanceFisico: parseFloat(e.target.value) || 0 }))}
+                                className="w-full px-2 py-1 text-xs border rounded" />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-semibold text-slate-500">Avance Financiero %</label>
+                              <input type="number" min={0} max={100} value={editForm.avanceFinanciero}
+                                onChange={e => setEditForm(f => ({ ...f, avanceFinanciero: parseFloat(e.target.value) || 0 }))}
+                                className="w-full px-2 py-1 text-xs border rounded" />
+                            </div>
                           </div>
-                          <div>
-                            <label className="text-[9px] font-semibold text-slate-500">Gastos (Q)</label>
-                            <input type="number" value={editForm.gastos}
-                              onChange={e => setEditForm(f => ({ ...f, gastos: parseFloat(e.target.value) || 0 }))}
-                              className="w-full px-2 py-1 text-xs border rounded" />
+                        ) : (
+                          <div className="flex gap-4 mt-2 text-xs text-slate-600 flex-wrap">
+                            <span>Total: <strong className="text-blue-900">Q {(p.total || 0).toLocaleString()}</strong></span>
+                            <span>Avance: <strong>{p.avanceFisico || 0}%</strong></span>
+                            <span>Ingresos: <strong className="text-emerald-700">Q {(p.ingresos || 0).toLocaleString()}</strong></span>
+                            <span>Gastos: <strong className="text-red-700">Q {(p.gastos || 0).toLocaleString()}</strong></span>
+                            <span>Pendiente: <strong className="text-amber-700">Q {(p.pendienteAportar || 0).toLocaleString()}</strong></span>
+                            {renglones.length > 0 && <span>Renglones: <strong>{renglones.length}</strong></span>}
                           </div>
-                          <div>
-                            <label className="text-[9px] font-semibold text-slate-500">Pendiente (Q)</label>
-                            <input type="number" value={editForm.pendienteAportar}
-                              onChange={e => setEditForm(f => ({ ...f, pendienteAportar: parseFloat(e.target.value) || 0 }))}
-                              className="w-full px-2 py-1 text-xs border rounded" />
+                        )}
+                        {p.fase === 'ejecución' && !isEditing && (
+                          <div className="mt-2 bg-slate-100 rounded-full h-1.5 max-w-[200px] overflow-hidden">
+                            <div className="bg-blue-600 h-full rounded-full" style={{ width: `${p.avanceFisico || 0}%` }} />
                           </div>
-                          <div>
-                            <label className="text-[9px] font-semibold text-slate-500">Avance Físico %</label>
-                            <input type="number" min={0} max={100} value={editForm.avanceFisico}
-                              onChange={e => setEditForm(f => ({ ...f, avanceFisico: parseFloat(e.target.value) || 0 }))}
-                              className="w-full px-2 py-1 text-xs border rounded" />
-                          </div>
-                          <div>
-                            <label className="text-[9px] font-semibold text-slate-500">Avance Financiero %</label>
-                            <input type="number" min={0} max={100} value={editForm.avanceFinanciero}
-                              onChange={e => setEditForm(f => ({ ...f, avanceFinanciero: parseFloat(e.target.value) || 0 }))}
-                              className="w-full px-2 py-1 text-xs border rounded" />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex gap-4 mt-2 text-xs text-slate-600 flex-wrap">
-                          <span>Total: <strong className="text-blue-900">Q {(p.total || 0).toLocaleString()}</strong></span>
-                          <span>Avance: <strong>{p.avanceFisico || 0}%</strong></span>
-                          <span>Ingresos: <strong className="text-emerald-700">Q {(p.ingresos || 0).toLocaleString()}</strong></span>
-                          <span>Gastos: <strong className="text-red-700">Q {(p.gastos || 0).toLocaleString()}</strong></span>
-                          <span>Pendiente: <strong className="text-amber-700">Q {(p.pendienteAportar || 0).toLocaleString()}</strong></span>
-                        </div>
-                      )}
-                      {p.fase === 'ejecución' && !isEditing && (
-                        <div className="mt-2 bg-slate-100 rounded-full h-1.5 max-w-[200px] overflow-hidden">
-                          <div className="bg-blue-600 h-full rounded-full" style={{ width: `${p.avanceFisico || 0}%` }} />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2 shrink-0">
-                      {isEditing ? (
-                        <>
-                          <button onClick={() => saveEditing(p.id)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition">
-                            <Save className="w-3.5 h-3.5" /> Guardar
-                          </button>
-                          <button onClick={() => setEditingId(null)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-300 hover:bg-slate-400 text-slate-700 transition">
-                            <X className="w-3.5 h-3.5" /> Cancelar
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button onClick={() => startEditing(p)}
+                        )}
+                      </div>
+                      <div className="flex gap-2 shrink-0 flex-wrap">
+                        {/* Expandir / Detalle */}
+                        {renglones.length > 0 && (
+                          <button onClick={() => setExpandedId(isExpanded ? null : p.id)}
                             className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
-                            <Edit3 className="w-3.5 h-3.5" /> Editar
+                            {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                            {isExpanded ? 'Cerrar' : 'Renglones'}
                           </button>
-                          {accion && (
-                            <button onClick={() => transicionFase(p.id, accion.fase)}
-                              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white ${accion.color} transition`}>
-                              <accion.icon className="w-3.5 h-3.5" /> {accion.label}
-                            </button>
-                          )}
-                          {p.fase !== 'finalizado' && (
-                            <button onClick={() => transicionFase(p.id, 'finalizado')}
+                        )}
+                        {isEditing ? (
+                          <>
+                            <button onClick={() => saveEditing(p.id)}
                               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition">
-                              <CheckCircle className="w-3.5 h-3.5" /> Finalizar
+                              <Save className="w-3.5 h-3.5" /> Guardar
                             </button>
-                          )}
-                          <button onClick={() => handleDelete(p.id, p.proyecto)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 hover:bg-red-200 text-red-600 transition">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      )}
+                            <button onClick={() => setEditingId(null)}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-300 hover:bg-slate-400 text-slate-700 transition">
+                              <X className="w-3.5 h-3.5" /> Cancelar
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => startEditing(p)}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+                              <Edit3 className="w-3.5 h-3.5" /> Editar
+                            </button>
+                            {accion && (
+                              <button onClick={() => transicionFase(p.id, accion.fase)}
+                                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white ${accion.color} transition`}>
+                                <accion.icon className="w-3.5 h-3.5" /> {accion.label}
+                              </button>
+                            )}
+                            {p.fase !== 'finalizado' && (
+                              <button onClick={() => transicionFase(p.id, 'finalizado')}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition">
+                                <CheckCircle className="w-3.5 h-3.5" /> Finalizar
+                              </button>
+                            )}
+                            <button onClick={() => handleDelete(p.id, p.proyecto)}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 hover:bg-red-200 text-red-600 transition">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {/* Panel expandible: Renglones + Financiero */}
+                  {isExpanded && renglones.length > 0 && (
+                    <div className="border-t border-slate-100 bg-slate-50/50">
+                      <div className="p-4 space-y-3">
+                        {/* Resumen financiero */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div className="bg-white rounded-lg border border-slate-200 p-3">
+                            <div className="flex items-center gap-1.5 text-emerald-600 text-[10px] font-semibold uppercase tracking-wider mb-1">
+                              <TrendingUp className="w-3 h-3" /> Ingresos
+                            </div>
+                            <div className="text-lg font-bold text-slate-900">Q {(p.ingresos || 0).toLocaleString()}</div>
+                          </div>
+                          <div className="bg-white rounded-lg border border-slate-200 p-3">
+                            <div className="flex items-center gap-1.5 text-red-600 text-[10px] font-semibold uppercase tracking-wider mb-1">
+                              <TrendingDown className="w-3 h-3" /> Gastos
+                            </div>
+                            <div className="text-lg font-bold text-slate-900">Q {(p.gastos || 0).toLocaleString()}</div>
+                          </div>
+                          <div className="bg-white rounded-lg border border-slate-200 p-3">
+                            <div className="flex items-center gap-1.5 text-amber-600 text-[10px] font-semibold uppercase tracking-wider mb-1">
+                              <DollarSign className="w-3 h-3" /> Pendiente
+                            </div>
+                            <div className="text-lg font-bold text-slate-900">Q {(p.pendienteAportar || 0).toLocaleString()}</div>
+                          </div>
+                          <div className="bg-white rounded-lg border border-slate-200 p-3">
+                            <div className="flex items-center gap-1.5 text-blue-700 text-[10px] font-semibold uppercase tracking-wider mb-1">
+                              <Ruler className="w-3 h-3" /> Costo Directo
+                            </div>
+                            <div className="text-lg font-bold text-slate-900">Q {(p.costo_directo || 0).toLocaleString()}</div>
+                          </div>
+                        </div>
+
+                        {/* Tabla de renglones */}
+                        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                          <div className="bg-slate-100 px-3 py-2 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                            Renglones de presupuesto ({renglones.length})
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-[11px]">
+                              <thead>
+                                <tr className="bg-slate-50 border-b border-slate-200">
+                                  <th className="text-left px-3 py-2 font-semibold text-slate-600">Código</th>
+                                  <th className="text-left px-3 py-2 font-semibold text-slate-600">Descripción</th>
+                                  <th className="text-right px-3 py-2 font-semibold text-slate-600">Cant.</th>
+                                  <th className="text-right px-3 py-2 font-semibold text-slate-600">Unidad</th>
+                                  <th className="text-right px-3 py-2 font-semibold text-slate-600">Mat. (Q)</th>
+                                  <th className="text-right px-3 py-2 font-semibold text-slate-600">M.O. (Q)</th>
+                                  <th className="text-right px-3 py-2 font-semibold text-slate-600">Her. (Q)</th>
+                                  <th className="text-right px-3 py-2 font-semibold text-slate-600">Subtotal (Q)</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {renglones.map(r => (
+                                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50">
+                                    <td className="px-3 py-2 text-slate-500 font-mono">{r.codigo}</td>
+                                    <td className="px-3 py-2 font-medium text-slate-800">{r.descripcion}</td>
+                                    <td className="px-3 py-2 text-right text-slate-700">{r.cantidad}</td>
+                                    <td className="px-3 py-2 text-right text-slate-500">{r.unidad}</td>
+                                    <td className="px-3 py-2 text-right text-slate-700">{r.costoMaterial.toFixed(2)}</td>
+                                    <td className="px-3 py-2 text-right text-slate-700">{r.costoManoObra.toFixed(2)}</td>
+                                    <td className="px-3 py-2 text-right text-slate-700">{r.costoHerramienta.toFixed(2)}</td>
+                                    <td className="px-3 py-2 text-right font-bold text-blue-800">{CalcularSubtotal(r).toFixed(2)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot>
+                                <tr className="bg-blue-50">
+                                  <td colSpan={7} className="px-3 py-2 text-right font-bold text-slate-700">TOTAL RENGLONES</td>
+                                  <td className="px-3 py-2 text-right font-bold text-blue-900">Q {totalRenglones.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Factores del presupuesto */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">
+                          <div className="bg-white rounded border border-slate-200 px-3 py-2">
+                            <span className="text-slate-500">Indirectos:</span>{' '}
+                            <span className="font-semibold">{p.factor_indirectos || 0}%</span>
+                          </div>
+                          <div className="bg-white rounded border border-slate-200 px-3 py-2">
+                            <span className="text-slate-500">Administrativos:</span>{' '}
+                            <span className="font-semibold">{p.factor_administrativos || 0}%</span>
+                          </div>
+                          <div className="bg-white rounded border border-slate-200 px-3 py-2">
+                            <span className="text-slate-500">Imprevistos:</span>{' '}
+                            <span className="font-semibold">{p.factor_imprevistos || 0}%</span>
+                          </div>
+                          <div className="bg-white rounded border border-slate-200 px-3 py-2">
+                            <span className="text-slate-500">Utilidad:</span>{' '}
+                            <span className="font-semibold">{p.factor_utilidad || 0}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             });
