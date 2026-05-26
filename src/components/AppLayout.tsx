@@ -9,6 +9,7 @@ import FinancieroScreen from '@/features/financiero/components/FinancieroScreen'
 import SeguimientoScreen from '@/components/screens/SeguimientoScreen';
 import TeamsScreen from '@/components/screens/TeamsScreen';
 import CommandPalette from '@/components/shared/CommandPalette';
+import OfflineBanner from '@/components/shared/OfflineBanner';
 // import { FloatingMenu } from '@/components/shared/FloatingMenu'; // Eliminado ya que ahora está en Header
 import { Loader2 } from 'lucide-react';
 
@@ -57,6 +58,7 @@ const AppLayout: React.FC = () => {
       <CommandPalette />
       {/* FloatingMenu eliminado */}
       {renderView()}
+      <OfflineBanner />
     </div>
   );
 };

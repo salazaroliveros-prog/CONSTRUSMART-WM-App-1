@@ -36,7 +36,7 @@ const NotificationBell: React.FC = () => {
     cargar();
     const userId = session?.user.id;
     if (!userId) return;
-    const canal = supabase.channel('notificaciones')
+    const canal = supabase.channel('notificaciones-bell')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notificaciones', filter: `user_id=eq.${userId}` }, () => cargar())
       .subscribe();
     return () => { supabase.removeChannel(canal); };

@@ -12,6 +12,11 @@ import {
   dbToTransaccion, transaccionToDb, dbToActividad, actividadToDb, dbToPresupuesto, presupuestoToDb,
   dbToEquipo, equipoToDb, dbToEquipoMiembro, equipoMiembroToDb
 } from '@/types/supabase';
+import {
+  loadCachedData, saveCachedData, clearUserCache,
+  addPendingMutation, getPendingCount, processPendingMutations, clearPendingMutations,
+  type PendingMutation,
+} from '@/services/offline';
 
 export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos';
 
@@ -69,6 +74,8 @@ interface AppContextType {
   toggleSidebar: () => void;
   darkMode: boolean;
   toggleDarkMode: () => void;
+  isOnline: boolean;
+  pendingCount: number;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -97,8 +104,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
    const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
    const [actividades, setActividades] = useState<Actividad[]>([]);
-   const [equipos, setEquipos] = useState<Equipo[]>([]);
-   const [equipoMiembros, setEquipoMiembros] = useState<EquipoMiembro[]>([]);
+    const [equipos, setEquipos] = useState<Equipo[]>([]);
+    const [equipoMiembros, setEquipoMiembros] = useState<EquipoMiembro[]>([]);
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const [pendingCount, setPendingCount] = useState(0);
    const realtimeClientes = useRef<RealtimeChannel | null>(null);
    const realtimeProyectos = useRef<RealtimeChannel | null>(null);
    const realtimePresupuestos = useRef<RealtimeChannel | null>(null);
@@ -127,36 +136,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const loadAll = useCallback(async (userId?: string) => {
       if (!userId) return;
-      
-      // Evitar múltiples ejecuciones simultáneas
       if (loadingRef.current) return;
       loadingRef.current = true;
-      
-       const PAGE_SIZE = 200;
-       try {
-         const [cR, pR, prR, tR, aR, eR, emR] = await Promise.all([
-           supabase.from('clientes').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE),
-           supabase.from('proyectos').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE),
-           supabase.from('presupuestos').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE),
-           supabase.from('transacciones').select('*').eq('user_id', userId).order('fecha', { ascending: false }).limit(PAGE_SIZE),
-           supabase.from('actividades').select('*').eq('user_id', userId).order('fecha', { ascending: false }).limit(PAGE_SIZE),
-           supabase.from('equipos').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE),
-           supabase.from('equipo_miembros').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE)
-         ]);
-         
-         setClientes((cR.data || []).map(dbToCliente));
-         setProyectos((pR.data || []).map(dbToProyecto));
-         setPresupuestos((prR.data || []).map(dbToPresupuesto));
-         setTransacciones((tR.data || []).map(dbToTransaccion));
-         setActividades((aR.data || []).map(dbToActividad));
-         setEquipos((eR.data || []).map(dbToEquipo));
-         setEquipoMiembros((emR.data || []).map(dbToEquipoMiembro));
-       } catch (e) {
-         // Error loading data handled by toast
-         toast.error('Error al cargar datos de la base.');
-       } finally {
-        loadingRef.current = false;
+
+      const PAGE_SIZE = 200;
+      const tables = [
+        { name: 'clientes', setter: setClientes, mapper: dbToCliente, },
+        { name: 'proyectos', setter: setProyectos, mapper: dbToProyecto, },
+        { name: 'presupuestos', setter: setPresupuestos, mapper: dbToPresupuesto, },
+        { name: 'transacciones', setter: setTransacciones, mapper: dbToTransaccion, },
+        { name: 'actividades', setter: setActividades, mapper: dbToActividad, },
+        { name: 'equipos', setter: setEquipos, mapper: dbToEquipo, },
+        { name: 'equipo_miembros', setter: setEquipoMiembros, mapper: dbToEquipoMiembro, },
+      ] as const;
+
+      let anyOnline = false;
+
+      for (const t of tables) {
+        try {
+          const res = await supabase.from(t.name).select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE);
+          if (res.error) throw res.error;
+          anyOnline = true;
+          const data = (res.data || []).map((d: Record<string, unknown>) => t.mapper(d));
+          (t.setter as React.Dispatch<React.SetStateAction<any[]>>)(data);
+          saveCachedData(t.name, userId, data);
+        } catch {
+          const cached = loadCachedData(t.name, userId);
+          if (cached) {
+            (t.setter as React.Dispatch<React.SetStateAction<any[]>>)(cached);
+          }
+        }
       }
+
+      if (!anyOnline) {
+        const hasAnyCache = tables.some(t => loadCachedData(t.name, userId));
+        if (hasAnyCache) {
+          toast.info('Modo offline — mostrando datos guardados');
+        }
+      }
+
+      loadingRef.current = false;
     }, []);
 
   // Inicialización de sesión y realtime listeners
@@ -214,11 +233,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
-   return () => {
-       mountedRef.current = false;
-       clearTimeout(sessionTimeout);
-       if (sub?.subscription) sub.subscription.unsubscribe();
-       if (realtimeClientes.current) realtimeClientes.current.unsubscribe();
+    // Online / offline detection
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+        mountedRef.current = false;
+        clearTimeout(sessionTimeout);
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+        if (sub?.subscription) sub.subscription.unsubscribe();
+        if (realtimeClientes.current) realtimeClientes.current.unsubscribe();
        if (realtimeProyectos.current) realtimeProyectos.current.unsubscribe();
        if (realtimeTransacciones.current) realtimeTransacciones.current.unsubscribe();
         if (realtimeActividades.current) realtimeActividades.current.unsubscribe();
@@ -236,6 +263,73 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     // eslint-disable-next-line react-hooks/exhaustive-deps
    }, []);
+
+   // Actualizar pendingCount cuando cambia session user y al reconectar
+   useEffect(() => {
+     if (session?.user.id) {
+       setPendingCount(getPendingCount(session.user.id));
+     } else {
+       setPendingCount(0);
+     }
+   }, [session?.user.id]);
+
+   // Sincronizar mutaciones pendientes al reconectar
+   const syncingRef = useRef(false);
+   useEffect(() => {
+     if (!isOnline || !session?.user.id || syncingRef.current) return;
+     const pending = getPendingCount(session.user.id);
+     if (pending === 0) return;
+
+     syncingRef.current = true;
+     const sync = async () => {
+       const { ok, fail } = await processPendingMutations(
+         session.user.id,
+         async (m) => {
+           let q = supabase.from(m.table);
+           if (m.action === 'INSERT') {
+             const { error } = await q.insert(m.data).select().single();
+             if (error) throw error;
+           } else if (m.action === 'UPDATE') {
+             q = q.update(m.data);
+             if (m.filters) {
+               Object.entries(m.filters).forEach(([k, v]) => { q = q.eq(k, v); });
+             }
+             const { error } = await q;
+             if (error) throw error;
+           } else if (m.action === 'DELETE') {
+             if (m.filters) {
+               Object.entries(m.filters).forEach(([k, v]) => { q = q.eq(k, v); });
+             }
+             const { error } = await q.delete();
+             if (error) throw error;
+           }
+         },
+         (done, total) => {
+           if (mountedRef.current) {
+             setPendingCount(getPendingCount(session.user.id));
+             if (done < total) {
+               toast.loading(`Sincronizando ${done}/${total}...`, { id: 'sync' });
+             }
+           }
+         }
+       );
+       if (mountedRef.current) {
+         setPendingCount(getPendingCount(session.user.id));
+         if (ok > 0 || fail > 0) {
+           toast.dismiss('sync');
+         }
+         if (ok > 0 && fail === 0) {
+           toast.success(`${ok} cambio${ok > 1 ? 's' : ''} sincronizado${ok > 1 ? 's' : ''}`);
+         } else if (fail > 0) {
+           toast.warning(`${ok} sincronizado${ok > 1 ? 's' : ''}, ${fail} pendiente${fail > 1 ? 's' : ''}`);
+         }
+         // Recargar datos frescos
+         await loadAll(session.user.id);
+       }
+       syncingRef.current = false;
+     };
+     sync().catch(() => { syncingRef.current = false; });
+   }, [isOnline, session?.user.id]);
 
  // Setup realtime listeners para todas las tablas
    const setupRealtimeListeners = (userId: string) => {
@@ -544,6 +638,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const signOut = async () => {
+    if (session?.user.id) {
+      clearUserCache(session.user.id);
+      clearPendingMutations(session.user.id);
+    }
     await supabase.auth.signOut();
     setView('login');
   };
@@ -551,11 +649,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------- CRUD Clientes ----------
   const addCliente = async (c: CreateCliente) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
     try {
-      const validated = validateCliente({ ...c, user_id: session.user.id });
-      const { data, error } = await supabase.from('clientes').insert({ ...clienteToDb(validated), user_id: session.user.id }).select().single();
+      const validated = validateCliente({ ...c, user_id: userId });
+      const dbRecord = { ...clienteToDb(validated), user_id: userId };
+      if (!isOnline) {
+        addPendingMutation({ table: 'clientes', action: 'INSERT', data: dbRecord, userId });
+        const optimistic = dbToCliente({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
+        setClientes(p => [optimistic, ...p]);
+        saveCachedData('clientes', userId, [optimistic, ...clientes]);
+        setPendingCount(getPendingCount(userId));
+        toast.success('Guardado localmente (sin conexión)');
+        return;
+      }
+      const { data, error } = await supabase.from('clientes').insert(dbRecord).select().single();
       if (error) throw error;
-      if (data) setClientes(p => [dbToCliente(data), ...p]);
+      if (data) {
+        const mapped = dbToCliente(data);
+        setClientes(p => [mapped, ...p]);
+        saveCachedData('clientes', userId, [mapped, ...clientes]);
+      }
       toast.success('Cliente guardado');
     } catch (error) {
       console.error('Error al agregar cliente:', error);
@@ -566,11 +679,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateCliente = async (id: string, c: UpdateCliente) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
     try {
-      const validated = validateCliente({ ...c, id, user_id: session.user.id });
-      const { data, error } = await supabase.from('clientes').update(clienteToDb(validated)).eq('id', id).eq('user_id', session.user.id).select().single();
+      const validated = validateCliente({ ...c, id, user_id: userId });
+      const dbRecord = clienteToDb(validated);
+      if (!isOnline) {
+        addPendingMutation({ table: 'clientes', action: 'UPDATE', data: dbRecord, filters: { id, user_id: userId }, userId });
+        setClientes(p => { const updated = p.map(x => x.id === id ? { ...x, ...c } : x); saveCachedData('clientes', userId, updated); return updated; });
+        setPendingCount(getPendingCount(userId));
+        toast.success('Actualizado localmente (sin conexión)');
+        return;
+      }
+      const { data, error } = await supabase.from('clientes').update(dbRecord).eq('id', id).eq('user_id', userId).select().single();
       if (error) throw error;
-      if (data) setClientes(p => p.map(x => x.id === id ? dbToCliente(data) : x));
+      if (data) {
+        const mapped = dbToCliente(data);
+        setClientes(p => { const updated = p.map(x => x.id === id ? mapped : x); saveCachedData('clientes', userId, updated); return updated; });
+      }
       toast.success('Cliente actualizado');
     } catch (error) {
       console.error('Error al actualizar cliente:', error);
@@ -581,20 +706,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteCliente = async (id: string) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
-    const { error } = await supabase.from('clientes').delete().eq('id', id).eq('user_id', session.user.id);
+    const userId = session.user.id;
+    if (!isOnline) {
+      addPendingMutation({ table: 'clientes', action: 'DELETE', data: {}, filters: { id, user_id: userId }, userId });
+      setClientes(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('clientes', userId, filtered); return filtered; });
+      setPendingCount(getPendingCount(userId));
+      toast.success('Eliminado localmente (sin conexión)');
+      return;
+    }
+    const { error } = await supabase.from('clientes').delete().eq('id', id).eq('user_id', userId);
     if (error) { toast.error('Error al eliminar cliente'); throw error; }
-    setClientes(p => p.filter(x => x.id !== id));
+    setClientes(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('clientes', userId, filtered); return filtered; });
     toast.success('Cliente eliminado');
   };
 
   // ---------- CRUD Proyectos ----------
   const addProyecto = async (p: CreateProyecto) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
     try {
-      const validated = validateProyecto({ ...p, user_id: session.user.id });
-      const { data, error } = await supabase.from('proyectos').insert({ ...proyectoToDb(validated), user_id: session.user.id }).select().single();
+      const validated = validateProyecto({ ...p, user_id: userId });
+      const dbRecord = { ...proyectoToDb(validated), user_id: userId };
+      if (!isOnline) {
+        addPendingMutation({ table: 'proyectos', action: 'INSERT', data: dbRecord, userId });
+        const optimistic = dbToProyecto({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
+        setProyectos(prev => [optimistic, ...prev]);
+        saveCachedData('proyectos', userId, [optimistic, ...proyectos]);
+        setPendingCount(getPendingCount(userId));
+        toast.success('Guardado localmente (sin conexión)');
+        return;
+      }
+      const { data, error } = await supabase.from('proyectos').insert(dbRecord).select().single();
       if (error) throw error;
-      if (data) setProyectos(prev => [dbToProyecto(data), ...prev]);
+      if (data) {
+        const mapped = dbToProyecto(data);
+        setProyectos(prev => [mapped, ...prev]);
+        saveCachedData('proyectos', userId, [mapped, ...proyectos]);
+      }
       toast.success('Proyecto guardado');
     } catch (error) {
       console.error('Error al agregar proyecto:', error);
@@ -605,11 +753,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateProyecto = async (id: string, p: UpdateProyecto) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
     try {
-      const validated = validateProyecto({ ...p, id, user_id: session.user.id });
-      const { data, error } = await supabase.from('proyectos').update(proyectoToDb(validated)).eq('id', id).eq('user_id', session.user.id).select().single();
+      const validated = validateProyecto({ ...p, id, user_id: userId });
+      const dbRecord = proyectoToDb(validated);
+      if (!isOnline) {
+        addPendingMutation({ table: 'proyectos', action: 'UPDATE', data: dbRecord, filters: { id, user_id: userId }, userId });
+        setProyectos(prev => { const updated = prev.map(x => x.id === id ? { ...x, ...p } : x); saveCachedData('proyectos', userId, updated); return updated; });
+        setPendingCount(getPendingCount(userId));
+        toast.success('Actualizado localmente (sin conexión)');
+        return;
+      }
+      const { data, error } = await supabase.from('proyectos').update(dbRecord).eq('id', id).eq('user_id', userId).select().single();
       if (error) throw error;
-      if (data) setProyectos(prev => prev.map(x => x.id === id ? dbToProyecto(data) : x));
+      if (data) {
+        const mapped = dbToProyecto(data);
+        setProyectos(prev => { const updated = prev.map(x => x.id === id ? mapped : x); saveCachedData('proyectos', userId, updated); return updated; });
+      }
       toast.success('Proyecto actualizado');
     } catch (error) {
       console.error('Error al actualizar proyecto:', error);
@@ -621,12 +781,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------- CRUD Transacciones ----------
   const addTransaccion = async (t: CreateTransaccion) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
     try {
-      const validated = validateTransaccion({ ...t, user_id: session.user.id });
-      const { data, error } = await supabase.from('transacciones').insert({ ...transaccionToDb(validated), user_id: session.user.id }).select().single();
+      const validated = validateTransaccion({ ...t, user_id: userId });
+      const dbRecord = { ...transaccionToDb(validated), user_id: userId };
+      if (!isOnline) {
+        addPendingMutation({ table: 'transacciones', action: 'INSERT', data: dbRecord, userId });
+        const optimistic = dbToTransaccion({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
+        setTransacciones(p => [optimistic, ...p]);
+        saveCachedData('transacciones', userId, [optimistic, ...transacciones]);
+        setPendingCount(getPendingCount(userId));
+        toast.success('Guardado localmente (sin conexión)');
+        return;
+      }
+      const { data, error } = await supabase.from('transacciones').insert(dbRecord).select().single();
       if (error) throw error;
       if (data) {
-        setTransacciones(p => [dbToTransaccion(data), ...p]);
+        const mapped = dbToTransaccion(data);
+        setTransacciones(p => [mapped, ...p]);
+        saveCachedData('transacciones', userId, [mapped, ...transacciones]);
         toast.success('Transacción registrada');
       }
     } catch (error) {
@@ -638,13 +811,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteTransaccion = async (id: string) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
+    if (!isOnline) {
+      addPendingMutation({ table: 'transacciones', action: 'DELETE', data: {}, filters: { id, user_id: userId }, userId });
+      setTransacciones(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('transacciones', userId, filtered); return filtered; });
+      setPendingCount(getPendingCount(userId));
+      toast.success('Eliminado localmente (sin conexión)');
+      return;
+    }
     try {
-      const { error } = await supabase.from('transacciones').delete().eq('id', id).eq('user_id', session.user.id);
+      const { error } = await supabase.from('transacciones').delete().eq('id', id).eq('user_id', userId);
       if (error) throw error;
-      setTransacciones(p => p.filter(x => x.id !== id));
+      setTransacciones(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('transacciones', userId, filtered); return filtered; });
       toast.success('Transacción eliminada');
-    } catch (error) {
-        // Error handled by toast
+    } catch {
       toast.error('Error al eliminar transacción');
     }
   };
@@ -652,12 +832,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------- CRUD Actividades ----------
   const addActividad = async (a: CreateActividad) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
     try {
-      const validated = validateActividad({ ...a, user_id: session.user.id });
-      const { data, error } = await supabase.from('actividades').insert({ ...actividadToDb(validated), user_id: session.user.id }).select().single();
+      const validated = validateActividad({ ...a, user_id: userId });
+      const dbRecord = { ...actividadToDb(validated), user_id: userId };
+      if (!isOnline) {
+        addPendingMutation({ table: 'actividades', action: 'INSERT', data: dbRecord, userId });
+        const optimistic = dbToActividad({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
+        setActividades(p => [optimistic, ...p]);
+        saveCachedData('actividades', userId, [optimistic, ...actividades]);
+        setPendingCount(getPendingCount(userId));
+        toast.success('Guardado localmente (sin conexión)');
+        return;
+      }
+      const { data, error } = await supabase.from('actividades').insert(dbRecord).select().single();
       if (error) throw error;
       if (data) {
-        setActividades(p => [dbToActividad(data), ...p]);
+        const mapped = dbToActividad(data);
+        setActividades(p => [mapped, ...p]);
+        saveCachedData('actividades', userId, [mapped, ...actividades]);
         toast.success('Actividad guardada');
       }
     } catch (error) {
@@ -669,61 +862,67 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteActividad = async (id: string) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
+    if (!isOnline) {
+      addPendingMutation({ table: 'actividades', action: 'DELETE', data: {}, filters: { id, user_id: userId }, userId });
+      setActividades(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('actividades', userId, filtered); return filtered; });
+      setPendingCount(getPendingCount(userId));
+      toast.success('Eliminado localmente (sin conexión)');
+      return;
+    }
     try {
-      const { error } = await supabase.from('actividades').delete().eq('id', id).eq('user_id', session.user.id);
+      const { error } = await supabase.from('actividades').delete().eq('id', id).eq('user_id', userId);
       if (error) throw error;
-      setActividades(p => p.filter(x => x.id !== id));
+      setActividades(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('actividades', userId, filtered); return filtered; });
       toast.success('Actividad eliminada');
-    } catch (error) {
-        // Error handled by toast
+    } catch {
       toast.error('Error al eliminar actividad');
     }
   };
 
   // ---------- CRUD Presupuestos (unificado con fase) ----------
+  const cachePresupuestos = (userId: string) => {
+    saveCachedData('presupuestos', userId, presupuestos);
+  };
+
   const addPresupuesto = async (p: CreatePresupuestoInput): Promise<string | null> => {
     if (!session) return null;
+    const userId = session.user.id;
+    const tmpId = crypto.randomUUID();
     try {
       const createPayload: CreatePresupuesto = {
-        proyecto: p.proyecto,
-        cliente: p.cliente || '',
-        ubicacion: p.ubicacion || '',
-        tipologia: p.tipologia || '',
-        fase: p.fase || 'planeación',
-        factor_indirectos: p.factor_indirectos ?? 12,
-        factor_administrativos: p.factor_administrativos ?? 8,
-        factor_imprevistos: p.factor_imprevistos ?? 5,
-        factor_utilidad: p.factor_utilidad ?? 15,
-        lineas: p.lineas || [],
-        total: p.total || 0,
-        user_id: session.user.id,
-        avanceFisico: 0,
-        avanceFinanciero: 0,
-        ingresos: 0,
-        gastos: 0,
-        pendienteAportar: 0,
-        fechaInicio: '',
-        fechaFin: '',
-        proyectoId: undefined,
+        proyecto: p.proyecto, cliente: p.cliente || '', ubicacion: p.ubicacion || '',
+        tipologia: p.tipologia || '', fase: p.fase || 'planeación',
+        factor_indirectos: p.factor_indirectos ?? 12, factor_administrativos: p.factor_administrativos ?? 8,
+        factor_imprevistos: p.factor_imprevistos ?? 5, factor_utilidad: p.factor_utilidad ?? 15,
+        lineas: p.lineas || [], total: p.total || 0, user_id: userId,
+        avanceFisico: 0, avanceFinanciero: 0, ingresos: 0, gastos: 0, pendienteAportar: 0,
+        fechaInicio: '', fechaFin: '', proyectoId: undefined,
       };
       const dbPayload = presupuestoToDb(createPayload);
+      if (!isOnline) {
+        addPendingMutation({ table: 'presupuestos', action: 'INSERT', data: { ...dbPayload, user_id: userId }, userId });
+        const optimistic = dbToPresupuesto({ ...dbPayload, id: tmpId, user_id: userId, created_at: new Date().toISOString() });
+        setPresupuestos(prev => [optimistic, ...prev]);
+        cachePresupuestos(userId);
+        setPendingCount(getPendingCount(userId));
+        toast.success('Guardado localmente (sin conexión)');
+        return tmpId;
+      }
       const { data, error } = await supabase.from('presupuestos')
-        .insert({ ...dbPayload, user_id: session.user.id, created_at: new Date().toISOString() })
-        .select()
-        .single();
+        .insert({ ...dbPayload, user_id: userId, created_at: new Date().toISOString() })
+        .select().single();
       if (error) throw error;
       if (data) {
         setPresupuestos(prev => [dbToPresupuesto(data), ...prev]);
+        cachePresupuestos(userId);
         toast.success('Presupuesto guardado');
         return data.id;
       }
       return null;
     } catch (error) {
       console.error('Error al agregar presupuesto:', error);
-      // Log detallado del error de Supabase
-      if (typeof error === 'object' && error !== null && 'message' in error) {
-        // Supabase error details handled
-      }
+      cachePresupuestos(userId);
       toast.error('Error al guardar presupuesto', { description: error instanceof Error ? error.message : 'Error desconocido' });
       throw error;
     }
@@ -731,17 +930,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updatePresupuesto = async (id: string, p: UpdatePresupuesto) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
     try {
-      const dbPayload = presupuestoToDb(p);
+      const dbPayload = { ...presupuestoToDb(p), updated_at: new Date().toISOString() };
+      if (!isOnline) {
+        addPendingMutation({ table: 'presupuestos', action: 'UPDATE', data: dbPayload, filters: { id, user_id: userId }, userId });
+        setPresupuestos(prev => { const updated = prev.map(x => x.id === id ? { ...x, ...p } : x); saveCachedData('presupuestos', userId, updated); return updated; });
+        setPendingCount(getPendingCount(userId));
+        toast.success('Actualizado localmente (sin conexión)');
+        return;
+      }
       const { data, error } = await supabase.from('presupuestos')
-        .update({ ...dbPayload, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('user_id', session.user.id)
-        .select()
-        .single();
+        .update(dbPayload).eq('id', id).eq('user_id', userId).select().single();
       if (error) throw error;
       if (data) {
-        setPresupuestos(prev => prev.map(x => x.id === id ? dbToPresupuesto(data) : x));
+        const mapped = dbToPresupuesto(data);
+        setPresupuestos(prev => { const updated = prev.map(x => x.id === id ? mapped : x); saveCachedData('presupuestos', userId, updated); return updated; });
         toast.success('Presupuesto actualizado');
       }
     } catch (error) {
@@ -753,20 +957,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const transicionFase = async (id: string, nuevaFase: Presupuesto['fase']) => {
     if (!session) return;
+    const userId = session.user.id;
     const original = presupuestos.find(p => p.id === id)?.fase;
     try {
-      // Optimistic update inmediato
       setPresupuestos(prev => prev.map(p => p.id === id ? { ...p, fase: nuevaFase } : p));
-      // Update directo sin RPC externa
+      if (!isOnline) {
+        addPendingMutation({ table: 'presupuestos', action: 'UPDATE', data: { fase: nuevaFase }, filters: { id, user_id: userId }, userId });
+        cachePresupuestos(userId);
+        setPendingCount(getPendingCount(userId));
+        toast.success('Fase cambiada localmente (sin conexión)');
+        return;
+      }
       const { data, error } = await supabase
         .from('presupuestos')
         .update({ fase: nuevaFase, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('user_id', session.user.id)
-        .select()
-        .single();
+        .eq('id', id).eq('user_id', userId).select().single();
       if (error) throw error;
       if (data) setPresupuestos(prev => prev.map(p => p.id === id ? dbToPresupuesto(data) : p));
+      cachePresupuestos(userId);
       toast.success(`Proyecto movido a fase: ${nuevaFase}`);
     } catch (error) {
       console.error('Error en transicionFase:', error);
@@ -779,11 +987,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------- CRUD Equipos ----------
   const addEquipo = async (e: CreateEquipo) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
     try {
-      const validated = validateEquipo({ ...e, user_id: session.user.id });
-      const { data, error } = await supabase.from('equipos').insert({ ...equipoToDb(validated), user_id: session.user.id }).select().single();
+      const validated = validateEquipo({ ...e, user_id: userId });
+      const dbRecord = { ...equipoToDb(validated), user_id: userId };
+      if (!isOnline) {
+        addPendingMutation({ table: 'equipos', action: 'INSERT', data: dbRecord, userId });
+        const optimistic = dbToEquipo({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
+        setEquipos(p => [optimistic, ...p]);
+        saveCachedData('equipos', userId, [optimistic, ...equipos]);
+        setPendingCount(getPendingCount(userId));
+        toast.success('Guardado localmente (sin conexión)');
+        return;
+      }
+      const { data, error } = await supabase.from('equipos').insert(dbRecord).select().single();
       if (error) throw error;
-      if (data) setEquipos(p => [dbToEquipo(data), ...p]);
+      if (data) {
+        const mapped = dbToEquipo(data);
+        setEquipos(p => [mapped, ...p]);
+        saveCachedData('equipos', userId, [mapped, ...equipos]);
+      }
       toast.success('Equipo guardado');
     } catch (error) {
       console.error('Error al agregar equipo:', error);
@@ -794,11 +1017,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateEquipo = async (id: string, e: UpdateEquipo) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
     try {
-      const validated = validateEquipo({ ...e, id, user_id: session.user.id });
-      const { data, error } = await supabase.from('equipos').update(equipoToDb(validated)).eq('id', id).eq('user_id', session.user.id).select().single();
+      const validated = validateEquipo({ ...e, id, user_id: userId });
+      const dbRecord = equipoToDb(validated);
+      if (!isOnline) {
+        addPendingMutation({ table: 'equipos', action: 'UPDATE', data: dbRecord, filters: { id, user_id: userId }, userId });
+        setEquipos(p => { const updated = p.map(x => x.id === id ? { ...x, ...e } : x); saveCachedData('equipos', userId, updated); return updated; });
+        setPendingCount(getPendingCount(userId));
+        toast.success('Actualizado localmente (sin conexión)');
+        return;
+      }
+      const { data, error } = await supabase.from('equipos').update(dbRecord).eq('id', id).eq('user_id', userId).select().single();
       if (error) throw error;
-      if (data) setEquipos(p => p.map(x => x.id === id ? dbToEquipo(data) : x));
+      if (data) {
+        const mapped = dbToEquipo(data);
+        setEquipos(p => { const updated = p.map(x => x.id === id ? mapped : x); saveCachedData('equipos', userId, updated); return updated; });
+      }
       toast.success('Equipo actualizado');
     } catch (error) {
       console.error('Error al actualizar equipo:', error);
@@ -809,20 +1044,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteEquipo = async (id: string) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
-    const { error } = await supabase.from('equipos').delete().eq('id', id).eq('user_id', session.user.id);
+    const userId = session.user.id;
+    if (!isOnline) {
+      addPendingMutation({ table: 'equipos', action: 'DELETE', data: {}, filters: { id, user_id: userId }, userId });
+      setEquipos(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('equipos', userId, filtered); return filtered; });
+      setPendingCount(getPendingCount(userId));
+      toast.success('Eliminado localmente (sin conexión)');
+      return;
+    }
+    const { error } = await supabase.from('equipos').delete().eq('id', id).eq('user_id', userId);
     if (error) { toast.error('Error al eliminar equipo'); throw error; }
-    setEquipos(p => p.filter(x => x.id !== id));
+    setEquipos(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('equipos', userId, filtered); return filtered; });
     toast.success('Equipo eliminado');
   };
 
   // ---------- CRUD Equipo Miembros ----------
   const addEquipoMiembro = async (em: CreateEquipoMiembro) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
     try {
-      const validated = validateEquipoMiembro({ ...em, user_id: session.user.id });
-      const { data, error } = await supabase.from('equipo_miembros').insert({ ...equipoMiembroToDb(validated), user_id: session.user.id }).select().single();
+      const validated = validateEquipoMiembro({ ...em, user_id: userId });
+      const dbRecord = { ...equipoMiembroToDb(validated), user_id: userId };
+      if (!isOnline) {
+        addPendingMutation({ table: 'equipo_miembros', action: 'INSERT', data: dbRecord, userId });
+        const optimistic = dbToEquipoMiembro({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
+        setEquipoMiembros(p => [optimistic, ...p]);
+        saveCachedData('equipo_miembros', userId, [optimistic, ...equipoMiembros]);
+        setPendingCount(getPendingCount(userId));
+        toast.success('Guardado localmente (sin conexión)');
+        return;
+      }
+      const { data, error } = await supabase.from('equipo_miembros').insert(dbRecord).select().single();
       if (error) throw error;
-      if (data) setEquipoMiembros(p => [dbToEquipoMiembro(data), ...p]);
+      if (data) {
+        const mapped = dbToEquipoMiembro(data);
+        setEquipoMiembros(p => [mapped, ...p]);
+        saveCachedData('equipo_miembros', userId, [mapped, ...equipoMiembros]);
+      }
       toast.success('Miembro agregado al equipo');
     } catch (error) {
       console.error('Error al agregar miembro:', error);
@@ -833,11 +1091,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateEquipoMiembro = async (id: string, em: UpdateEquipoMiembro) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
     try {
-      const validated = validateEquipoMiembro({ ...em, id, user_id: session.user.id });
-      const { data, error } = await supabase.from('equipo_miembros').update(equipoMiembroToDb(validated)).eq('id', id).select().single();
+      const validated = validateEquipoMiembro({ ...em, id, user_id: userId });
+      const dbRecord = equipoMiembroToDb(validated);
+      if (!isOnline) {
+        addPendingMutation({ table: 'equipo_miembros', action: 'UPDATE', data: dbRecord, filters: { id }, userId });
+        setEquipoMiembros(p => { const updated = p.map(x => x.id === id ? { ...x, ...em } : x); saveCachedData('equipo_miembros', userId, updated); return updated; });
+        setPendingCount(getPendingCount(userId));
+        toast.success('Actualizado localmente (sin conexión)');
+        return;
+      }
+      const { data, error } = await supabase.from('equipo_miembros').update(dbRecord).eq('id', id).select().single();
       if (error) throw error;
-      if (data) setEquipoMiembros(p => p.map(x => x.id === id ? dbToEquipoMiembro(data) : x));
+      if (data) {
+        const mapped = dbToEquipoMiembro(data);
+        setEquipoMiembros(p => { const updated = p.map(x => x.id === id ? mapped : x); saveCachedData('equipo_miembros', userId, updated); return updated; });
+      }
       toast.success('Miembro actualizado');
     } catch (error) {
       console.error('Error al actualizar miembro:', error);
@@ -848,13 +1118,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteEquipoMiembro = async (id: string) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
-    const { error } = await supabase
-      .from('equipo_miembros')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', session.user.id);
+    const userId = session.user.id;
+    if (!isOnline) {
+      addPendingMutation({ table: 'equipo_miembros', action: 'DELETE', data: {}, filters: { id, user_id: userId }, userId });
+      setEquipoMiembros(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('equipo_miembros', userId, filtered); return filtered; });
+      setPendingCount(getPendingCount(userId));
+      toast.success('Eliminado localmente (sin conexión)');
+      return;
+    }
+    const { error } = await supabase.from('equipo_miembros').delete().eq('id', id).eq('user_id', userId);
     if (error) { toast.error('Error al eliminar miembro'); throw error; }
-    setEquipoMiembros(p => p.filter(x => x.id !== id));
+    setEquipoMiembros(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('equipo_miembros', userId, filtered); return filtered; });
     toast.success('Miembro removido del equipo');
   };
 
@@ -870,6 +1144,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       equipoMiembros, addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
       sidebarOpen, toggleSidebar: () => setSidebarOpen(p => !p),
       darkMode, toggleDarkMode: () => setDarkMode(p => !p),
+      isOnline, pendingCount,
     }}>
       {children}
     </AppContext.Provider>

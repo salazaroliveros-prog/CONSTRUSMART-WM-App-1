@@ -23,7 +23,7 @@ npm test             # vitest
 - **Vercel**: SPA rewrites in `vercel.json`.
 - **Entrypoint chain**: `src/main.tsx` → `App.tsx` → `pages/Index.tsx` → `<AppProvider> <AppLayout />`.
 - **Features** dir: `src/features/{clientes,financiero,presupuestos,proyectos}/`, each with own `components/` and `hooks/`.
-- **Services** dir: `src/services/` (CalculoService, PresupuestoService, RenglonesService, ExportService).
+- **Services** dir: `src/services/` (CalculoService, PresupuestoService, RenglonesService, ExportService, offline).
 - **No CI workflows** exist (only dependabot for devcontainers). No automated PR checks besides local commands.
 
 ## Supabase — critical facts
@@ -76,3 +76,14 @@ Equipos: additional SELECT access for team members via subquery.
 ## Two `usePresupuestos` hooks
 - `src/hooks/usePresupuestos.ts` — wraps `PresupuestoService` (calculations, export, comparisons).
 - `src/features/presupuestos/hooks/usePresupuestos.ts` — may differ; check which one a consumer imports.
+
+## Offline-first system
+
+Built into AppContext via `src/services/offline.ts`.
+
+- **Cache**: every successful Supabase fetch saves to `localStorage` under key `offline_{table}_{userId}`. On fetch failure (offline or 500), each table loads independently from cache — one broken table never blocks others.
+- **Pending queue**: mutations made while offline are saved as `PendingMutation` records in `localStorage` under `offline_pending_{userId}`. State updates are applied optimistically (immediate UI + cache save).
+- **Auto-sync**: on `online` event, pending mutations replay in order against Supabase. After all sync, fresh data is fetched. Sync happens automatically via `useEffect` on `[isOnline, session?.user.id]`.
+- **OfflineBanner** (`src/components/shared/OfflineBanner.tsx`): shows "Sin conexión" + pending count when offline; shows "Sincronizando..." during sync. Auto-hides when idle.
+- **Cache cleared** on signOut. Pending queue drained after successful sync.
+- **Edge case**: if the Supabase project lacks some tables (500), those tables load from cache or stay empty — the app still boots with whatever data is available.
