@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Bell, BellDot, X, Check, Info, AlertTriangle, CheckCircle, AlertCircle, Trash2 } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
+import { toast } from 'sonner';
 
 interface Notif {
   id: string;
@@ -43,13 +44,24 @@ const NotificationBell: React.FC = () => {
   }, [cargar, session?.user.id]);
 
   const marcarLeido = async (id: string) => {
-    await supabase.from('notificaciones').update({ leido: true }).eq('id', id);
-    setNotifs(prev => prev.map(n => n.id === id ? { ...n, leido: true } : n));
+    try {
+      const { error } = await supabase.from('notificaciones').update({ leido: true }).eq('id', id);
+      if (error) throw error;
+      setNotifs(prev => prev.map(n => n.id === id ? { ...n, leido: true } : n));
+    } catch (err) {
+      console.error('Error al marcar como leído:', err);
+    }
   };
 
   const eliminar = async (id: string) => {
-    await supabase.from('notificaciones').delete().eq('id', id);
-    setNotifs(prev => prev.filter(n => n.id !== id));
+    try {
+      const { error } = await supabase.from('notificaciones').delete().eq('id', id);
+      if (error) throw error;
+      setNotifs(prev => prev.filter(n => n.id !== id));
+    } catch (err) {
+      toast.error('Error al eliminar notificación');
+      console.error(err);
+    }
   };
 
   const noLeidas = notifs.filter(n => !n.leido).length;

@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import PageShell from '@/components/shared/PageShell';
 import { toast } from 'sonner';
 import { Users, Plus, Trash2, UserPlus, Shield, User, Eye } from 'lucide-react';
-import type { Equipo, EquipoMiembro } from '@/types/supabase';
+import type { Equipo, EquipoMiembro, CreateEquipo, CreateEquipoMiembro } from '@/types/supabase';
 
 const rolIcon: Record<string, React.ComponentType<{ className?: string }>> = {
   admin: Shield,
@@ -19,7 +19,7 @@ const rolLabels: Record<string, string> = {
 };
 
 const TeamsScreen: React.FC = () => {
-  const { session } = useAppContext();
+  const { session, addEquipo, addEquipoMiembro, deleteEquipoMiembro } = useAppContext();
   const [equipos, setEquipos] = useState<(Equipo & { miembros: (EquipoMiembro & { email?: string })[] })[]>([]);
   const [nuevoEquipo, setNuevoEquipo] = useState('');
   const [creando, setCreando] = useState(false);
@@ -42,7 +42,7 @@ const TeamsScreen: React.FC = () => {
 
   const handleCrear = async () => {
     if (!session) return;
-    
+
     const nombre = nuevoEquipo.trim();
     if (!nombre || nombre.length < 1) {
       toast.error('El nombre del equipo es requerido');
@@ -53,12 +53,7 @@ const TeamsScreen: React.FC = () => {
 
     setCreando(true);
     try {
-      const { error } = await supabase.from('equipos').insert({
-        nombre,
-        user_id: session.user.id,
-        creador_id: session.user.id,
-      });
-      if (error) throw error;
+      await addEquipo({ nombre, user_id: session.user.id } as CreateEquipo);
       toast.success(`Equipo "${nombre}" creado`);
       setNuevoEquipo('');
       await loadEquipos();
@@ -74,12 +69,11 @@ const TeamsScreen: React.FC = () => {
     if (!inviteEmail.trim()) return;
     if (!confirm('¿Confirmas que deseas agregar a este usuario al equipo?')) return;
     try {
-      const { error } = await supabase.from('equipo_miembros').insert({
+      await addEquipoMiembro({
         equipo_id: equipoId,
         user_id: inviteEmail.trim(),
         rol: 'miembro',
-      });
-      if (error) throw error;
+      } as CreateEquipoMiembro);
       toast.success('Miembro agregado');
       setInviteEmail('');
       setInviteTeamId(null);
@@ -93,7 +87,7 @@ const TeamsScreen: React.FC = () => {
   const handleRemoveMember = async (miembroId: string) => {
     if (!confirm('¿Estás seguro de eliminar a este miembro del equipo? Esta acción no se puede deshacer.')) return;
     try {
-      await supabase.from('equipo_miembros').delete().eq('id', miembroId);
+      await deleteEquipoMiembro(miembroId);
       toast.success('Miembro removido');
       await loadEquipos();
     } catch (err) {
