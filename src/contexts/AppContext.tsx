@@ -890,40 +890,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const userId = session.user.id;
     const tmpId = crypto.randomUUID();
     try {
-      const createPayload: CreatePresupuesto = {
-        proyecto: p.proyecto, cliente: p.cliente || '', ubicacion: p.ubicacion || '',
-        tipologia: p.tipologia || '', fase: p.fase || 'planeación',
-        factor_indirectos: p.factor_indirectos ?? 12, factor_administrativos: p.factor_administrativos ?? 8,
-        factor_imprevistos: p.factor_imprevistos ?? 5, factor_utilidad: p.factor_utilidad ?? 15,
-        lineas: p.lineas || [], total: p.total || 0, user_id: userId,
-        avanceFisico: 0, avanceFinanciero: 0, ingresos: 0, gastos: 0, pendienteAportar: 0,
-        fechaInicio: '', fechaFin: '', proyectoId: undefined,
+      // Construir payload DIRECTAMENTE con nombres de columna de la DB
+      // NO usar presupuestoToDb (es para updates parciales)
+      const dbRecord = {
+        user_id: userId,
+        proyecto: p.proyecto?.trim() || 'Sin nombre',
+        cliente: p.cliente || null,
+        ubicacion: p.ubicacion || null,
+        tipologia: p.tipologia || null,
+        fase: p.fase || 'planeación',
+        proyecto_id: null,
+        factor_indirectos: p.factor_indirectos ?? 12,
+        factor_administrativos: p.factor_administrativos ?? 8,
+        factor_imprevistos: p.factor_imprevistos ?? 5,
+        factor_utilidad: p.factor_utilidad ?? 15,
+        lineas: p.lineas && Array.isArray(p.lineas) ? p.lineas : [],
+        total: typeof p.total === 'number' ? p.total : 0,
+        avance_fisico: 0,
+        avance_financiero: 0,
+        ingresos: 0,
+        gastos: 0,
+        pendiente_aportar: 0,
+        costo_directo: 0,
+        fecha_inicio: null,
+        fecha_fin: null,
       };
-      const dbPayload = presupuestoToDb(createPayload);
+
       if (!isOnline) {
-        addPendingMutation({ table: 'presupuestos', action: 'INSERT', data: { ...dbPayload, user_id: userId }, userId });
-        const optimistic = dbToPresupuesto({ ...dbPayload, id: tmpId, user_id: userId, created_at: new Date().toISOString() });
+        addPendingMutation({ table: 'presupuestos', action: 'INSERT', data: dbRecord, userId });
+        const optimistic = dbToPresupuesto({ ...dbRecord, id: tmpId, created_at: new Date().toISOString() });
         setPresupuestos(prev => [optimistic, ...prev]);
         cachePresupuestos(userId);
         setPendingCount(getPendingCount(userId));
         toast.success('Guardado localmente (sin conexión)');
         return tmpId;
       }
+
       const { data, error } = await supabase.from('presupuestos')
-        .insert({ ...dbPayload, user_id: userId, created_at: new Date().toISOString() })
-        .select().single();
-      if (error) throw error;
-      if (data) {
-        setPresupuestos(prev => [dbToPresupuesto(data), ...prev]);
+        .insert(dbRecord)
+        .select();
+      if (error) {
+        console.error('Error Supabase al insertar presupuesto:', JSON.stringify(error));
+        throw error;
+      }
+      if (data && data.length > 0) {
+        const inserted = data[0];
+        setPresupuestos(prev => [dbToPresupuesto(inserted), ...prev]);
         cachePresupuestos(userId);
         toast.success('Presupuesto guardado');
-        return data.id;
+        return inserted.id;
       }
       return null;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al agregar presupuesto:', error);
+      const msg = error?.message || error?.description || 'Error desconocido';
+      const code = error?.code ? ` (${error?.code})` : '';
       cachePresupuestos(userId);
-      toast.error('Error al guardar presupuesto', { description: error instanceof Error ? error.message : 'Error desconocido' });
+      toast.error('Error al guardar presupuesto', { description: `${msg}${code}` });
       throw error;
     }
   };
@@ -941,16 +964,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
       const { data, error } = await supabase.from('presupuestos')
-        .update(dbPayload).eq('id', id).eq('user_id', userId).select().single();
-      if (error) throw error;
-      if (data) {
-        const mapped = dbToPresupuesto(data);
+        .update(dbPayload).eq('id', id).eq('user_id', userId).select();
+      if (error) {
+        console.error('Error Supabase al actualizar presupuesto:', JSON.stringify(error));
+        throw error;
+      }
+      if (data && data.length > 0) {
+        const mapped = dbToPresupuesto(data[0]);
         setPresupuestos(prev => { const updated = prev.map(x => x.id === id ? mapped : x); saveCachedData('presupuestos', userId, updated); return updated; });
         toast.success('Presupuesto actualizado');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al actualizar presupuesto:', error);
-      toast.error('Error al actualizar presupuesto', { description: error instanceof Error ? error.message : 'Error desconocido' });
+      const msg = error?.message || error?.description || 'Error desconocido';
+      const code = error?.code ? ` (${error?.code})` : '';
+      toast.error('Error al actualizar presupuesto', { description: `${msg}${code}` });
       throw error;
     }
   };
@@ -971,12 +999,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { data, error } = await supabase
         .from('presupuestos')
         .update({ fase: nuevaFase, updated_at: new Date().toISOString() })
-        .eq('id', id).eq('user_id', userId).select().single();
-      if (error) throw error;
-      if (data) setPresupuestos(prev => prev.map(p => p.id === id ? dbToPresupuesto(data) : p));
+        .eq('id', id).eq('user_id', userId).select();
+      if (error) {
+        console.error('Error Supabase en transicionFase:', JSON.stringify(error));
+        throw error;
+      }
+      if (data && data.length > 0) setPresupuestos(prev => prev.map(p => p.id === id ? dbToPresupuesto(data[0]) : p));
       cachePresupuestos(userId);
       toast.success(`Proyecto movido a fase: ${nuevaFase}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error en transicionFase:', error);
       if (original) setPresupuestos(prev => prev.map(p => p.id === id ? { ...p, fase: original } : p));
       toast.error('Error al cambiar de fase');
