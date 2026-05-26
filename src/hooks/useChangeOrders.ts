@@ -2,7 +2,9 @@
  * useChangeOrders - Hook para gestión de órdenes de cambio
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAppContext } from '@/contexts/AppContext';
 import { 
   crearChangeOrder, 
   aprobarChangeOrder, 
@@ -12,8 +14,36 @@ import {
 import type { Presupuesto } from '@/types/supabase';
 
 export function useChangeOrders(presupuesto: Presupuesto) {
+  const { session } = useAppContext();
   const [changeOrders, setChangeOrders] = useState<ChangeOrder[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!presupuesto.id) return;
+    const cargar = async () => {
+      const { data } = await supabase
+        .from('cambios_presupuesto')
+        .select('*')
+        .eq('presupuesto_id', presupuesto.id)
+        .order('version', { ascending: false });
+      if (data) {
+        setChangeOrders(data.map((c: any) => ({
+          id: c.id,
+          presupuesto_id: c.presupuesto_id,
+          version: c.version,
+          cambios: c.cambios,
+          descripcion: c.motivo,
+          estado: c.estado === 'aprobado' ? 'aprobada' : c.estado === 'rechazado' ? 'rechazada' : 'pendiente',
+          solicitado_por: '',
+          solicitado_fecha: new Date(c.created_at),
+          aprobado_por: c.aprobado_por,
+          aprobado_fecha: undefined,
+          comentarios: undefined,
+        })));
+      }
+    };
+    cargar();
+  }, [presupuesto.id]);
 
   const crearOrden = useCallback(
     async (lineasNuevas: Array<{ id: string; codigo?: string; cantidad: number; unitario: number }>, motivo: string) => {
@@ -27,39 +57,49 @@ export function useChangeOrders(presupuesto: Presupuesto) {
           changeOrders
         );
         
+        const userId = session?.user?.id;
+        await supabase.from('cambios_presupuesto').insert({
+          presupuesto_id: presupuesto.id,
+          version: orden.version,
+          cambios: orden.cambios,
+          motivo: orden.descripcion,
+          estado: 'pendiente',
+          aprobado_por: userId,
+        });
+
         setChangeOrders(prev => [...prev, orden]);
         return orden;
       } finally {
         setLoading(false);
       }
     },
-    [presupuesto, changeOrders]
+    [presupuesto, changeOrders, session]
   );
 
   const aprobar = useCallback(
-    (ordenId: string, aprobadoPor: string, comentarios?: string) => {
-      setChangeOrders(prev => 
-        prev.map(co => 
-          co.id === ordenId 
-            ? aprobarChangeOrder(co, aprobadoPor, comentarios)
-            : co
-        )
+    async (ordenId: string, aprobadoPor: string, comentarios?: string) => {
+      const updated = changeOrders.map(co =>
+        co.id === ordenId
+          ? aprobarChangeOrder(co, aprobadoPor, comentarios)
+          : co
       );
+      setChangeOrders(updated);
+      await supabase.from('cambios_presupuesto').update({ estado: 'aprobado' }).eq('id', ordenId);
     },
-    []
+    [changeOrders]
   );
 
   const rechazar = useCallback(
-    (ordenId: string, rechazadoPor: string, motivo: string) => {
-      setChangeOrders(prev =>
-        prev.map(co =>
-          co.id === ordenId
-            ? rechazarChangeOrder(co, rechazadoPor, motivo)
-            : co
-        )
+    async (ordenId: string, rechazadoPor: string, motivo: string) => {
+      const updated = changeOrders.map(co =>
+        co.id === ordenId
+          ? rechazarChangeOrder(co, rechazadoPor, motivo)
+          : co
       );
+      setChangeOrders(updated);
+      await supabase.from('cambios_presupuesto').update({ estado: 'rechazado' }).eq('id', ordenId);
     },
-    []
+    [changeOrders]
   );
 
   return { changeOrders, crearOrden, aprobar, rechazar, loading };
