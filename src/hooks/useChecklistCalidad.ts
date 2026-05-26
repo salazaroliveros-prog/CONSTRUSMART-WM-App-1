@@ -14,6 +14,7 @@ import {
   type ChecklistFase,
   type ChecklistItem,
 } from '@/utils/checklistCalidad';
+import { crearNotificacion } from '@/utils/notificaciones';
 
 export function useChecklistCalidad(presupuesto_id: string, tipologia: string) {
   const { session } = useAppContext();
@@ -92,6 +93,14 @@ export function useChecklistCalidad(presupuesto_id: string, tipologia: string) {
         completado_por: session?.user?.id,
         completado_en: new Date().toISOString(),
       }).eq('id', item_id);
+
+      const checklistActualizado = updated.find(c => c.id === checklist_id);
+      if (checklistActualizado && session?.user.id) {
+        const todosCompletos = checklistActualizado.items.every(i => i.completado);
+        if (todosCompletos) {
+          crearNotificacion(session.user.id, 'exito', `Checklist completado: ${checklistActualizado.fase}`);
+        }
+      }
     },
     [checklists, session]
   );

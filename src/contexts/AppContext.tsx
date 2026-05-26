@@ -17,6 +17,7 @@ import {
   addPendingMutation, getPendingCount, processPendingMutations, clearPendingMutations,
   type PendingMutation,
 } from '@/services/offline';
+import { crearNotificacion } from '@/utils/notificaciones';
 
 export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos';
 
@@ -46,6 +47,7 @@ interface AppContextType {
   proyectos: Proyecto[];
   addProyecto: (p: CreateProyecto) => Promise<void>;
   updateProyecto: (id: string, p: UpdateProyecto) => Promise<void>;
+  deleteProyecto: (id: string) => Promise<void>;
 
   transacciones: Transaccion[];
   addTransaccion: (t: CreateTransaccion) => Promise<void>;
@@ -778,6 +780,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const deleteProyecto = async (id: string) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
+    if (!isOnline) {
+      addPendingMutation({ table: 'proyectos', action: 'DELETE', data: {}, filters: { id, user_id: userId }, userId });
+      setProyectos(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('proyectos', userId, filtered); return filtered; });
+      setPendingCount(getPendingCount(userId));
+      toast.success('Eliminado localmente (sin conexión)');
+      return;
+    }
+    const { error } = await supabase.from('proyectos').delete().eq('id', id).eq('user_id', userId);
+    if (error) { toast.error('Error al eliminar proyecto'); throw error; }
+    setProyectos(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('proyectos', userId, filtered); return filtered; });
+    toast.success('Proyecto eliminado');
+  };
+
   // ---------- CRUD Transacciones ----------
   const addTransaccion = async (t: CreateTransaccion) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
@@ -1006,6 +1024,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       if (data && data.length > 0) setPresupuestos(prev => prev.map(p => p.id === id ? dbToPresupuesto(data[0]) : p));
       cachePresupuestos(userId);
+      const nombreProyecto = presupuestos.find(p => p.id === id)?.proyecto || 'Proyecto';
+      crearNotificacion(userId, 'info', `Fase cambiada: ${nuevaFase}`, `"${nombreProyecto}" movido a ${nuevaFase}`);
       toast.success(`Proyecto movido a fase: ${nuevaFase}`);
     } catch (error: any) {
       console.error('Error en transicionFase:', error);
@@ -1167,7 +1187,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       view, setView, session, loading, authError, signIn, signUp, signInWithGoogle, signOut, user,
       clientes, addCliente, updateCliente, deleteCliente,
-      proyectos, addProyecto, updateProyecto,
+      proyectos, addProyecto, updateProyecto, deleteProyecto,
       transacciones, addTransaccion, deleteTransaccion,
       actividades, addActividad, deleteActividad,
       presupuestos, addPresupuesto, updatePresupuesto, transicionFase,

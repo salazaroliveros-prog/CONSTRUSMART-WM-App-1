@@ -200,6 +200,7 @@ const PresupuestoScreen: React.FC = () => {
         factor_utilidad: meta.factorUtilidad,
         lineas,
         total,
+        costo_directo: costoDirecto,
       };
 
       if (savedPresupuestoId) {
