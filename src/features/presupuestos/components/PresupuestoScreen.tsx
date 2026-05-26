@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import Header from '@/components/shared/Header';
+import PageShell from '@/components/shared/PageShell';
 import { renglonesPorTipologia, Tipologia, tipologiaLabels, Renglon } from '@/data/renglones';
 import { downloadCSV, printPDF, fmtQ } from '@/lib/exporters';
 import { BitacoraAvancePanel } from '@/components/shared/BitacoraAvancePanel';
@@ -220,9 +220,7 @@ const PresupuestoScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 animate-fadeIn">
-      <Header title="Motor de Presupuestos APU" />
-
+    <PageShell showHome={false} title="Motor de Presupuestos APU">
       <div className="p-3 sm:p-5 max-w-[1600px] mx-auto grid grid-cols-12 gap-4">
         {/* Datos generales y catálogo */}
         <div className="col-span-12 lg:col-span-4 space-y-3">
@@ -442,7 +440,7 @@ const PresupuestoScreen: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 };
 

@@ -1,30 +1,35 @@
 import React, { useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import Header from '@/components/shared/Header';
+import PageShell from '@/components/shared/PageShell';
 import Calendar from '@/components/shared/Calendar';
 import TransactionForm from '@/components/shared/TransactionForm';
-import { Users, FolderKanban, Calculator, Wallet, TrendingUp, TrendingDown, DollarSign, Folder, Percent, Shield } from 'lucide-react';
+import { Users, FolderKanban, Calculator, Wallet, TrendingUp, TrendingDown, DollarSign, Percent, Shield } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
 type KPIColor = 'emerald' | 'red' | 'blue' | 'indigo' | 'purple' | 'amber' | 'teal';
 
-const CompactKPI: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: string; value: string; color: KPIColor }> = ({ icon: Icon, label, value, color }) => {
+const KPI: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: string; value: string; color: KPIColor; index: number }> = ({ icon: Icon, label, value, color, index }) => {
   const colors: Record<string, string> = {
-    emerald: 'from-emerald-500 to-emerald-600 text-emerald-50',
-    red: 'from-red-500 to-red-600 text-red-50',
-    blue: 'from-blue-600 to-blue-700 text-blue-50',
-    indigo: 'from-indigo-500 to-indigo-600 text-indigo-50',
-    purple: 'from-purple-500 to-purple-600 text-purple-50',
-    amber: 'from-amber-500 to-amber-600 text-amber-50',
-    teal: 'from-teal-500 to-teal-600 text-teal-50',
+    emerald: 'from-emerald-500/90 to-emerald-600/90 text-emerald-50',
+    red: 'from-red-500/90 to-red-600/90 text-red-50',
+    blue: 'from-blue-600/90 to-blue-700/90 text-blue-50',
+    indigo: 'from-indigo-500/90 to-indigo-600/90 text-indigo-50',
+    purple: 'from-purple-500/90 to-purple-600/90 text-purple-50',
+    amber: 'from-amber-500/90 to-amber-600/90 text-amber-50',
+    teal: 'from-teal-500/90 to-teal-600/90 text-teal-50',
   };
   return (
-    <div className={`bg-gradient-to-br ${colors[color]} rounded-lg p-2 shadow-sm`}>
-      <div className="flex items-center justify-between">
-        <Icon className="w-3 h-3 opacity-80" />
+    <div
+      className={`bg-gradient-to-br ${colors[color]} rounded-xl p-3 shadow-md shadow-${color}-500/10 card-hover`}
+      style={{ animationDelay: `${index * 0.04}s` }}
+    >
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="p-1.5 rounded-lg bg-white/20">
+          <Icon className="w-3.5 h-3.5" />
+        </div>
       </div>
-      <div className="text-[9px] uppercase tracking-wider opacity-80 font-semibold leading-tight mt-0.5">{label}</div>
-      <div className="text-xs font-bold leading-tight">{value}</div>
+      <div className="text-[10px] uppercase tracking-wider opacity-80 font-semibold">{label}</div>
+      <div className="text-sm sm:text-base font-bold leading-tight mt-0.5">{value}</div>
     </div>
   );
 };
@@ -45,93 +50,81 @@ const Dashboard: React.FC = () => {
     return { ingresos, gastos, activos, planeacion, finalizados, pendiente, margen: ingresos - gastos, rentabilidadGeneral };
   }, [transacciones, presupuestos]);
 
-  const pieData = presupuestos.filter(p => p.fase === 'ejecución').map(p => ({ name: p.proyecto.slice(0, 16), value: p.total }));
+  const pieData = useMemo(() =>
+    presupuestos.filter(p => p.fase === 'ejecución').map(p => ({ name: p.proyecto.slice(0, 16), value: p.total })),
+    [presupuestos]
+  );
   const COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
-  const barData = presupuestos.filter(p => p.fase === 'ejecución').map(p => ({
-    name: p.proyecto.split(' ').slice(0, 2).join(' '),
-    Avance: p.avanceFisico,
-    Financiero: p.avanceFinanciero,
-  }));
+  const barData = useMemo(() =>
+    presupuestos.filter(p => p.fase === 'ejecución').map(p => ({
+      name: p.proyecto.split(' ').slice(0, 2).join(' '),
+      Avance: p.avanceFisico,
+      Financiero: p.avanceFinanciero,
+    })),
+    [presupuestos]
+  );
 
-  const kpiData: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; color: KPIColor }[] = [
-    { icon: TrendingUp, label: 'Ingresos', value: `Q${(stats.ingresos / 1000).toFixed(1)}K`, color: 'emerald' },
-    { icon: TrendingDown, label: 'Gastos', value: `Q${(stats.gastos / 1000).toFixed(1)}K`, color: 'red' },
-    { icon: DollarSign, label: 'Margen', value: `Q${(stats.margen / 1000).toFixed(1)}K`, color: stats.margen >= 0 ? 'blue' : 'red' },
-    { icon: Percent, label: 'Rentabilidad', value: `${stats.rentabilidadGeneral.toFixed(1)}%`, color: stats.rentabilidadGeneral >= 10 ? 'emerald' : 'amber' },
-    { icon: FolderKanban, label: 'Activos', value: String(stats.activos), color: 'indigo' },
-    { icon: FolderKanban, label: 'Planeación', value: String(stats.planeacion), color: 'purple' },
-    { icon: FolderKanban, label: 'Finalizados', value: String(stats.finalizados), color: 'teal' },
-    { icon: DollarSign, label: 'Pendiente', value: `Q${(stats.pendiente / 1000).toFixed(0)}K`, color: 'amber' },
-  ];
+  const kpiData = useMemo(() => [
+    { icon: TrendingUp, label: 'Ingresos', value: `Q${(stats.ingresos / 1000).toFixed(1)}K`, color: 'emerald' as KPIColor },
+    { icon: TrendingDown, label: 'Gastos', value: `Q${(stats.gastos / 1000).toFixed(1)}K`, color: 'red' as KPIColor },
+    { icon: DollarSign, label: 'Margen', value: `Q${(stats.margen / 1000).toFixed(1)}K`, color: stats.margen >= 0 ? 'blue' as KPIColor : 'red' as KPIColor },
+    { icon: Percent, label: 'Rentabilidad', value: `${stats.rentabilidadGeneral.toFixed(1)}%`, color: stats.rentabilidadGeneral >= 10 ? 'emerald' as KPIColor : 'amber' as KPIColor },
+    { icon: FolderKanban, label: 'Activos', value: String(stats.activos), color: 'indigo' as KPIColor },
+    { icon: FolderKanban, label: 'Planeación', value: String(stats.planeacion), color: 'purple' as KPIColor },
+    { icon: FolderKanban, label: 'Finalizados', value: String(stats.finalizados), color: 'teal' as KPIColor },
+    { icon: DollarSign, label: 'Pendiente', value: `Q${(stats.pendiente / 1000).toFixed(0)}K`, color: 'amber' as KPIColor },
+  ], [stats]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 overflow-hidden">
-      <Header showHome={false} title="Tablero Ejecutivo" />
-      <div className="flex-1 overflow-y-auto w-full">
-        <div className="w-full mx-auto">
-          {/* KPI Grid - Responsive */}
-          <div className="p-2 sm:p-3 md:p-4">
-            <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-1 sm:gap-2">
-              {kpiData.map((k, i) => (
-                <div key={i}>
-                  <CompactKPI icon={k.icon} label={k.label} value={k.value} color={k.color} />
-                </div>
-              ))}
+    <PageShell showHome={false} title="Tablero Ejecutivo">
+      <div className="p-3 sm:p-4 md:p-5 max-w-[1600px] mx-auto space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3 stagger-children">
+          {kpiData.map((k, i) => (
+            <KPI key={i} icon={k.icon} label={k.label} value={k.value} color={k.color} index={i} />
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="glass-card rounded-xl p-4 flex flex-col h-72 sm:h-80 card-hover">
+              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Distribución</h3>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} innerRadius={25} paddingAngle={3}>
+                    {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip formatter={(v: number) => `Q ${v.toLocaleString()}`} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="glass-card rounded-xl p-4 flex flex-col h-72 sm:h-80 card-hover">
+              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Avance vs Financiero</h3>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barData} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={60} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="Avance" fill="#1E3A8A" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="Financiero" fill="#10B981" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="sm:col-span-2 glass-card rounded-xl p-4 card-hover">
+              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Registro Rápido</h3>
+              <TransactionForm compact />
             </div>
           </div>
 
-          {/* Main Content - Responsive Layout */}
-          <div className="p-2 sm:p-3 md:p-4 space-y-3 md:space-y-4">
-            {/* Mobile/Tablet Stack - Desktop Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-              {/* Charts Section - spans 2 cols on desktop */}
-              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-                {/* Pie Chart */}
-                <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 flex flex-col h-64 sm:h-72 md:h-80">
-                  <h3 className="text-xs sm:text-sm font-bold text-slate-600 uppercase mb-2">Distribución</h3>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={Math.min(40, 60)} innerRadius={Math.min(20, 30)} paddingAngle={2}>
-                        {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip formatter={(v: number) => `Q ${v.toLocaleString()}`} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Bar Chart */}
-                <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 flex flex-col h-64 sm:h-72 md:h-80">
-                  <h3 className="text-xs sm:text-sm font-bold text-slate-600 uppercase mb-2">Avance vs Financiero</h3>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={barData} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
-                      <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={60} />
-                      <YAxis tick={{ fontSize: 10 }} />
-                      <Tooltip />
-                      <Bar dataKey="Avance" fill="#1E3A8A" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="Financiero" fill="#10B981" radius={[2, 2, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Transaction Form - Full width on mobile */}
-                <div className="sm:col-span-2 bg-white rounded-lg shadow-sm p-3 sm:p-4">
-                  <TransactionForm compact />
-                </div>
-              </div>
-
-              {/* Sidebar - Stacks on mobile */}
-              <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 h-auto md:h-auto">
-                <h3 className="text-xs sm:text-sm font-bold text-slate-600 uppercase mb-3">Calendario</h3>
-                <div className="w-full">
-                  <Calendar />
-                </div>
-              </div>
-            </div>
+          <div className="glass-card rounded-xl p-4 card-hover">
+            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Calendario</h3>
+            <Calendar />
           </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 };
 

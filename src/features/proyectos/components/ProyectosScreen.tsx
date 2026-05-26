@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import type { Presupuesto } from '@/types/supabase';
-import Header from '@/components/shared/Header';
+import PageShell from '@/components/shared/PageShell';
 import { Play, PauseCircle, CheckCircle, Folder, Filter, Edit3, Save, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -88,8 +88,7 @@ const ProyectosScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 animate-fadeIn">
-      <Header title="Proyectos por Fase" />
+    <PageShell showHome={false} title="Proyectos por Fase">
       <div className="p-3 sm:p-5 max-w-[1600px] mx-auto space-y-4">
         <div className="grid grid-cols-4 gap-3">
           <button onClick={() => setFiltroFase('todas')}
@@ -228,7 +227,7 @@ const ProyectosScreen: React.FC = () => {
           })}
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 };
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/lib/supabase';
-import Header from '@/components/shared/Header';
+import PageShell from '@/components/shared/PageShell';
 import { toast } from 'sonner';
 import { Users, Plus, Trash2, UserPlus, Shield, User, Eye } from 'lucide-react';
 import type { Equipo, EquipoMiembro } from '@/types/supabase';
@@ -103,9 +103,7 @@ const TeamsScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 animate-fadeIn">
-      <Header title="Gestión de Equipos" />
-
+    <PageShell showHome={false} title="Gestión de Equipos">
       <div className="p-3 sm:p-5 max-w-[1200px] mx-auto space-y-4">
         {/* Crear equipo */}
         <div className="bg-white rounded-xl shadow-md p-4">
@@ -210,7 +208,7 @@ const TeamsScreen: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 };
 
