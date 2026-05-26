@@ -276,6 +276,7 @@ export interface CreatePresupuestoInput {
   factor_utilidad?: number;
   lineas?: unknown[];
   total?: number;
+  costo_directo?: number;
 }
 
 export interface Equipo {

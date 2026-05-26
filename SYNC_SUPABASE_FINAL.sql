@@ -316,6 +316,11 @@ ALTER TABLE public.presupuestos
 ALTER TABLE public.presupuestos
   ADD COLUMN IF NOT EXISTS costo_directo numeric DEFAULT 0;
 
+ALTER TABLE public.conciliaciones
+  ADD COLUMN IF NOT EXISTS proyecto_id text;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_conciliaciones_proyecto_id ON public.conciliaciones(proyecto_id);
+
 -- ============================================================
 -- PASO 10: TRIGGER updated_at en presupuestos
 -- ============================================================

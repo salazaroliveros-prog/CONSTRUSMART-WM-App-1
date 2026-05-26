@@ -929,7 +929,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ingresos: 0,
         gastos: 0,
         pendiente_aportar: 0,
-        costo_directo: 0,
+        costo_directo: p.costo_directo ?? 0,
         fecha_inicio: null,
         fecha_fin: null,
       };

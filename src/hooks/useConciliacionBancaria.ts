@@ -1,7 +1,3 @@
-/**
- * useConciliacionBancaria - Hook para conciliación de caja
- */
-
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAppContext } from '@/contexts/AppContext';
@@ -13,20 +9,20 @@ import {
   type CajaProyecto,
 } from '@/utils/conciliacionBancaria';
 
-export function useConciliacionBancaria(proyecto_id: string, saldo_inicial: number) {
+export function useConciliacionBancaria(presupuestoId: string, saldoInicial: number) {
   const { session } = useAppContext();
   const [caja, setCaja] = useState<CajaProyecto>(() =>
-    inicializarCajaProyecto(proyecto_id, saldo_inicial)
+    inicializarCajaProyecto(presupuestoId, saldoInicial)
   );
 
   useEffect(() => {
-    if (!proyecto_id) return;
+    if (!presupuestoId) return;
     const cargar = async () => {
       const { data: concs } = await supabase
         .from('conciliaciones')
         .select('*, partidas_conciliacion(*)')
-        .eq('id', proyecto_id)
-        .single();
+        .eq('proyecto_id', presupuestoId)
+        .maybeSingle();
       if (concs) {
         setCaja(prev => ({
           ...prev,
@@ -34,7 +30,7 @@ export function useConciliacionBancaria(proyecto_id: string, saldo_inicial: numb
           saldo_real_actual: Number(concs.saldo_banco),
           movimientos: (concs.partidas_conciliacion || []).map((p: any) => ({
             id: p.id,
-            proyecto_id,
+            proyecto_id: presupuestoId,
             fecha: new Date(p.fecha),
             descripcion: p.descripcion,
             subtipo: p.tipo === 'pendiente_libros' ? 'gasto' : p.tipo === 'pendiente_banco' ? 'ingreso' : 'ajuste',
@@ -47,21 +43,22 @@ export function useConciliacionBancaria(proyecto_id: string, saldo_inicial: numb
       }
     };
     cargar();
-  }, [proyecto_id]);
+  }, [presupuestoId]);
 
   const registrar = useCallback(
     async (fecha: Date, descripcion: string, subtipo: 'retiro' | 'deposito' | 'gasto' | 'ingreso' | 'ajuste', monto: number, saldo_real?: number) => {
       setCaja(prev => registrarMovimiento(prev, fecha, descripcion, subtipo, monto, saldo_real));
+      const nuevoSaldo = caja.saldo_sistema_actual + (subtipo === 'ingreso' || subtipo === 'deposito' ? monto : -monto);
       await supabase.from('conciliaciones').upsert({
-        id: proyecto_id,
+        proyecto_id: presupuestoId,
         user_id: session?.user?.id,
         banco: 'Caja chica',
         periodo: fecha.toISOString().slice(0, 7) + '-01',
-        saldo_libros: caja.saldo_sistema_actual + (subtipo === 'ingreso' || subtipo === 'deposito' ? monto : -monto),
+        saldo_libros: nuevoSaldo,
         saldo_banco: saldo_real ?? caja.saldo_real_actual,
-      }, { onConflict: 'id' });
+      }, { onConflict: 'proyecto_id', ignoreDuplicates: false });
     },
-    [caja, proyecto_id, session]
+    [caja, presupuestoId, session]
   );
 
   const conciliar = useCallback(
