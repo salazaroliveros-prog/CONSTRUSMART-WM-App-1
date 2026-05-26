@@ -25,6 +25,24 @@ export const PresupuestosService = {
   },
 
   /**
+   * Analiza si un proyecto está excediendo su presupuesto basado en gastos reales.
+   */
+  analizarDesviacion(presupuesto: any, gastosActuales: number) {
+    const total = presupuesto.total || 0;
+    const porcentajeGastado = total > 0 ? (gastosActuales / total) * 100 : 0;
+    
+    let nivelAlerta: 'normal' | 'advertencia' | 'critico' = 'normal';
+    if (porcentajeGastado >= 90) nivelAlerta = 'critico';
+    else if (porcentajeGastado >= 75) nivelAlerta = 'advertencia';
+    
+    return {
+      porcentajeGastado,
+      nivelAlerta,
+      exceso: gastosActuales > total ? gastosActuales - total : 0
+    };
+  },
+
+  /**
    * Actualiza el estado financiero y avance de un presupuesto
    */
   async updateAvance(presupuestoId: string, payload: Partial<Presupuesto>) {

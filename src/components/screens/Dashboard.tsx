@@ -1,3 +1,4 @@
+import { PresupuestosService } from '@/services/presupuestos/PresupuestosService';
 import { Skeleton } from '@/components/ui/skeleton/Skeleton';
 import React, { useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
@@ -63,12 +64,17 @@ const Dashboard: React.FC = () => {
   const COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
   const barData = useMemo(() =>
-    presupuestos.filter(p => p.fase === 'ejecución').map(p => ({
-      name: p.proyecto.split(' ').slice(0, 2).join(' '),
-      Avance: p.avanceFisico,
-      Financiero: p.avanceFinanciero,
-    })),
-    [presupuestos]
+    presupuestos.filter(p => p.fase === 'ejecución').map(p => {
+      const gastosReal = transacciones.filter(t => t.proyectoId === p.id && t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
+      const desviacion = PresupuestosService.analizarDesviacion(p, gastosReal);
+      return {
+        name: p.proyecto.split(' ').slice(0, 2).join(' '),
+        Avance: p.avanceFisico,
+        Financiero: p.avanceFinanciero,
+        desviacion: desviacion.nivelAlerta
+      };
+    }),
+    [presupuestos, transacciones]
   );
 
   const kpiData = useMemo(() => [
@@ -119,7 +125,11 @@ const Dashboard: React.FC = () => {
                   <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip />
                   <Bar dataKey="Avance" fill="#1E3A8A" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="Financiero" fill="#10B981" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="Financiero" fill="#10B981" radius={[3, 3, 0, 0]}>
+                    {barData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.desviacion === 'critico' ? '#EF4444' : entry.desviacion === 'advertencia' ? '#F59E0B' : '#10B981'} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
