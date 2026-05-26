@@ -4,6 +4,9 @@
 
 import { z } from 'zod';
 
+// Database type for createClient generic (Supabase schema shape)
+export type Database = Record<string, unknown>;
+
 // ====== Esquemas de validación Zod ======
 const ClienteSchema = z.object({
   id: z.string().optional(),
