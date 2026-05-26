@@ -1,11 +1,13 @@
--- Fix RLS infinite recursion between equipos and equipo_miembros
--- The problem: equipos SELECT policy queries equipo_miembros, whose SELECT
--- policy queries equipos back, creating infinite recursion.
--- Execute this ONCE in Supabase SQL Editor.
+-- Fix RLS infinite recursion (42P17)
+-- Problema: políticas SELECT en equipos ↔ equipo_miembros se referencian
+-- circularmente. Además, presupuestos_select_team consulta equipo_miembros
+-- y extiende el problema a presupuestos.
+-- Ejecutar UNA SOLA VEZ en Supabase SQL Editor.
 
--- STEP 1: Create a SECURITY DEFINER function that bypasses RLS
--- This breaks the circular reference because the subquery inside the
--- function runs as the table owner (bypassing RLS).
+-- ============================================================
+-- PASO 1: Función SECURITY DEFINER que rompe el ciclo
+-- (corre como propietario, bypassea RLS)
+-- ============================================================
 
 CREATE OR REPLACE FUNCTION public.user_owns_equipo(p_equipo_id uuid)
 RETURNS boolean
@@ -20,18 +22,26 @@ AS $$
   );
 $$;
 
--- STEP 2: Drop equipos_select policy that queries equipo_miembros
+-- ============================================================
+-- PASO 2: Eliminar política problemática en presupuestos
+-- presupuestos_select_team consulta equipo_miembros → cascada
+-- ============================================================
+
+DROP POLICY IF EXISTS "presupuestos_select_team" ON public.presupuestos;
+
+-- ============================================================
+-- PASO 3: equipos — simplificar a solo owner
+-- ============================================================
 
 DROP POLICY IF EXISTS "equipos_select" ON public.equipos;
-
--- STEP 3: Re-create equipos_select with simple owner-only check
--- Team members access equipos via the equipo_miembros table instead.
 
 CREATE POLICY "equipos_select" ON public.equipos
   FOR SELECT TO authenticated
   USING (auth.uid() = user_id);
 
--- STEP 4: Drop existing policies on equipo_miembros that cause recursion
+-- ============================================================
+-- PASO 4: equipo_miembros — recrear usando función
+-- ============================================================
 
 DROP POLICY IF EXISTS "equipo_miembros_select" ON public.equipo_miembros;
 DROP POLICY IF EXISTS "equipo_miembros_insert" ON public.equipo_miembros;
@@ -40,9 +50,6 @@ DROP POLICY IF EXISTS "equipo_miembros_delete" ON public.equipo_miembros;
 DROP POLICY IF EXISTS "miembros_select" ON public.equipo_miembros;
 DROP POLICY IF EXISTS "miembros_insert" ON public.equipo_miembros;
 DROP POLICY IF EXISTS "miembros_delete" ON public.equipo_miembros;
-
--- STEP 5: Re-create equipo_miembros policies using the SECURITY DEFINER function
--- This avoids the circular reference because the function bypasses RLS.
 
 CREATE POLICY "equipo_miembros_select" ON public.equipo_miembros
   FOR SELECT USING (
