@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import PageShell from '@/components/shared/PageShell';
 import { renglonesPorTipologia, Tipologia, tipologiaLabels, Renglon } from '@/data/renglones';
@@ -55,32 +55,38 @@ const PresupuestoScreen: React.FC = () => {
     r.codigo.includes(search)
   );
 
-  const addRenglon = (r: Renglon) => {
-    if (lineas.find(l => l.id === r.id)) return;
-    setLineas([...lineas, { ...r, cantidad: 1 }]);
+  const addRenglon = useCallback((r: Renglon) => {
+    setLineas(prev => {
+      if (prev.find(l => l.id === r.id)) return prev;
+      return [...prev, { ...r, cantidad: 1 }];
+    });
     setExpanded(prev => new Set(prev).add(r.id));
-  };
+  }, []);
 
-  const updateLinea = (id: string, field: keyof LineaPresupuesto, value: number) => {
+  const updateLinea = useCallback((id: string, field: keyof LineaPresupuesto, value: number) => {
     setLineas(prev => prev.map(l => l.id === id ? { ...l, [field]: value } : l));
-  };
+  }, []);
 
-  const removeLinea = (id: string) => {
+  const removeLinea = useCallback((id: string) => {
     setLineas(prev => prev.filter(l => l.id !== id));
-  };
+  }, []);
 
-  const toggleExpand = (id: string) => {
+  const toggleExpand = useCallback((id: string) => {
     setExpanded(prev => {
       const n = new Set(prev);
       if (n.has(id)) n.delete(id); else n.add(id);
       return n;
     });
-  };
+  }, []);
 
-  const handleSugerirFactores = () => {
+  const handleMetaChange = useCallback((key: string, value: string | number) => {
+    setMeta(prev => ({ ...prev, [key]: value }));
+  }, []);
+
+  const handleSugerirFactores = useCallback(() => {
     const s = sugerirFactores(tipologia);
     setMeta(m => ({ ...m, ...s }));
-  };
+  }, [tipologia]);
 
   const totales = useMemo(() => {
     const direct = lineas.map(l => {
@@ -382,42 +388,16 @@ const PresupuestoScreen: React.FC = () => {
               </div>
             ) : (
               <div className="divide-y">
-                {lineas.map(l => {
-                  const isOpen = expanded.has(l.id);
-                  const costoUnit = l.costoMaterial + l.costoManoObra + l.costoHerramienta;
-                  const subtotal = costoUnit * l.cantidad;
-                  return (
-                    <div key={l.id} className="">
-                      <div className="flex items-center gap-2 p-3 hover:bg-slate-50">
-                        <button onClick={() => toggleExpand(l.id)} className="text-slate-500">
-                          {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                        </button>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-semibold text-slate-800 truncate">{l.codigo} · {l.descripcion}</div>
-                          <div className="text-[10px] text-slate-500">{l.unidad} · {fmtQ(costoUnit)} c/u</div>
-                        </div>
-                         <input type="number" placeholder="Cantidad" value={l.cantidad} onChange={e => updateLinea(l.id, 'cantidad', parseFloat(e.target.value) || 0)} className="w-20 px-2 py-1 text-xs border rounded text-right" />
-                        <div className="w-24 text-right text-xs font-bold text-blue-900">{fmtQ(subtotal)}</div>
-                        <button onClick={() => removeLinea(l.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
-                      </div>
-                      {isOpen && (
-                        <div className="bg-slate-50 p-3 border-t border-dashed">
-                          <div className="text-[10px] font-bold text-slate-600 mb-2 uppercase tracking-wider">Análisis de Precios Unitarios (APU)</div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                            <Field label="Material (Q)" value={l.costoMaterial} onChange={v => updateLinea(l.id, 'costoMaterial', v)} />
-                            <Field label="Mano de Obra (Q)" value={l.costoManoObra} onChange={v => updateLinea(l.id, 'costoManoObra', v)} />
-                            <Field label="Herramienta (Q)" value={l.costoHerramienta} onChange={v => updateLinea(l.id, 'costoHerramienta', v)} />
-                            <Field label={`Rendim. (${l.unidad}/día)`} value={l.rendimiento} onChange={v => updateLinea(l.id, 'rendimiento', v)} />
-                          </div>
-                          <div className="mt-2 text-[10px] text-slate-600">
-                            Tiempo estimado: <strong>{l.rendimiento > 0 ? (l.cantidad / l.rendimiento).toFixed(2) : 0} días</strong> ·
-                            Costo unitario total: <strong className="text-blue-700">{fmtQ(costoUnit)}</strong>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {lineas.map(l => (
+                  <RenglonCard
+                    key={l.id}
+                    linea={l}
+                    isOpen={expanded.has(l.id)}
+                    onUpdate={updateLinea}
+                    onRemove={removeLinea}
+                    onToggle={toggleExpand}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -444,18 +424,60 @@ const PresupuestoScreen: React.FC = () => {
   );
 };
 
-const Field: React.FC<{ label: string; value: number; onChange: (v: number) => void }> = ({ label, value, onChange }) => (
+const RenglonCard = React.memo<{
+  linea: LineaPresupuesto;
+  isOpen: boolean;
+  onUpdate: (id: string, field: keyof LineaPresupuesto, value: number) => void;
+  onRemove: (id: string) => void;
+  onToggle: (id: string) => void;
+}>(({ linea: l, isOpen, onUpdate, onRemove, onToggle }) => {
+  const costoUnit = l.costoMaterial + l.costoManoObra + l.costoHerramienta;
+  const subtotal = costoUnit * l.cantidad;
+  return (
+    <div>
+      <div className="flex items-center gap-2 p-3 hover:bg-slate-50">
+        <button onClick={() => onToggle(l.id)} className="text-slate-500">
+          {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-semibold text-slate-800 truncate">{l.codigo} · {l.descripcion}</div>
+          <div className="text-[10px] text-slate-500">{l.unidad} · {fmtQ(costoUnit)} c/u</div>
+        </div>
+        <input type="number" placeholder="Cantidad" value={l.cantidad} onChange={e => onUpdate(l.id, 'cantidad', parseFloat(e.target.value) || 0)} className="w-20 px-2 py-1 text-xs border rounded text-right" />
+        <div className="w-24 text-right text-xs font-bold text-blue-900">{fmtQ(subtotal)}</div>
+        <button onClick={() => onRemove(l.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+      </div>
+      {isOpen && (
+        <div className="bg-slate-50 p-3 border-t border-dashed">
+          <div className="text-[10px] font-bold text-slate-600 mb-2 uppercase tracking-wider">Análisis de Precios Unitarios (APU)</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <Field label="Material (Q)" value={l.costoMaterial} onChange={v => onUpdate(l.id, 'costoMaterial', v)} />
+            <Field label="Mano de Obra (Q)" value={l.costoManoObra} onChange={v => onUpdate(l.id, 'costoManoObra', v)} />
+            <Field label="Herramienta (Q)" value={l.costoHerramienta} onChange={v => onUpdate(l.id, 'costoHerramienta', v)} />
+            <Field label={`Rendim. (${l.unidad}/día)`} value={l.rendimiento} onChange={v => onUpdate(l.id, 'rendimiento', v)} />
+          </div>
+          <div className="mt-2 text-[10px] text-slate-600">
+            Tiempo estimado: <strong>{l.rendimiento > 0 ? (l.cantidad / l.rendimiento).toFixed(2) : 0} días</strong> ·
+            Costo unitario total: <strong className="text-blue-700">{fmtQ(costoUnit)}</strong>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+const Field = React.memo<{ label: string; value: number; onChange: (v: number) => void }>(({ label, value, onChange }) => (
   <div>
     <label className="text-[10px] text-slate-600 font-semibold">{label}</label>
     <input type="number" placeholder={label} value={value} onChange={e => onChange(parseFloat(e.target.value) || 0)} className="w-full px-2 py-1 text-xs border rounded" />
   </div>
-);
+));
 
-const Stat: React.FC<{ label: string; value: string; highlight?: boolean }> = ({ label, value, highlight }) => (
+const Stat = React.memo<{ label: string; value: string; highlight?: boolean }>(({ label, value, highlight }) => (
   <div className={`p-2 rounded ${highlight ? 'bg-emerald-500 col-span-2 md:col-span-1' : 'bg-white/10'}`}>
     <div className="text-[10px] opacity-80 uppercase tracking-wider">{label}</div>
     <div className={`font-bold ${highlight ? 'text-base' : 'text-sm'}`}>{value}</div>
   </div>
-);
+));
 
 export default PresupuestoScreen;
