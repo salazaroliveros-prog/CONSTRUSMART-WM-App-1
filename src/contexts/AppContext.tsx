@@ -143,11 +143,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    const initDoneRef = useRef(false);
    const mountedRef = useRef(true);
 
-   const user = {
+   const user = useMemo(() => ({
      nombre: session?.user?.user_metadata?.nombre || session?.user?.email?.split('@')[0] || 'Usuario',
      empresa: 'CONSTRUCTORA WM/M&S',
      avatar: session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture || '',
-   };
+   }), [session?.user?.user_metadata?.nombre, session?.user?.user_metadata?.avatar_url, session?.user?.user_metadata?.picture, session?.user?.email]);
 
     const loadAll = useCallback(async (userId?: string) => {
       if (!userId) return;

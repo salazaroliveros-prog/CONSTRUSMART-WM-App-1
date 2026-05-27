@@ -2,7 +2,7 @@ import React from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { WifiOff, CloudUpload, RefreshCw } from 'lucide-react';
 
-const OfflineBanner: React.FC = () => {
+const OfflineBannerComponent: React.FC = () => {
   const { isOnline, pendingCount } = useAppContext();
 
   if (isOnline && pendingCount === 0) return null;
@@ -29,4 +29,5 @@ const OfflineBanner: React.FC = () => {
   );
 };
 
+const OfflineBanner = React.memo(OfflineBannerComponent);
 export default OfflineBanner;

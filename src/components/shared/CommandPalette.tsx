@@ -14,7 +14,7 @@ const views = [
   { id: 'compras', label: 'Compras', icon: ShoppingCart },
 ];
 
-const CommandPalette: React.FC = () => {
+const CommandPaletteComponent: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const { setView, presupuestos, clientes, addPresupuesto } = useAppContext();
@@ -159,4 +159,5 @@ const CommandPalette: React.FC = () => {
   );
 };
 
+const CommandPalette = React.memo(CommandPaletteComponent);
 export default CommandPalette;
