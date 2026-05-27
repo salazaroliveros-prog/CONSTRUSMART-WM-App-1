@@ -4,7 +4,7 @@ import { PlanillaService } from '@/services/seguimiento/PlanillaService';
 import { GanttService } from '@/services/seguimiento/GanttService';
 import PageShell from '@/components/shared/PageShell';
 import GanttView from '@/components/shared/GanttView';
-import BitacoraAvancePanel from '@/components/shared/BitacoraAvancePanel';
+import { BitacoraAvancePanel } from '@/components/shared/BitacoraAvancePanel';
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
 import { Download, FileText, Play, Users, Clock, Filter, TrendingUp, TrendingDown, BarChart3, PieChartIcon, Wallet, FolderKanban, Percent, ArrowLeft, ArrowRight, Eye, DollarSign, Calendar } from 'lucide-react';
 import type { Presupuesto } from '@/types/supabase';
