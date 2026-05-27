@@ -30,7 +30,7 @@ export interface Dependencia {
 function buildNodos(renglones: RenglonConLinea[], dependencias: Dependencia[]): RenglonCPM[] {
   const nodos: RenglonCPM[] = renglones.map((r) => {
     const apu = calcularAPU(r);
-    const duracion = Math.max(1, Math.round(apu.dias || apu.totalPersonasDia || 1));
+    const duracion = Math.max(1, Math.ceil(apu.dias || apu.totalPersonasDia || 1));
     return {
       id: r.id || r.codigo,
       codigo: r.codigo,
@@ -57,6 +57,29 @@ function buildNodos(renglones: RenglonConLinea[], dependencias: Dependencia[]): 
   return nodos;
 }
 
+function ordenarTopologico(nodos: RenglonCPM[]): RenglonCPM[] {
+  const nodosMap = new Map(nodos.map((n) => [n.id, n]));
+  const gradosEntrada = new Map(nodos.map((n) => [n.id, n.predecesores.length]));
+  const cola: RenglonCPM[] = [...nodos.filter((n) => n.predecesores.length === 0)];
+  const resultado: RenglonCPM[] = [];
+
+  while (cola.length > 0) {
+    const actual = cola.shift()!;
+    resultado.push(actual);
+
+    for (const sucesorId of actual.sucesores) {
+      const grado = (gradosEntrada.get(sucesorId) ?? 0) - 1;
+      gradosEntrada.set(sucesorId, grado);
+      if (grado === 0) {
+        const nodo = nodosMap.get(sucesorId);
+        if (nodo) cola.push(nodo);
+      }
+    }
+  }
+
+  return resultado.length === nodos.length ? resultado : [...nodos];
+}
+
 export const GanttService = {
   calcularRutaCritica(
     renglones: RenglonConLinea[],
@@ -70,10 +93,9 @@ export const GanttService = {
     }));
 
     const nodos = buildNodos(renglones, deps);
+    const nodosOrdenados = ordenarTopologico(nodos);
 
-    // Forward pass: Cálculo de ES (Early Start) y EF (Early Finish)
-    const sortedForward = [...nodos].sort((a, b) => a.id.localeCompare(b.id)); // Simulación de orden topológico básico
-    for (const n of nodos) {
+    for (const n of nodosOrdenados) {
       n.ES = n.predecesores.length === 0
         ? 0
         : Math.max(...n.predecesores.map(pId => {
@@ -83,11 +105,10 @@ export const GanttService = {
       n.EF = n.ES + n.duracionDias;
     }
 
-    // Backward pass: Cálculo de LS (Late Start) y LF (Late Finish)
     const proyectoFin = Math.max(...nodos.map(n => n.EF));
 
-    for (let i = nodos.length - 1; i >= 0; i--) {
-      const n = nodos[i];
+    for (let i = nodosOrdenados.length - 1; i >= 0; i--) {
+      const n = nodosOrdenados[i];
       n.LF = n.sucesores.length === 0
         ? proyectoFin
         : Math.min(...n.sucesores.map(sId => {

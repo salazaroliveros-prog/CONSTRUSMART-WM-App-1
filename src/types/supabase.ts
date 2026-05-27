@@ -152,6 +152,7 @@ const OrdenCompraItemSchema = z.object({
   descripcion: z.string().min(1, 'La descripción es requerida'),
   cantidad: z.number().positive('La cantidad debe ser mayor a 0'),
   unidad: z.string().default('pza'),
+  material_id: z.string().optional(),
   precio_unitario: z.number().min(0).default(0),
   importe: z.number().default(0),
   cantidad_recibida: z.number().default(0),
@@ -776,6 +777,7 @@ export const ordenCompraToDb = (oc: UpdateOrdenCompra): Partial<DBOrdenCompra> =
 export const dbToOrdenCompraItem = (db: DBRow): OrdenCompraItem => ({
   id: (db.id as string) || '',
   ordenCompraId: (db.orden_compra_id as string) ?? '',
+  materialId: (db.material_id as string) ?? undefined,
   descripcion: (db.descripcion as string) ?? '',
   cantidad: Number(db.cantidad) || 0,
   unidad: (db.unidad as string) ?? 'pza',
@@ -793,6 +795,7 @@ export const ordenCompraItemToDb = (item: UpdateOrdenCompraItem): Partial<DBOrde
   if (item.precioUnitario !== undefined) out.precio_unitario = item.precioUnitario;
   if (item.importe !== undefined) out.importe = item.importe;
   if (item.cantidadRecibida !== undefined) out.cantidad_recibida = item.cantidadRecibida;
+  if ((item as any).materialId !== undefined) out.material_id = (item as any).materialId;
   return out as Partial<DBOrdenCompraItem>;
 };
 

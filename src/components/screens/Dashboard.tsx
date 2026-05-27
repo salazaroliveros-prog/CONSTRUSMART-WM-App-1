@@ -6,7 +6,6 @@ import ProjectHeatMap from '@/components/shared/ProjectHeatMap';
 import { CurvaSChart } from '@/components/shared/CurvaSChart';
 import { fmtQ } from '@/lib/exporters';
 import { CoreEngineService } from '@/services/CoreEngineService';
-import { useQuery } from '@tanstack/react-query';
 import { AgenteInteligente } from '@/services/ai/AgenteInteligente';
 import { LayoutDashboard, BarChart3, TrendingUp, TrendingDown, DollarSign, Percent, Shield, AlertTriangle, ArrowLeft, ArrowRight, FolderKanban, Wallet, Users, ShoppingCart, PackageCheck } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid } from 'recharts';
@@ -37,11 +36,71 @@ const KPI: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: 
 const PIE_COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899'];
 
 const Dashboard: React.FC = () => {
-  const { presupuestos, transacciones, loading, proveedores, ordenesCompra, setView } = useAppContext();
+  const { presupuestos, transacciones, proveedores, ordenesCompra, setView, transicionFase } = useAppContext();
   const [pagina, setPagina] = useState(0);
   const [alertas, setAlertas] = useState<any[]>([]);
   const [filtroProyecto, setFiltroProyecto] = useState('todos');
   const totalPaginas = 3;
+
+  const presupuestosFiltrados = useMemo(
+    () => (filtroProyecto === 'todos' ? presupuestos : presupuestos.filter(p => p.id === filtroProyecto)),
+    [filtroProyecto, presupuestos]
+  );
+
+  const transaccionesFiltradas = useMemo(
+    () => (filtroProyecto === 'todos' ? transacciones : transacciones.filter(t => t.proyectoId === filtroProyecto)),
+    [filtroProyecto, transacciones]
+  );
+
+  const stats = useMemo(() => {
+    const ingresos = transaccionesFiltradas.filter(t => t.tipo === 'ingreso').reduce((sum, t) => sum + t.costoTotal, 0);
+    const gastos = transaccionesFiltradas.filter(t => t.tipo === 'gasto').reduce((sum, t) => sum + t.costoTotal, 0);
+    const totalPresupuestado = presupuestosFiltrados.reduce((sum, p) => sum + (p.total || 0), 0);
+    const ocPendientes = ordenesCompra.filter(oc => ['pendiente', 'aprobada', 'recibida_parcial'].includes(oc.estatus)).length;
+    const rentabilidad = ingresos === 0 ? 0 : ((ingresos - gastos) / ingresos) * 100;
+    return { ingresos, gastos, balance: ingresos - gastos, activos: presupuestosFiltrados.length, rentabilidad, ocPendientes, totalPresupuestado };
+  }, [transaccionesFiltradas, presupuestosFiltrados, ordenesCompra]);
+
+  const curvaSData = useMemo(
+    () => CoreEngineService.calcularCurvaS(presupuestosFiltrados, transaccionesFiltradas),
+    [presupuestosFiltrados, transaccionesFiltradas]
+  );
+
+  const flujoMensual = useMemo(() => {
+    const byMes: Record<string, { mes: string; ingresos: number; gastos: number }> = {};
+    transaccionesFiltradas.forEach(t => {
+      const mes = t.fecha?.slice(0, 7) || 'sin-fecha';
+      if (!byMes[mes]) {
+        byMes[mes] = { mes, ingresos: 0, gastos: 0 };
+      }
+      if (t.tipo === 'ingreso') byMes[mes].ingresos += t.costoTotal;
+      else byMes[mes].gastos += t.costoTotal;
+    });
+    return Object.values(byMes).sort((a, b) => a.mes.localeCompare(b.mes));
+  }, [transaccionesFiltradas]);
+
+  const gastosPorCategoria = useMemo(() => {
+    const categorias: Record<string, number> = {};
+    transaccionesFiltradas.filter(t => t.tipo === 'gasto').forEach(t => {
+      categorias[t.categoria] = (categorias[t.categoria] || 0) + t.costoTotal;
+    });
+    return Object.entries(categorias).map(([name, value]) => ({ name, value }));
+  }, [transaccionesFiltradas]);
+
+  useEffect(() => {
+    let activo = true;
+    const cargarAlertas = async () => {
+      const resultados = await Promise.all(
+        presupuestos.map(p => AgenteInteligente.diagnosticarProyecto(p, transacciones))
+      );
+      if (activo) setAlertas(resultados.flat());
+    };
+    cargarAlertas();
+    return () => { activo = false; };
+  }, [presupuestos, transacciones]);
+
+  const nextPage = useCallback(() => setPagina(p => (p + 1) % totalPaginas), []);
+  const prevPage = useCallback(() => setPagina(p => (p - 1 + totalPaginas) % totalPaginas), []);
 
   // Optimización responsive: en pantallas pequeñas, forzar vista de lista simple en lugar de rejilla compleja
   const layoutClass = "min-h-dvh flex flex-col p-2 sm:p-3 overflow-hidden";

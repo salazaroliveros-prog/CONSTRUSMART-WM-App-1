@@ -13,7 +13,12 @@ import type {
 } from '@/types/supabase';
 import { ProveedoresService } from '@/services/compras/ProveedoresService';
 import { OrdenesCompraService } from '@/services/compras/OrdenesCompraService';
+import { MaterialesService } from '@/services/presupuestos/MaterialesService';
 import { BodegaService } from '@/services/proyectos/BodegaService';
+
+type OCItemForm = Omit<CreateOrdenCompraItem, 'ordenCompraId'> & {
+  materialId?: string;
+};
 
 type Tab = 'proveedores' | 'ordenes';
 
@@ -34,7 +39,7 @@ const estatusIcon: Record<string, React.ComponentType<{ className?: string }>> =
 };
 
 const ComprasScreen: React.FC = () => {
-  const { session, proveedores, setView } = useAppContext();
+  const { session, proveedores, setView, proyectos, presupuestos } = useAppContext();
   const userId = session?.user?.id;
 
   const [tab, setTab] = useState<Tab>('proveedores');
@@ -51,13 +56,15 @@ const ComprasScreen: React.FC = () => {
 
   const [ordenes, setOrdenes] = useState<OrdenCompra[]>([]);
   const [selectedOC, setSelectedOC] = useState<OrdenCompra | null>(null);
-  const [ocItems, setOcItems] = useState<OrdenCompraItem[]>([]);
+  const [ocItems, setOcItems] = useState<(OrdenCompraItem & { materialId?: string })[]>([]);
   const [showOCForm, setShowOCForm] = useState(false);
   const [ocForm, setOcForm] = useState<CreateOrdenCompra>({
     userId: '', folio: '', proveedorId: '', proyectoId: '', fechaEmision: new Date().toISOString().split('T')[0],
     fechaEntrega: '', estatus: 'pendiente', subtotal: 0, iva: 0, total: 0, notas: '',
   });
-  const [ocItemForms, setOcItemForms] = useState<Omit<CreateOrdenCompraItem, 'ordenCompraId'>[]>([]);
+  const [ocItemForms, setOcItemForms] = useState<OCItemForm[]>([]);
+  const [materialOptions, setMaterialOptions] = useState<{ id: string; nombre: string; unidad: string }[]>([]);
+  const [selectedProjectMaterials, setSelectedProjectMaterials] = useState<{ id: string; nombre: string; unidad: string }[]>([]);
 
   const [showRecepcion, setShowRecepcion] = useState(false);
   const [recepcionCantidades, setRecepcionCantidades] = useState<Record<string, number>>({});
@@ -71,6 +78,29 @@ const ComprasScreen: React.FC = () => {
     if (!userId) return;
     OrdenesCompraService.listar(userId).then(setOrdenes).catch(() => {});
   }, [userId]);
+
+  useEffect(() => {
+    const loadProjectMaterials = async () => {
+      if (!ocForm.proyectoId) {
+        setMaterialOptions([]);
+        return;
+      }
+      const presupuesto = presupuestos.find(p => p.proyectoId === ocForm.proyectoId);
+      if (!presupuesto) {
+        setMaterialOptions([]);
+        return;
+      }
+      try {
+        const materials = await MaterialesService.getMateriales(presupuesto.id);
+        setMaterialOptions(materials.map(m => ({ id: m.id, nombre: m.nombre, unidad: m.unidad })));
+      } catch (err) {
+        console.error('Error cargando materiales del proyecto', err);
+        setMaterialOptions([]);
+      }
+    };
+
+    loadProjectMaterials();
+  }, [ocForm.proyectoId, presupuestos]);
 
   const proveedoresFiltrados = useMemo(() => {
     if (!search.trim()) return proveedoresLocal;
@@ -156,6 +186,7 @@ const ComprasScreen: React.FC = () => {
   const handleCreateOC = async () => {
     if (!userId) return;
     if (!ocForm.proveedorId) { toast.error('Selecciona un proveedor'); return; }
+    if (!ocForm.proyectoId) { toast.error('Selecciona un proyecto'); return; }
     if (ocItemForms.length === 0) { toast.error('Agrega al menos una partida'); return; }
     setSaveLoading(true);
     try {
@@ -183,16 +214,30 @@ const ComprasScreen: React.FC = () => {
     setSelectedOC(oc);
     const items = await OrdenesCompraService.listarItems(oc.id);
     setOcItems(items);
+    return items;
   };
 
-  const openRecepcion = (oc: OrdenCompra) => {
+  const openRecepcion = async (oc: OrdenCompra) => {
     setSelectedOC(oc);
-    loadOCItems(oc.id).then(() => {
-      const cant: Record<string, number> = {};
-      ocItems.forEach(i => { cant[i.id] = i.cantidad - i.cantidadRecibida; });
-      setRecepcionCantidades(cant);
-      setShowRecepcion(true);
-    });
+    const items = await loadOCItems(oc);
+    const cant: Record<string, number> = {};
+    items.forEach(i => { cant[i.id] = i.cantidad - i.cantidadRecibida; });
+    setRecepcionCantidades(cant);
+
+    const presupuesto = presupuestos.find(p => p.proyectoId === oc.proyectoId);
+    if (presupuesto) {
+      try {
+        const materials = await MaterialesService.getMateriales(presupuesto.id);
+        setSelectedProjectMaterials(materials.map(m => ({ id: m.id, nombre: m.nombre, unidad: m.unidad })));
+      } catch (err) {
+        console.error('Error cargando materiales para recepción', err);
+        setSelectedProjectMaterials([]);
+      }
+    } else {
+      setSelectedProjectMaterials([]);
+    }
+
+    setShowRecepcion(true);
   };
 
   const handleRecepcion = async () => {
@@ -202,14 +247,34 @@ const ComprasScreen: React.FC = () => {
         ordenCompraId: selectedOC.id, userId, fechaRecepcion: new Date().toISOString().split('T')[0],
       } as CreateRecepcionOC, userId);
       const itemsRec: CreateRecepcionOCItem[] = [];
+      const presupuesto = presupuestos.find(p => p.proyectoId === selectedOC.proyectoId);
+      const presupuestoId = presupuesto?.id;
+
       for (const item of ocItems) {
         const cant = recepcionCantidades[item.id] || 0;
         if (cant <= 0) continue;
         itemsRec.push({ recepcionId: rec.id, ordenCompraItemId: item.id, cantidadRecibida: cant });
         const nuevaRecibida = item.cantidadRecibida + cant;
         await OrdenesCompraService.actualizarCantidadRecibida(item.id, nuevaRecibida);
-        // Automáticamente impactar inventario en Bodega
-        await BodegaService.registrarMovimiento(item.id, 'entrada', cant, `Recepción OC ${selectedOC.folio}`);
+
+        let materialId: string | undefined;
+        if (selectedProjectMaterials.length > 0) {
+          const matched = selectedProjectMaterials.find(m =>
+            item.materialId ? m.id === item.materialId : m.nombre.toLowerCase() === item.descripcion.toLowerCase()
+          );
+          materialId = matched?.id;
+        }
+
+        if (!materialId && presupuestoId) {
+          const material = await MaterialesService.buscarPorNombre(presupuestoId, item.descripcion);
+          materialId = material?.id;
+        }
+
+        if (materialId) {
+          await BodegaService.registrarMovimiento(materialId, 'entrada', cant, `Recepción OC ${selectedOC.folio}`, userId);
+        } else if (presupuestoId) {
+          console.warn('No se encontró material vinculado para item de OC:', item.descripcion, item.id);
+        }
       }
       if (itemsRec.length > 0) {
         await OrdenesCompraService.crearItemsRecepcion(itemsRec);
@@ -228,16 +293,28 @@ const ComprasScreen: React.FC = () => {
   };
 
   const addItemRow = () => {
-    setOcItemForms([...ocItemForms, { descripcion: '', cantidad: 1, unidad: 'pza', precioUnitario: 0, importe: 0, cantidadRecibida: 0 }]);
+    setOcItemForms([...ocItemForms, { descripcion: '', cantidad: 1, unidad: 'pza', precioUnitario: 0, importe: 0, cantidadRecibida: 0, materialId: undefined }]);
   };
 
-  const updateItemRow = (idx: number, field: string, value: string | number) => {
+  const updateItemRow = (idx: number, field: keyof OCItemForm, value: string | number) => {
     setOcItemForms(prev => {
       const next = [...prev];
-      next[idx] = { ...next[idx], [field]: value };
-      if (field === 'cantidad' || field === 'precioUnitario') {
-        next[idx].importe = Number(next[idx].cantidad) * Number(next[idx].precioUnitario);
+      const current = { ...next[idx] };
+      current[field] = value as any;
+
+      if (field === 'materialId' && typeof value === 'string') {
+        const material = materialOptions.find(m => m.id === value);
+        if (material) {
+          current.descripcion = material.nombre;
+          current.unidad = material.unidad;
+        }
       }
+
+      if (field === 'cantidad' || field === 'precioUnitario') {
+        current.importe = Number(current.cantidad) * Number(current.precioUnitario);
+      }
+
+      next[idx] = current;
       return next;
     });
   };
@@ -478,15 +555,25 @@ const ComprasScreen: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Proyecto</label>
+                    <select value={ocForm.proyectoId} onChange={e => setOcForm(f => ({ ...f, proyectoId: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100">
+                      <option value="">Seleccionar...</option>
+                      {proyectos.map(p => (
+                        <option key={p.id} value={p.id}>{p.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
                     <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Fecha de emisión</label>
                     <input type="date" value={ocForm.fechaEmision} onChange={e => setOcForm(f => ({ ...f, fechaEmision: e.target.value }))}
                       className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100" />
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Fecha de entrega</label>
-                    <input type="date" value={ocForm.fechaEntrega} onChange={e => setOcForm(f => ({ ...f, fechaEntrega: e.target.value }))}
-                      className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100" />
-                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Fecha de entrega</label>
+                  <input type="date" value={ocForm.fechaEntrega} onChange={e => setOcForm(f => ({ ...f, fechaEntrega: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100" />
                 </div>
                 <textarea placeholder="Notas" rows={2} value={ocForm.notas} onChange={e => setOcForm(f => ({ ...f, notas: e.target.value }))}
                   className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:text-gray-100 resize-none" />
@@ -498,21 +585,31 @@ const ComprasScreen: React.FC = () => {
                     <button onClick={addItemRow} className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400">+ Agregar partida</button>
                   </div>
                   {ocItemForms.map((item, idx) => (
-                    <div key={idx} className="flex gap-2 mb-2 items-start">
-                      <input type="text" placeholder="Descripción" value={item.descripcion}
-                        onChange={e => updateItemRow(idx, 'descripcion', e.target.value)}
-                        className="flex-1 px-2 py-1.5 text-xs border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100" />
-                      <input type="number" placeholder="Cant" value={item.cantidad}
-                        onChange={e => updateItemRow(idx, 'cantidad', Number(e.target.value))}
-                        className="w-16 px-2 py-1.5 text-xs border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100 text-right" />
-                      <input type="text" placeholder="Und" value={item.unidad}
-                        onChange={e => updateItemRow(idx, 'unidad', e.target.value)}
-                        className="w-14 px-2 py-1.5 text-xs border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100" />
-                      <input type="number" placeholder="$" value={item.precioUnitario}
-                        onChange={e => updateItemRow(idx, 'precioUnitario', Number(e.target.value))}
-                        className="w-20 px-2 py-1.5 text-xs border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100 text-right" />
-                      <span className="text-xs py-1.5 text-gray-600 dark:text-gray-400 w-16 text-right">${item.importe.toLocaleString()}</span>
-                      <button onClick={() => removeItemRow(idx)} className="p-1.5 text-gray-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
+                    <div key={idx} className="flex flex-col gap-2 mb-2">
+                      <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr_0.9fr_0.9fr_0.6fr_auto] gap-2 items-end">
+                        <select value={item.materialId || ''}
+                          onChange={e => updateItemRow(idx, 'materialId', e.target.value)}
+                          className="w-full px-2 py-1.5 text-xs border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100">
+                          <option value="">Material (opcional)</option>
+                          {materialOptions.map(m => (
+                            <option key={m.id} value={m.id}>{m.nombre} ({m.unidad})</option>
+                          ))}
+                        </select>
+                        <input type="text" placeholder="Descripción" value={item.descripcion}
+                          onChange={e => updateItemRow(idx, 'descripcion', e.target.value)}
+                          className="w-full px-2 py-1.5 text-xs border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100" />
+                        <input type="number" placeholder="Cant" value={item.cantidad}
+                          onChange={e => updateItemRow(idx, 'cantidad', Number(e.target.value))}
+                          className="w-full px-2 py-1.5 text-xs border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100 text-right" />
+                        <input type="text" placeholder="Und" value={item.unidad}
+                          onChange={e => updateItemRow(idx, 'unidad', e.target.value)}
+                          className="w-full px-2 py-1.5 text-xs border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100" />
+                        <input type="number" placeholder="$" value={item.precioUnitario}
+                          onChange={e => updateItemRow(idx, 'precioUnitario', Number(e.target.value))}
+                          className="w-full px-2 py-1.5 text-xs border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100 text-right" />
+                        <button onClick={() => removeItemRow(idx)} className="p-1.5 text-gray-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                      <div className="text-right text-xs text-gray-600 dark:text-gray-400">Importe: ${item.importe.toLocaleString()}</div>
                     </div>
                   ))}
                 </div>
@@ -538,20 +635,34 @@ const ComprasScreen: React.FC = () => {
               </div>
               <div className="p-5 space-y-3">
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Ingresa las cantidades recibidas para cada partida:</p>
-                {ocItems.map(item => (
-                  <div key={item.id} className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{item.descripcion}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Pedido: {item.cantidad} {item.unidad} · Recibido: {item.cantidadRecibida} · Pendiente: {item.cantidad - item.cantidadRecibida}
-                      </p>
+                {ocItems.map(item => {
+                  const matchedMaterial = selectedProjectMaterials.find(m =>
+                    item.materialId ? m.id === item.materialId : m.nombre.toLowerCase() === item.descripcion.toLowerCase()
+                  );
+                  return (
+                    <div key={item.id} className="flex flex-col gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{item.descripcion}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Pedido: {item.cantidad} {item.unidad} · Recibido: {item.cantidadRecibida} · Pendiente: {item.cantidad - item.cantidadRecibida}
+                          </p>
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${matchedMaterial ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {matchedMaterial ? `Material: ${matchedMaterial.nombre}` : 'Material no vinculado'}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        min={0}
+                        max={item.cantidad - item.cantidadRecibida}
+                        value={recepcionCantidades[item.id] || 0}
+                        onChange={e => setRecepcionCantidades(c => ({ ...c, [item.id]: Number(e.target.value) }))}
+                        className="w-20 px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100 text-right"
+                      />
                     </div>
-                    <input type="number" min={0} max={item.cantidad - item.cantidadRecibida}
-                      value={recepcionCantidades[item.id] || 0}
-                      onChange={e => setRecepcionCantidades(c => ({ ...c, [item.id]: Number(e.target.value) }))}
-                      className="w-20 px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100 text-right" />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <div className="flex justify-end gap-2 p-5 border-t border-gray-200 dark:border-gray-700">
                 <button onClick={() => { setShowRecepcion(false); setSelectedOC(null); }}
