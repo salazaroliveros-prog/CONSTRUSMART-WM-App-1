@@ -44,9 +44,9 @@ const faseColors: Record<string, string> = {
 
 function useDeepCalc(lineas: LineaPresupuesto[]) {
   return useMemo(() =>
-    lineas.map(l => ({ linea: l, apu: calcularAPU(l) })),
+    Object.fromEntries(lineas.map(l => [l.id, calcularAPU(l)])),
     [lineas]
-  );
+  ) as Record<string, ReturnType<typeof calcularAPU>>;
 }
 
 const PresupuestoScreen: React.FC = () => {
@@ -188,20 +188,20 @@ const PresupuestoScreen: React.FC = () => {
   const calculadas = useDeepCalc(lineas);
 
   const totales = useMemo(() => {
-    const costoDirecto = calculadas.reduce((s, c) => s + c.apu.subtotal, 0);
-    const totalMaterial = calculadas.reduce((s, c) => s + c.apu.costoMaterial * c.linea.cantidad, 0);
-    const totalMO = calculadas.reduce((s, c) => s + c.apu.costoManoObra * c.linea.cantidad, 0);
-    const totalEquipo = calculadas.reduce((s, c) => s + c.apu.costoHerramienta * c.linea.cantidad, 0);
+    const costoDirecto = lineas.reduce((s, l) => s + (calculadas[l.id]?.subtotal ?? 0), 0);
+    const totalMaterial = lineas.reduce((s, l) => s + ((calculadas[l.id]?.costoMaterial ?? 0) * l.cantidad), 0);
+    const totalMO = lineas.reduce((s, l) => s + ((calculadas[l.id]?.costoManoObra ?? 0) * l.cantidad), 0);
+    const totalEquipo = lineas.reduce((s, l) => s + ((calculadas[l.id]?.costoHerramienta ?? 0) * l.cantidad), 0);
     const indirectos = costoDirecto * (meta.factorIndirectos / 100);
     const administrativos = costoDirecto * (meta.factorAdministrativos / 100);
     const imprevistos = costoDirecto * (meta.factorImprevistos / 100);
     const subtotal = costoDirecto + indirectos + administrativos + imprevistos;
     const utilidad = subtotal * (meta.factorUtilidad / 100);
     const total = subtotal + utilidad;
-    const tiempo = calculadas.reduce((s, c) => s + c.apu.dias, 0);
-    const totalPersonasDia = calculadas.reduce((s, c) => s + c.apu.totalPersonasDia, 0);
+    const tiempo = lineas.reduce((s, l) => s + (calculadas[l.id]?.dias ?? 0), 0);
+    const totalPersonasDia = lineas.reduce((s, l) => s + (calculadas[l.id]?.totalPersonasDia ?? 0), 0);
     return { calculadas, costoDirecto, totalMaterial, totalMO, totalEquipo, indirectos, administrativos, imprevistos, subtotal, utilidad, total, tiempo, totalPersonasDia };
-  }, [calculadas, meta]);
+  }, [calculadas, lineas, meta]);
 
   const validacion = useMemo(() => validarFactores({ ...meta, total: totales.total }), [meta, totales.total]);
 
@@ -487,12 +487,12 @@ const PresupuestoScreen: React.FC = () => {
             ) : (
               <div className="divide-y">
                 {lineas.map(l => {
-                  const calc = calculadas.find(c => c.linea.id === l.id);
+                  const apu = calculadas[l.id];
                   return (
                     <RenglonCard
                       key={l.id}
                       linea={l}
-                      apu={calc?.apu}
+                      apu={apu}
                       isOpen={expanded.has(l.id)}
                       onUpdate={updateLinea}
                       onUpdateSubMaterial={updateSubMaterial}
@@ -761,7 +761,31 @@ const RenglonCard = React.memo<{
       )}
     </div>
   );
-});
+}, areEqualRenglonCardProps);
+
+function areEqualRenglonCardProps(prev: React.ComponentProps<typeof RenglonCard>, next: React.ComponentProps<typeof RenglonCard>) {
+  if (prev.linea !== next.linea || prev.isOpen !== next.isOpen) return false;
+  const p = prev.apu;
+  const n = next.apu;
+  if (!p && !n) return true;
+  if (!p || !n) return false;
+  return (
+    p.costoMaterial === n.costoMaterial &&
+    p.costoManoObra === n.costoManoObra &&
+    p.costoHerramienta === n.costoHerramienta &&
+    p.costoUnitario === n.costoUnitario &&
+    p.subtotal === n.subtotal &&
+    p.dias === n.dias &&
+    p.totalPersonasDia === n.totalPersonasDia &&
+    prev.onUpdate === next.onUpdate &&
+    prev.onUpdateSubMaterial === next.onUpdateSubMaterial &&
+    prev.onUpdateSubMO === next.onUpdateSubMO &&
+    prev.onUpdateSubEquipo === next.onUpdateSubEquipo &&
+    prev.onUpdateMemoria === next.onUpdateMemoria &&
+    prev.onRemove === next.onRemove &&
+    prev.onToggle === next.onToggle
+  );
+}
 
 const Field = React.memo<{ label: string; value: number; onChange: (v: number) => void }>(({ label, value, onChange }) => (
   <div>
