@@ -132,6 +132,19 @@ export default {
         'spin-slow': {
           to: { transform: 'rotate(360deg)' },
         },
+        'slideInRight': {
+          from: { opacity: '0', transform: 'translateX(24px)' },
+          to: { opacity: '1', transform: 'translateX(0)' },
+        },
+        'slideInLeft': {
+          from: { opacity: '0', transform: 'translateX(-24px)' },
+          to: { opacity: '1', transform: 'translateX(0)' },
+        },
+        'bounceIn': {
+          '0%': { transform: 'scale(0.9)', opacity: '0' },
+          '50%': { transform: 'scale(1.02)' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -144,6 +157,9 @@ export default {
         'scale-in': 'scale-in 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         'pulse-soft': 'pulse-soft 2s ease-in-out infinite',
         'spin-slow': 'spin-slow 3s linear infinite',
+        'slideInRight': 'slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        'slideInLeft': 'slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        'bounceIn': 'bounceIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
       typography: {
         DEFAULT: {
