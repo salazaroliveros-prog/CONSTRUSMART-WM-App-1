@@ -6,13 +6,17 @@ export function exportPresupuestos(presupuestos: Presupuesto[], filename = 'pres
   const data = presupuestos.map(p => ({
     Proyecto: p.proyecto,
     Cliente: p.cliente,
+    Ubicacion: p.ubicacion || '',
+    Tipologia: p.tipologia || '',
     Fase: p.fase,
+    Costo_Directo: p.costo_directo || 0,
     Total: p.total,
     Avance_Fisico: `${p.avanceFisico}%`,
     Avance_Financiero: `${p.avanceFinanciero}%`,
     Ingresos: p.ingresos,
     Gastos: p.gastos,
     Pendiente_Aportar: p.pendienteAportar,
+    Utilidad: p.total > 0 ? (((p.ingresos || 0) - (p.gastos || 0)) / p.total * 100).toFixed(1) + '%' : '0%',
   }));
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(data);
@@ -27,9 +31,12 @@ export function exportTransacciones(transacciones: Transaccion[], presupuestos: 
     Proyecto: mapProyecto[t.proyectoId] || t.proyectoId,
     Tipo: t.tipo,
     Fecha: t.fecha,
-    Costo_Total: t.costoTotal,
-    Categoria: t.categoria,
     Descripcion: t.descripcion || '',
+    Categoria: t.categoria,
+    Cantidad: t.cantidad,
+    Unidad: t.unidad || '',
+    Costo_Unitario: t.costoUnitario,
+    Costo_Total: t.costoTotal,
   }));
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(data);
@@ -44,7 +51,10 @@ export function exportCompleto(presupuestos: Presupuesto[], transacciones: Trans
   const presData = presupuestos.map(p => ({
     Proyecto: p.proyecto,
     Cliente: p.cliente,
+    Ubicacion: p.ubicacion || '',
+    Tipologia: p.tipologia || '',
     Fase: p.fase,
+    Costo_Directo: p.costo_directo || 0,
     Total: p.total,
     Avance_Fisico: `${p.avanceFisico}%`,
     Ingresos: p.ingresos,
@@ -58,8 +68,12 @@ export function exportCompleto(presupuestos: Presupuesto[], transacciones: Trans
     Proyecto: mapProyecto[t.proyectoId] || t.proyectoId,
     Tipo: t.tipo,
     Fecha: t.fecha,
-    Monto: t.costoTotal,
+    Descripcion: t.descripcion || '',
     Categoria: t.categoria,
+    Cantidad: t.cantidad,
+    Unidad: t.unidad || '',
+    Costo_Unitario: t.costoUnitario,
+    Monto: t.costoTotal,
   }));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txData), 'Transacciones');
 
@@ -67,6 +81,10 @@ export function exportCompleto(presupuestos: Presupuesto[], transacciones: Trans
     Nombre: c.nombre,
     Telefono: c.telefono || '',
     Email: c.email || '',
+    Direccion: c.direccion || '',
+    Tipo_Proyecto: c.tipoProyecto || '',
+    Estado: c.estado || '',
+    Notas: c.notas || '',
   }));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cliData), 'Clientes');
 
