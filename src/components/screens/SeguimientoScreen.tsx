@@ -3,8 +3,10 @@ import { useAppContext } from '@/contexts/AppContext';
 import { PlanillaService } from '@/services/seguimiento/PlanillaService';
 import { GanttService } from '@/services/seguimiento/GanttService';
 import PageShell from '@/components/shared/PageShell';
+import GanttView from '@/components/shared/GanttView';
+import BitacoraAvancePanel from '@/components/shared/BitacoraAvancePanel';
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
-import { Download, FileText, Play, Users, Clock, Filter, TrendingUp, TrendingDown, BarChart3, PieChartIcon, Wallet, FolderKanban, Percent, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Download, FileText, Play, Users, Clock, Filter, TrendingUp, TrendingDown, BarChart3, PieChartIcon, Wallet, FolderKanban, Percent, ArrowLeft, ArrowRight, Eye, DollarSign, Calendar } from 'lucide-react';
 import type { Presupuesto } from '@/types/supabase';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 
@@ -238,37 +240,50 @@ const SeguimientoScreen: React.FC = () => {
               <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-md p-3 flex flex-col overflow-y-auto">
                 <h3 className="font-bold text-xs text-slate-800 mb-2 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-blue-700" />Ruta Crítica</h3>
                 <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
-                  {rutaCritica.length > 0 ? rutaCritica.map((r: any) => (
+                  {rutaCritica.length > 0 ? rutaCritica.filter(r => r.esRutaCritica).map((r: any) => (
                     <div key={r.id} className="flex justify-between p-2 border-b text-[11px]">
-                      <span>{r.descripcion}</span>
-                      <span className={r.esRutaCritica ? 'text-red-600 font-bold' : 'text-slate-500'}>Prioridad Alta</span>
+                      <span className="font-medium text-red-700">{r.descripcion}</span>
+                      <span className="text-red-600 font-bold">{r.duracionDias}d</span>
                     </div>
-                  )) : <div className="text-center py-4 text-slate-400 text-xs">Sin renglones en ruta crítica</div>}
+                  )) : <div className="text-center py-4 text-slate-400 text-xs">Seleccione un proyecto para ver su ruta crítica</div>}
                 </div>
               </div>
-              <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-md p-3 flex flex-col">
+              <div className="col-span-12 lg:col-span-5 bg-white rounded-xl shadow-md p-3 flex flex-col">
+                <h3 className="font-bold text-xs text-slate-800 mb-2 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-blue-700" />Gantt — {selectedProyecto ? presupuestos.find(p => p.id === selectedProyecto)?.proyecto : 'Seleccione un proyecto'}</h3>
+                <div className="flex-1 min-h-0">
+                  <GanttView presupuestos={selectedProyecto ? presupuestos.filter(p => p.id === selectedProyecto) : []} />
+                </div>
+              </div>
+              <div className="col-span-12 lg:col-span-3 bg-white rounded-xl shadow-md p-3 flex flex-col overflow-y-auto">
                 <h3 className="font-bold text-xs text-slate-800 mb-2 flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-emerald-600" />Control de Planilla</h3>
-                <div className="flex-1 flex flex-col justify-center items-center">
-                  <div className="p-4 bg-blue-50 rounded-lg text-center">
-                    <div className="text-[10px] text-blue-600 uppercase font-semibold">Inversión Personal</div>
-                    <div className="text-2xl font-bold text-blue-900">{fmtQ(gastosPersonal)}</div>
-                  </div>
-                  <div className="text-[10px] text-slate-400 mt-2 text-center">
-                    {selectedProyecto ? 'Proyecto seleccionado' : 'Seleccione un proyecto arriba'}
-                  </div>
+                <div className="space-y-2">
+                  {selectedProyecto ? (
+                    <>
+                      <div className="p-3 bg-blue-50 rounded-lg text-center">
+                        <div className="text-[10px] text-blue-600 uppercase font-semibold">Total Invertido</div>
+                        <div className="text-xl font-bold text-blue-900">{fmtQ(gastosPersonal)}</div>
+                      </div>
+                      <div className="text-[10px] font-semibold text-slate-500 uppercase mb-1">Últimos Pagos</div>
+                      {transacciones.filter(t => t.proyectoId === selectedProyecto && t.categoria === 'mano-obra').slice(0, 5).map(t => (
+                        <div key={t.id} className="flex justify-between items-center py-1.5 border-b text-[11px]">
+                          <div>
+                            <div className="text-slate-700">{t.descripcion || 'Pago'}</div>
+                            <div className="text-slate-400">{t.fecha}</div>
+                          </div>
+                          <div className="font-semibold text-emerald-700">{fmtQ(t.costoTotal)}</div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="text-center py-6 text-slate-400 text-xs">Seleccione un proyecto arriba</div>
+                  )}
                 </div>
               </div>
-              <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-md p-3 flex flex-col">
-                <h3 className="font-bold text-xs text-slate-800 mb-2 flex items-center gap-1.5"><Download className="w-3.5 h-3.5 text-blue-700" />Exportar Datos</h3>
-                <div className="flex-1 flex flex-col gap-3 justify-center">
-                  <button onClick={handleExportCSV} className="flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-4 py-3 rounded-lg text-sm font-semibold w-full justify-center">
-                    <Download className="w-4 h-4" /> Exportar CSV
-                  </button>
-                  <button onClick={handleExportPDF} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-lg text-sm font-semibold w-full justify-center">
-                    <FileText className="w-4 h-4" /> Exportar PDF
-                  </button>
+              {selectedProyecto && (
+                <div className="col-span-12 bg-white rounded-xl shadow-md p-3">
+                  <BitacoraAvancePanel presupuestoId={selectedProyecto} />
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>
@@ -276,12 +291,12 @@ const SeguimientoScreen: React.FC = () => {
 
       {/* Tables section (below the chart viewport) */}
       <div className="p-2 sm:p-3 space-y-4">
-        <ProyectosTabla titulo="Proyectos en Ejecución" proyectos={ejecucion} color="emerald" onAction={(p) => {
-          if (p.fase === 'ejecución') transicionFase(p.id, 'pausa');
-          else if (p.fase === 'pausa') transicionFase(p.id, 'ejecución');
-        }} actionLabel={(p) => p.fase === 'pausa' ? 'Reanudar' : 'Pausar'} />
+          <ProyectosTabla titulo="Proyectos en Ejecución" proyectos={ejecucion} color="emerald" onAction={(p) => {
+            if (p.fase === 'ejecución') transicionFase(p.id, 'pausa');
+            else if (p.fase === 'pausa') transicionFase(p.id, 'ejecución');
+          }} actionLabel={(p) => p.fase === 'pausa' ? 'Reanudar' : 'Pausar'} onVer={(p) => { setSelectedProyecto(p.id); setPagina(2); }} />
 
-        <ProyectosTabla titulo="Proyectos en Planeación" proyectos={planeacion} color="amber" onAction={(p) => transicionFase(p.id, 'ejecución')} actionLabel={() => 'Iniciar'} />
+        <ProyectosTabla titulo="Proyectos en Planeación" proyectos={planeacion} color="amber" onAction={(p) => transicionFase(p.id, 'ejecución')} actionLabel={() => 'Iniciar'} onVer={(p) => { setSelectedProyecto(p.id); setPagina(2); }} />
 
         {pausa.length > 0 && (
           <ProyectosTabla titulo="Proyectos en Pausa" proyectos={pausa} color="amber" onAction={(p) => transicionFase(p.id, 'ejecución')} actionLabel={() => 'Reanudar'} />
@@ -300,7 +315,8 @@ const ProyectosTabla: React.FC<{
   color: string;
   onAction?: (p: Presupuesto) => void;
   actionLabel?: (p: Presupuesto) => string;
-}> = ({ titulo, proyectos, color, onAction, actionLabel }) => {
+  onVer?: (p: Presupuesto) => void;
+}> = ({ titulo, proyectos, color, onAction, actionLabel, onVer }) => {
   const colors: Record<string, string> = {
     emerald: 'from-emerald-600 to-emerald-700',
     amber: 'from-amber-600 to-amber-700',
@@ -336,14 +352,20 @@ const ProyectosTabla: React.FC<{
                 <td className="p-2.5 text-right text-emerald-700 font-semibold">{fmtQ(p.ingresos)}</td>
                 <td className="p-2.5 text-right text-red-700 font-semibold">{fmtQ(p.gastos)}</td>
                 <td className="p-2.5 text-center">
-                  {onAction && actionLabel ? (
-                    <button onClick={() => onAction(p)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold text-white bg-blue-600 hover:bg-blue-700 transition">
-                      <Play className="w-3 h-3" /> {actionLabel(p)}
-                    </button>
-                  ) : (
-                    <span className="text-[10px] text-slate-400">-</span>
-                  )}
+                  <div className="flex items-center justify-center gap-1">
+                    {onVer && (
+                      <button onClick={() => onVer(p)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold text-blue-700 bg-blue-100 hover:bg-blue-200 transition">
+                        <Eye className="w-3 h-3" /> Ver
+                      </button>
+                    )}
+                    {onAction && actionLabel ? (
+                      <button onClick={() => onAction(p)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold text-white bg-blue-600 hover:bg-blue-700 transition">
+                        <Play className="w-3 h-3" /> {actionLabel(p)}
+                      </button>
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             ))}

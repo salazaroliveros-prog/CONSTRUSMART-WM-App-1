@@ -5,7 +5,7 @@ import GanttView from '@/components/shared/GanttView';
 import ProjectHeatMap from '@/components/shared/ProjectHeatMap';
 import { fmtQ } from '@/lib/exporters';
 import { AgenteInteligente } from '@/services/ai/AgenteInteligente';
-import { LayoutDashboard, BarChart3, TrendingUp, TrendingDown, DollarSign, Percent, Shield, AlertTriangle, ArrowLeft, ArrowRight, FolderKanban, Wallet, Users } from 'lucide-react';
+import { LayoutDashboard, BarChart3, TrendingUp, TrendingDown, DollarSign, Percent, Shield, AlertTriangle, ArrowLeft, ArrowRight, FolderKanban, Wallet, Users, ShoppingCart, PackageCheck } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid } from 'recharts';
 
 type KPIColor = 'emerald' | 'red' | 'blue' | 'indigo' | 'purple' | 'amber' | 'teal';
@@ -34,7 +34,7 @@ const KPI: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: 
 const PIE_COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899'];
 
 const Dashboard: React.FC = () => {
-  const { presupuestos, transacciones, loading } = useAppContext();
+  const { presupuestos, transacciones, loading, proveedores, ordenesCompra, setView } = useAppContext();
   const [pagina, setPagina] = useState(0);
   const [alertas, setAlertas] = useState<any[]>([]);
   const [filtroProyecto, setFiltroProyecto] = useState('todos');
@@ -64,8 +64,10 @@ const Dashboard: React.FC = () => {
     const totalPresupuestado = presupuestos.reduce((s, p) => s + (p.total || 0), 0);
     const balance = ingresos - gastos;
     const rentabilidad = totalPresupuestado > 0 ? (balance / totalPresupuestado) * 100 : 0;
-    return { ingresos, gastos, activos, totalPresupuestado, balance, rentabilidad };
-  }, [presupuestos, transacciones]);
+    const ocPendientes = ordenesCompra.filter(o => o.estatus === 'pendiente' || o.estatus === 'aprobada').length;
+    const proveedoresActivos = proveedores.filter(p => p.activo).length;
+    return { ingresos, gastos, activos, totalPresupuestado, balance, rentabilidad, ocPendientes, proveedoresActivos };
+  }, [presupuestos, transacciones, ordenesCompra, proveedores]);
 
   const gastosPorCategoria = useMemo(() => {
     const cats: Record<string, number> = {};
@@ -129,6 +131,14 @@ const Dashboard: React.FC = () => {
                 <KPI icon={Wallet} label="Balance" value={fmtQ(stats.balance)} color={stats.balance >= 0 ? 'blue' : 'red'} />
                 <KPI icon={FolderKanban} label="Proyectos" value={String(stats.activos)} color="indigo" />
                 <KPI icon={Percent} label="Rentabilidad" value={`${stats.rentabilidad.toFixed(1)}%`} color={stats.rentabilidad >= 0 ? 'teal' : 'amber'} />
+              </div>
+              <div className="col-span-12 grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-2">
+                <button onClick={() => setView('compras')} className="text-left">
+                  <KPI icon={ShoppingCart} label="OC Pendientes" value={String(stats.ocPendientes)} color="purple" />
+                </button>
+                <button onClick={() => setView('compras')} className="text-left">
+                  <KPI icon={PackageCheck} label="Proveedores" value={String(stats.proveedoresActivos)} color="indigo" />
+                </button>
               </div>
               <div className="col-span-12 lg:col-span-7 bg-white rounded-xl shadow-md p-3 flex flex-col">
                 <h3 className="font-bold text-xs text-slate-800 mb-1 flex items-center gap-1.5"><BarChart3 className="w-3.5 h-3.5 text-blue-700" />Avance Físico vs Financiero</h3>
@@ -244,6 +254,21 @@ const Dashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+              <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-md p-3">
+                <h3 className="font-bold text-xs text-slate-800 mb-1 flex items-center gap-1.5"><ShoppingCart className="w-3.5 h-3.5 text-purple-700" />OC Recientes</h3>
+                <div className="space-y-1 overflow-y-auto max-h-32">
+                  {ordenesCompra.slice(-5).reverse().map(oc => (
+                    <div key={oc.id} className="flex justify-between text-[10px] border-b border-slate-100 pb-0.5">
+                      <span className="truncate flex-1">{oc.folio} — {proveedores.find(p => p.id === oc.proveedorId)?.nombre || '—'}</span>
+                      <span className="font-semibold">{fmtQ(oc.total)}</span>
+                    </div>
+                  ))}
+                  {ordenesCompra.length === 0 && (
+                    <div className="text-[10px] text-slate-400 text-center py-4">Sin órdenes de compra</div>
+                  )}
+                </div>
+                <button onClick={() => setView('compras')} className="mt-2 text-[10px] text-blue-600 hover:text-blue-700 font-medium">Ir a Compras →</button>
               </div>
             </div>
           )}

@@ -726,6 +726,11 @@ CREATE POLICY "renglon_usage_owner" ON public.renglon_usage
   WITH CHECK (auth.uid() = user_id);
 
 -- 7.12. renglon_precios_historial (autorización vía renglones)
+DROP POLICY IF EXISTS "rph_select" ON public.renglon_precios_historial;
+DROP POLICY IF EXISTS "rph_insert" ON public.renglon_precios_historial;
+DROP POLICY IF EXISTS "rph_update" ON public.renglon_precios_historial;
+DROP POLICY IF EXISTS "rph_delete" ON public.renglon_precios_historial;
+
 CREATE POLICY "rph_select" ON public.renglon_precios_historial
   FOR SELECT TO authenticated
   USING (renglon_id IN (SELECT id FROM public.renglones WHERE user_id = auth.uid()));
