@@ -50,7 +50,7 @@ function useDeepCalc(lineas: LineaPresupuesto[]) {
 }
 
 const PresupuestoScreen: React.FC = () => {
-  const { clientes, session, presupuestos, addPresupuesto, updatePresupuesto, transicionFase } = useAppContext();
+  const { clientes, session, presupuestos, proyectos, addPresupuesto, updatePresupuesto, transicionFase } = useAppContext();
   const [tabFase, setTabFase] = useState<TabFase>('nuevo');
   const [tipologia, setTipologia] = useState<Tipologia>('general');
   const [search, setSearch] = useState('');
@@ -61,6 +61,7 @@ const PresupuestoScreen: React.FC = () => {
     proyecto: 'Proyecto sin nombre',
     cliente: '',
     ubicacion: 'Guatemala, Guatemala',
+    proyectoId: '',
     factorIndirectos: 12,
     factorAdministrativos: 8,
     factorImprevistos: 5,
@@ -306,6 +307,7 @@ const PresupuestoScreen: React.FC = () => {
         lineas,
         total,
         costo_directo: costoDirecto,
+        proyecto_id: meta.proyectoId || null,
       };
       if (savedPresupuestoId) {
         await updatePresupuesto(savedPresupuestoId, { ...payload, updated_at: new Date().toISOString() });
@@ -326,6 +328,10 @@ const PresupuestoScreen: React.FC = () => {
             <h3 className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2"><FileText className="w-4 h-4 text-blue-700" />Datos del Proyecto</h3>
             <div className="space-y-2">
               <input placeholder="Nombre del proyecto" value={meta.proyecto} onChange={e => setMeta({ ...meta, proyecto: e.target.value })} className="w-full px-2 py-1.5 text-xs border rounded" />
+              <select value={meta.proyectoId} onChange={e => setMeta({ ...meta, proyectoId: e.target.value })} className="w-full px-2 py-1.5 text-xs border rounded bg-white">
+                <option value="">-- Vincular a proyecto (opcional) --</option>
+                {proyectos.map(p => <option key={p.id} value={p.id}>{p.nombre} {p.cliente ? `(${p.cliente})` : ''}</option>)}
+              </select>
               <select value={meta.cliente} onChange={e => setMeta({ ...meta, cliente: e.target.value })} className="w-full px-2 py-1.5 text-xs border rounded bg-white">
                 <option value="">-- Seleccionar cliente --</option>
                 {clientes.map(c => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}

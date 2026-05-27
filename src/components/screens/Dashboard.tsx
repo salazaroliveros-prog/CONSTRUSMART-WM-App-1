@@ -99,8 +99,8 @@ const Dashboard: React.FC = () => {
     return () => { activo = false; };
   }, [presupuestos, transacciones]);
 
-  const nextPage = useCallback(() => setPagina(p => (p + 1) % totalPaginas), []);
-  const prevPage = useCallback(() => setPagina(p => (p - 1 + totalPaginas) % totalPaginas), []);
+  const nextPage = useCallback(() => setPagina(p => (p + 1) % totalPaginas), [totalPaginas]);
+  const prevPage = useCallback(() => setPagina(p => (p - 1 + totalPaginas) % totalPaginas), [totalPaginas]);
 
   // Optimización responsive: en pantallas pequeñas, forzar vista de lista simple en lugar de rejilla compleja
   const layoutClass = "min-h-dvh flex flex-col p-2 sm:p-3 overflow-hidden";

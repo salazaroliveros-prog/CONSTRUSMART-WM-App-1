@@ -8,33 +8,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { validarFactores, sugerirFactores, detectarAnomalias } from '@/utils/validacionPresupuesto';
-import type { Presupuesto } from '@/types/supabase';
+import type { Presupuesto, Transaccion } from '@/types/supabase';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AlertTriangle, CheckCircle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { CoreEngineService, type ProyeccionCashFlow } from '@/services/CoreEngineService';
 
 interface DashboardFinancieroProps {
   presupuesto: Presupuesto;
+  transacciones: Transaccion[];
 }
 
 export const DashboardFinanciero: React.FC<DashboardFinancieroProps> = ({
   presupuesto,
+  transacciones,
 }) => {
   // Validación de factores
   const validacion = validarFactores(presupuesto);
   const sugeridos = sugerirFactores(presupuesto.tipologia || 'general');
 
-  import { CoreEngineService } from '@/services/CoreEngineService';
-import { useQuery } from '@tanstack/react-query';
-import { useAppContext } from '@/contexts/AppContext';
+  const saldoInicial = transacciones.reduce(
+    (sum, t) => sum + (t.tipo === 'ingreso' ? t.costoTotal : -t.costoTotal),
+    0
+  );
 
-// Dentro del componente
-const { user } = useAppContext();
+  const { data: cashflow = [] } = useQuery<ProyeccionCashFlow[]>({
+    queryKey: ['cashflow', presupuesto.id, transacciones.length],
+    queryFn: () => CoreEngineService.proyectarCashflow(transacciones, saldoInicial, 30),
+    enabled: transacciones.length > 0,
+  });
 
-// Uso de CoreEngineService (temporalmente con mocks para no romper UI mientras unificamos)
-const { data: cashflow } = useQuery({
-  queryKey: ['cashflow', user?.id],
-  queryFn: () => CoreEngineService.proyectarCashflow([], 0, 30) // placeholder
-});
+  const alertasCashflow = CoreEngineService.detectarAlertas(cashflow);
 
   // Analizar anomalías
    
@@ -203,14 +207,82 @@ const { data: cashflow } = useQuery({
           </Card>
         </TabsContent>
 
-        {/* Tab: Cash Flow Proyectado - Por implementar */}
         <TabsContent value="cashflow" className="space-y-4">
-          <Alert className="border-blue-200 bg-blue-50">
-            <AlertTriangle className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800">
-              Módulo de Cash Flow próximamente disponible
-            </AlertDescription>
-          </Alert>
+          {cashflow.length === 0 ? (
+            <Alert className="border-blue-200 bg-blue-50">
+              <AlertTriangle className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                No hay datos de flujo de caja suficiente para proyectar. Registra transacciones de ingresos y gastos para ver la proyección.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Proyección de Cash Flow 30 días</CardTitle>
+                  <CardDescription>Una vista de ingresos, egresos y saldo acumulado.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={cashflow.map((item) => ({
+                        fecha: item.fecha.toLocaleDateString('es-GT', { day: '2-digit', month: 'short' }),
+                        ingresos: item.ingresos,
+                        egresos: item.egresos,
+                        saldoAcumulado: item.saldoAcumulado,
+                      }))}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="fecha" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip formatter={(value: number) => `Q${value.toLocaleString()}`} />
+                        <Bar dataKey="ingresos" fill="#10B981" name="Ingresos" />
+                        <Bar dataKey="egresos" fill="#EF4444" name="Egresos" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Resumen de Proyección</CardTitle>
+                  <CardDescription>Saldo acumulado y alertas de liquidez.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-slate-50 rounded-lg">
+                    <p className="text-sm text-slate-600">Saldo inicial estimado</p>
+                    <p className="text-2xl font-bold">Q{saldoInicial.toLocaleString()}</p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-lg">
+                    <p className="text-sm text-slate-600">Saldo final proyectado</p>
+                    <p className="text-2xl font-bold">Q{cashflow[cashflow.length - 1]?.saldoAcumulado.toLocaleString()}</p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-lg">
+                    <p className="text-sm text-slate-600">Ingresos totales</p>
+                    <p className="text-2xl font-bold">Q{cashflow.reduce((sum, item) => sum + item.ingresos, 0).toLocaleString()}</p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-lg">
+                    <p className="text-sm text-slate-600">Egresos totales</p>
+                    <p className="text-2xl font-bold">Q{cashflow.reduce((sum, item) => sum + item.egresos, 0).toLocaleString()}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {alertasCashflow.length > 0 && (
+                <Alert className="border-red-200 bg-red-50">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-800">
+                    <strong>Alertas de caja</strong>
+                    <ul className="mt-2 space-y-1">
+                      {alertasCashflow.map((mensaje, i) => (
+                        <li key={i} className="text-sm">• {mensaje}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
         </TabsContent>
 
         {/* Tab: Alertas General */}

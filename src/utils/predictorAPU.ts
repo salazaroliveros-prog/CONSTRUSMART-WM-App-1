@@ -58,8 +58,9 @@ export function predecirPresupuesto(
   tipologia: string,
   presupuestoBase: number
 ): PrediccionPresupuesto {
+  // 🔴 CORREGIDO: usar avanceFisico en lugar del campo 'avance' inexistente
   const relacionados = presupuestosAnteriores.filter(
-    (p) => p.tipologia === tipologia && p.total > 0 && p.avance && p.avance > 0.3 // Proyectos con avance mínimo
+    (p) => p.tipologia === tipologia && p.total > 0 && (p.avanceFisico ?? 0) > 30 // 30% de avance físico mínimo
   );
 
   if (relacionados.length === 0) {

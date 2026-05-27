@@ -1,10 +1,7 @@
 import { PresupuestosService } from '@/services/presupuestos/PresupuestosService';
-import { FinancieroService } from '@/services/financiero/FinancieroService';
+import { CoreEngineService } from '@/services/CoreEngineService';
 
 export const AgenteInteligente = {
-  /**
-   * Analiza la salud del proyecto y genera alertas proactivas.
-   */
   /**
    * Analiza la salud del proyecto y genera alertas proactivas.
    * Proporciona sugerencias para la activación automática del proyecto.
@@ -12,7 +9,7 @@ export const AgenteInteligente = {
   async diagnosticarProyecto(presupuesto: any, transacciones: any[]) {
     const gastosReal = transacciones
       .filter(t => t.proyectoId === presupuesto.id && t.tipo === 'gasto')
-      .reduce((s, t) => s + t.costoTotal, 0);
+      .reduce((s: number, t: any) => s + (t.costoTotal || 0), 0);
       
     const desviacion = PresupuestosService.analizarDesviacion(presupuesto, gastosReal);
     
@@ -42,6 +39,18 @@ export const AgenteInteligente = {
         tipo: 'alerta',
         proyecto: presupuesto.proyecto,
         mensaje: `El gasto financiero (${presupuesto.avanceFinanciero}%) supera al avance físico (${presupuesto.avanceFisico || 0}%) por más del 20%.`
+      });
+    }
+
+    // 3. Salud Financiera Global (Solo se agrega si hay transacciones relevantes)
+    const salud = CoreEngineService.analizarSaludFinanciera(transacciones);
+    if (salud.estado !== 'buena') {
+      salud.alertas.forEach((msg: string) => {
+        alertas.push({
+          tipo: salud.estado === 'critica' ? 'alerta' : 'sugerencia',
+          proyecto: 'Global / Personal',
+          mensaje: msg
+        });
       });
     }
 

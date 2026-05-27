@@ -21,10 +21,10 @@ import { z } from 'zod';
 export const AvanceSchema = z.object({
   id: z.string().uuid().optional(),
   presupuesto_id: z.string().uuid(),
-  user_id: z.string().uuid(),
+  user_id: z.string().uuid().optional(),
   fecha: z.string(),
-  avance_fisico: z.number().min(0).max(100),
-  descripcion: z.string().min(1),
+  avance: z.number().min(0).max(100),
+  notas: z.string().min(1),
   created_at: z.string().optional(),
 });
 export type Avance = z.infer<typeof AvanceSchema>;

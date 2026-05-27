@@ -18,8 +18,8 @@ export interface ProyeccionCashFlow {
 
 export const CoreEngineService = {
   // --- APU ENGINE ---
-  calcularRenglon(renglon: Renglon) {
-    return calcularAPU(renglon);
+  calcularRenglon(renglon: Renglon, cantidad: number = 1) {
+    return calcularAPU({ ...renglon, cantidad });
   },
 
   // --- CASH FLOW ENGINE (Unificado) ---
@@ -158,6 +158,42 @@ export const CoreEngineService = {
 
   calcularDuracionRutaCritica(dias: number) {
     return Math.max(1, Math.round(dias));
+  },
+
+  /**
+   * Analiza la salud financiera global comparando gastos personales vs utilidad bruta
+   */
+  analizarSaludFinanciera(transacciones: Transaccion[]) {
+    const ingresos = transacciones.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
+    const gastoOperativo = transacciones.filter(t => t.tipo === 'gasto' && ['materiales', 'mano-obra', 'herramienta', 'sub-contrato', 'transporte'].includes(t.categoria)).reduce((s, t) => s + t.costoTotal, 0);
+    const gastoAdmin = transacciones.filter(t => t.tipo === 'gasto' && ['administrativo', 'fijos'].includes(t.categoria)).reduce((s, t) => s + t.costoTotal, 0);
+    const gastoPersonal = transacciones.filter(t => t.tipo === 'gasto' && ['personal', 'hogar'].includes(t.categoria)).reduce((s, t) => s + t.costoTotal, 0);
+    
+    const utilidadBruta = ingresos - gastoOperativo - gastoAdmin;
+    const ratioGastoPersonal = utilidadBruta > 0 ? (gastoPersonal / utilidadBruta) * 100 : (gastoPersonal > 0 ? 100 : 0);
+    
+    let estado: 'buena' | 'advertencia' | 'critica' = 'buena';
+    const alertas: string[] = [];
+
+    if (utilidadBruta <= 0 && gastoPersonal > 0) {
+      estado = 'critica';
+      alertas.push('🚨 CRÍTICO: No hay utilidad bruta y se están realizando retiros personales.');
+    } else if (ratioGastoPersonal > 80) {
+      estado = 'critica';
+      alertas.push(`🚨 CRÍTICO: Gastos personales (${ratioGastoPersonal.toFixed(1)}%) exceden el 80% de la utilidad bruta.`);
+    } else if (ratioGastoPersonal > 50) {
+      estado = 'advertencia';
+      alertas.push(`⚠️ ADVERTENCIA: Gastos personales (${ratioGastoPersonal.toFixed(1)}%) superan el 50% de la utilidad bruta.`);
+    }
+
+    return {
+      ingresos,
+      utilidadBruta,
+      gastoPersonal,
+      ratioGastoPersonal,
+      estado,
+      alertas
+    };
   }
 };
 export type { Renglon };
