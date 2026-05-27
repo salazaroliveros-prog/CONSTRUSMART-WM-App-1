@@ -166,12 +166,17 @@
   animation: fadeIn 0.35s ease-out;
 }
 
+/* Solo animar en montaje inicial, no en cada re-render.
+   La animación se ejecuta exactamente UNA vez gracias a la key en AppLayout.
+   Usamos animation-fill-mode: backwards para evitar el flash inicial de opacity:0 */
 .animate-slide-right {
   animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: backwards;
 }
 
 .animate-slide-left {
   animation: slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: backwards;
 }
 
 .animate-pulse-glow {

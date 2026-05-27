@@ -34,7 +34,10 @@ export interface User {
   avatar: string;
 }
 
-interface AppContextType {
+// ===================== AUTH CONTEXT =====================
+// Contiene SOLO lo que AppLayout necesita: view, session, loading
+// Esto evita que AppLayout re-renderice cuando los datos CRUD cambian
+interface AuthContextType {
   view: ViewType;
   setView: (v: ViewType) => void;
   session: Session | null;
@@ -45,43 +48,6 @@ interface AppContextType {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   user: User;
-
-  clientes: Cliente[];
-  addCliente: (c: CreateCliente) => Promise<void>;
-  updateCliente: (id: string, c: UpdateCliente) => Promise<void>;
-  deleteCliente: (id: string) => Promise<void>;
-
-  proyectos: Proyecto[];
-  addProyecto: (p: CreateProyecto) => Promise<void>;
-  updateProyecto: (id: string, p: UpdateProyecto) => Promise<void>;
-
-  transacciones: Transaccion[];
-  addTransaccion: (t: CreateTransaccion) => Promise<void>;
-  deleteTransaccion: (id: string) => Promise<void>;
-
-  actividades: Actividad[];
-  addActividad: (a: CreateActividad) => Promise<void>;
-  deleteActividad: (id: string) => Promise<void>;
-
-  presupuestos: Presupuesto[];
-  addPresupuesto: (p: CreatePresupuestoInput) => Promise<string | null>;
-  updatePresupuesto: (id: string, p: UpdatePresupuesto) => Promise<void>;
-  deletePresupuesto: (id: string) => Promise<void>;
-  transicionFase: (id: string, nuevaFase: Presupuesto['fase']) => Promise<void>;
-
-  equipos: Equipo[];
-  addEquipo: (e: CreateEquipo) => Promise<void>;
-  updateEquipo: (id: string, e: UpdateEquipo) => Promise<void>;
-  deleteEquipo: (id: string) => Promise<void>;
-
-  equipoMiembros: EquipoMiembro[];
-  addEquipoMiembro: (em: CreateEquipoMiembro) => Promise<void>;
-  updateEquipoMiembro: (id: string, em: UpdateEquipoMiembro) => Promise<void>;
-  deleteEquipoMiembro: (id: string) => Promise<void>;
-
-  proveedores: Proveedor[];
-  ordenesCompra: OrdenCompra[];
-
   sidebarOpen: boolean;
   toggleSidebar: () => void;
   darkMode: boolean;
@@ -90,11 +56,63 @@ interface AppContextType {
   pendingCount: number;
 }
 
-const AppContext = createContext<AppContextType | undefined>(undefined);
-export const useAppContext = () => {
-  const ctx = useContext(AppContext);
-  if (!ctx) throw new Error('useAppContext must be used within AppProvider');
-  return ctx;
+// ===================== DATA CONTEXT =====================
+// Contiene los datos CRUD que cambian frecuentemente
+interface DataContextType {
+  clientes: Cliente[];
+  addCliente: (c: CreateCliente) => Promise<void>;
+  updateCliente: (id: string, c: UpdateCliente) => Promise<void>;
+  deleteCliente: (id: string) => Promise<void>;
+  proyectos: Proyecto[];
+  addProyecto: (p: CreateProyecto) => Promise<void>;
+  updateProyecto: (id: string, p: UpdateProyecto) => Promise<void>;
+  transacciones: Transaccion[];
+  addTransaccion: (t: CreateTransaccion) => Promise<void>;
+  deleteTransaccion: (id: string) => Promise<void>;
+  actividades: Actividad[];
+  addActividad: (a: CreateActividad) => Promise<void>;
+  deleteActividad: (id: string) => Promise<void>;
+  presupuestos: Presupuesto[];
+  addPresupuesto: (p: CreatePresupuestoInput) => Promise<string | null>;
+  updatePresupuesto: (id: string, p: UpdatePresupuesto) => Promise<void>;
+  deletePresupuesto: (id: string) => Promise<void>;
+  transicionFase: (id: string, nuevaFase: Presupuesto['fase']) => Promise<void>;
+  equipos: Equipo[];
+  addEquipo: (e: CreateEquipo) => Promise<void>;
+  updateEquipo: (id: string, e: UpdateEquipo) => Promise<void>;
+  deleteEquipo: (id: string) => Promise<void>;
+  equipoMiembros: EquipoMiembro[];
+  addEquipoMiembro: (em: CreateEquipoMiembro) => Promise<void>;
+  updateEquipoMiembro: (id: string, em: UpdateEquipoMiembro) => Promise<void>;
+  deleteEquipoMiembro: (id: string) => Promise<void>;
+  proveedores: Proveedor[];
+  ordenesCompra: OrdenCompra[];
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const DataContext = createContext<DataContextType | undefined>(undefined);
+
+// Hook unificado que combina ambos contextos para compatibilidad hacia atrás
+// Los consumidores existentes siguen funcionando sin cambios
+export const useAppContext = (): AuthContextType & DataContextType => {
+  const auth = useContext(AuthContext);
+  const data = useContext(DataContext);
+  if (!auth) throw new Error('useAppContext must be used within AppProvider');
+  if (!data) throw new Error('useAppContext must be used within AppProvider');
+  // Combinar ambos contextos en uno devuelto
+  return { ...auth, ...data };
+};
+
+export const useAuthContext = () => {
+  const auth = useContext(AuthContext);
+  if (!auth) throw new Error('useAuthContext must be used within AppProvider');
+  return auth;
+};
+
+export const useDataContext = () => {
+  const data = useContext(DataContext);
+  if (!data) throw new Error('useDataContext must be used within AppProvider');
+  return data;
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -200,7 +218,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const sessionTimeout = setTimeout(() => {
       if (mountedRef.current) {
-        // Session timeout
         setLoading(false);
         setView('login');
       }
@@ -221,7 +238,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setView('login');
         }
       } catch (err) {
-        // Session recovery error handled
         if (!mountedRef.current) return;
         setAuthError('No se pudo recuperar la sesión. Por favor, inicia sesión nuevamente.');
         setView('login');
@@ -234,7 +250,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     initSession();
 
-    // Escuchar cambios de autenticación (NO durante la inicialización)
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event: string, s: Session | null) => {
       if (!initDoneRef.current) return;
       setSession(s);
@@ -249,7 +264,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
-    // Online / offline detection
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     window.addEventListener('online', handleOnline);
@@ -280,7 +294,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // eslint-disable-next-line react-hooks/exhaustive-deps
    }, []);
 
-   // Actualizar pendingCount cuando cambia session user y al reconectar
    useEffect(() => {
      if (session?.user.id) {
        setPendingCount(getPendingCount(session.user.id));
@@ -289,7 +302,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
      }
    }, [session?.user.id]);
 
-   // Sincronizar mutaciones pendientes al reconectar
    const syncingRef = useRef(false);
    useEffect(() => {
      if (!isOnline || !session?.user.id || syncingRef.current) return;
@@ -339,7 +351,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
          } else if (fail > 0) {
            toast.warning(`${ok} sincronizado${ok > 1 ? 's' : ''}, ${fail} pendiente${fail > 1 ? 's' : ''}`);
          }
-         // Recargar datos frescos
          await loadAll(session.user.id);
        }
        syncingRef.current = false;
@@ -348,9 +359,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOnline, session?.user.id]);
 
- // Setup realtime listeners para todas las tablas
-   const setupRealtimeListeners = (userId: string) => {
-     // Clientes realtime
+ const setupRealtimeListeners = (userId: string) => {
      if (realtimeClientes.current) realtimeClientes.current.unsubscribe();
      realtimeClientes.current = supabase
        .channel('clientes')
@@ -364,7 +373,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        })
        .subscribe();
 
-     // Proyectos realtime
      if (realtimeProyectos.current) realtimeProyectos.current.unsubscribe();
      realtimeProyectos.current = supabase
        .channel('proyectos')
@@ -378,7 +386,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        })
        .subscribe();
 
-      // Presupuestos realtime
       if (realtimePresupuestos.current) realtimePresupuestos.current.unsubscribe();
       realtimePresupuestos.current = supabase
         .channel('presupuestos')
@@ -392,7 +399,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
         .subscribe();
 
-      // Transacciones realtime
       if (realtimeTransacciones.current) realtimeTransacciones.current.unsubscribe();
      realtimeTransacciones.current = supabase
        .channel('transacciones')
@@ -406,7 +412,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        })
        .subscribe();
 
-     // Actividades realtime
      if (realtimeActividades.current) realtimeActividades.current.unsubscribe();
      realtimeActividades.current = supabase
        .channel('actividades')
@@ -420,7 +425,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        })
        .subscribe();
 
-     // Equipos realtime
      if (realtimeEquipos.current) realtimeEquipos.current.unsubscribe();
      realtimeEquipos.current = supabase
        .channel('equipos')
@@ -434,7 +438,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        })
        .subscribe();
 
-     // Equipo Miembros realtime
      if (realtimeEquipoMiembros.current) realtimeEquipoMiembros.current.unsubscribe();
      realtimeEquipoMiembros.current = supabase
        .channel('equipo_miembros')
@@ -448,7 +451,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        })
        .subscribe();
 
-     // Renglones realtime
      if (realtimeRenglones.current) realtimeRenglones.current.unsubscribe();
      realtimeRenglones.current = supabase
        .channel('renglones')
@@ -458,7 +460,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        }, () => { /* feature hook refreshes on mount */ })
        .subscribe();
 
-     // Renglon usage realtime
      if (realtimeRenglonUsage.current) realtimeRenglonUsage.current.unsubscribe();
      realtimeRenglonUsage.current = supabase
        .channel('renglon_usage')
@@ -468,7 +469,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        }, () => {})
        .subscribe();
 
-     // Renglon precios historial (no user_id — RLS via renglones subquery)
      if (realtimeRenglonPrecios.current) realtimeRenglonPrecios.current.unsubscribe();
      realtimeRenglonPrecios.current = supabase
        .channel('renglon_precios_historial')
@@ -477,7 +477,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        }, () => {})
        .subscribe();
 
-     // Cambios presupuesto (no user_id — RLS via presupuestos subquery)
      if (realtimeCambios.current) realtimeCambios.current.unsubscribe();
      realtimeCambios.current = supabase
        .channel('cambios_presupuesto')
@@ -486,7 +485,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        }, () => {})
        .subscribe();
 
-     // Materiales proyecto (no user_id — RLS via presupuestos subquery)
      if (realtimeMateriales.current) realtimeMateriales.current.unsubscribe();
      realtimeMateriales.current = supabase
        .channel('materiales_proyecto')
@@ -495,7 +493,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        }, () => {})
        .subscribe();
 
-     // Movimientos materiales (tiene user_id)
      if (realtimeMovimientos.current) realtimeMovimientos.current.unsubscribe();
      realtimeMovimientos.current = supabase
        .channel('movimientos_materiales')
@@ -505,7 +502,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        }, () => {})
        .subscribe();
 
-     // Conciliaciones (tiene user_id)
      if (realtimeConciliaciones.current) realtimeConciliaciones.current.unsubscribe();
      realtimeConciliaciones.current = supabase
        .channel('conciliaciones')
@@ -515,7 +511,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        }, () => {})
        .subscribe();
 
-     // Partidas conciliacion (no user_id — RLS via conciliaciones subquery)
      if (realtimePartidas.current) realtimePartidas.current.unsubscribe();
      realtimePartidas.current = supabase
        .channel('partidas_conciliacion')
@@ -524,7 +519,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        }, () => {})
        .subscribe();
 
-     // Checklist items (no user_id — RLS via presupuestos subquery)
      if (realtimeChecklist.current) realtimeChecklist.current.unsubscribe();
      realtimeChecklist.current = supabase
        .channel('checklist_items')
@@ -533,7 +527,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        }, () => {})
        .subscribe();
 
-     // Notificaciones (tiene user_id)
      if (realtimeNotificaciones.current) realtimeNotificaciones.current.unsubscribe();
      realtimeNotificaciones.current = supabase
        .channel('notificaciones')
@@ -556,10 +549,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setClientes(prev => [dbToCliente(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-           
           setClientes(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToCliente(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-           
           setClientes(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -567,10 +558,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setProyectos(prev => [dbToProyecto(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-           
           setProyectos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToProyecto(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-           
           setProyectos(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -578,10 +567,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setTransacciones(prev => [dbToTransaccion(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-           
           setTransacciones(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToTransaccion(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-           
           setTransacciones(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -589,10 +576,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setPresupuestos(prev => [dbToPresupuesto(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-           
           setPresupuestos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToPresupuesto(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-           
           setPresupuestos(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -600,10 +585,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setActividades(prev => [dbToActividad(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-           
           setActividades(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToActividad(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-           
           setActividades(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -611,10 +594,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setEquipos(prev => [dbToEquipo(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-           
           setEquipos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToEquipo(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-           
           setEquipos(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -622,10 +603,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setEquipoMiembros(prev => [dbToEquipoMiembro(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-           
           setEquipoMiembros(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToEquipoMiembro(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-           
           setEquipoMiembros(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
@@ -939,8 +918,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const userId = session.user.id;
     const tmpId = crypto.randomUUID();
     try {
-      // Construir payload DIRECTAMENTE con nombres de columna de la DB
-      // NO usar presupuestoToDb (es para updates parciales)
       const dbRecord = {
         user_id: userId,
         proyecto: p.proyecto?.trim() || 'Sin nombre',
@@ -948,7 +925,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ubicacion: p.ubicacion || null,
         tipologia: p.tipologia || null,
         fase: p.fase || 'planeación',
-        proyecto_id: null,
+        proyecto_id: p.proyectoId || null,
         factor_indirectos: p.factor_indirectos ?? 12,
         factor_administrativos: p.factor_administrativos ?? 8,
         factor_imprevistos: p.factor_imprevistos ?? 5,
@@ -1179,8 +1156,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const toggleSidebar = useCallback(() => setSidebarOpen(p => !p), []);
   const toggleDarkMode = useCallback(() => setDarkMode(p => !p), []);
 
-  const contextValue = useMemo(() => ({
+  // ===== AUTH CONTEXT VALUE (ESTABLE) =====
+  // Solo cambia cuando view, session o loading cambian
+  // NO incluye los arrays de datos CRUD
+  const authContextValue = useMemo(() => ({
     view, setView, session, loading, authError, signIn, signUp, signInWithGoogle, signOut, user,
+    sidebarOpen, toggleSidebar,
+    darkMode, toggleDarkMode,
+    isOnline, pendingCount,
+  }), [
+    view, session, loading, authError, user,
+    sidebarOpen, darkMode, isOnline, pendingCount,
+  ]);
+
+  // ===== DATA CONTEXT VALUE (DINÁMICO) =====
+  // Cambia cuando los arrays de datos cambian (por Realtime o CRUD)
+  const dataContextValue = useMemo(() => ({
     clientes, addCliente, updateCliente, deleteCliente,
     proyectos, addProyecto, updateProyecto,
     transacciones, addTransaccion, deleteTransaccion,
@@ -1189,18 +1180,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     equipos, addEquipo, updateEquipo, deleteEquipo,
     equipoMiembros, addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
     proveedores, ordenesCompra,
-    sidebarOpen, toggleSidebar,
-    darkMode, toggleDarkMode,
-    isOnline, pendingCount,
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [
-    view, session, loading, authError, user,
     clientes, proyectos, transacciones, actividades, presupuestos, equipos, equipoMiembros, proveedores, ordenesCompra,
-    sidebarOpen, darkMode, isOnline, pendingCount,
   ]);
+
   return (
-    <AppContext.Provider value={contextValue}>
-      {children}
-    </AppContext.Provider>
+    <AuthContext.Provider value={authContextValue}>
+      <DataContext.Provider value={dataContextValue}>
+        {children}
+      </DataContext.Provider>
+    </AuthContext.Provider>
   );
 };
+
