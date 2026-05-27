@@ -4,6 +4,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { NotificationService } from '@/services/equipos/NotificationService';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { supabase } from '@/lib/supabase';
 
 interface Notif {
   id: string;
