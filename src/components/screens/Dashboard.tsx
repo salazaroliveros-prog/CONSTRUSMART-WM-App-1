@@ -103,11 +103,27 @@ const Dashboard: React.FC = () => {
   const prevPage = useCallback(() => setPagina(p => (p - 1 + totalPaginas) % totalPaginas), [totalPaginas]);
 
   // Optimización responsive: en pantallas pequeñas, forzar vista de lista simple en lugar de rejilla compleja
-  const layoutClass = "min-h-dvh flex flex-col p-2 sm:p-3 overflow-hidden";
-  const gridClass = "grid grid-cols-12 gap-2 sm:gap-3 h-full pb-16 sm:pb-0";
+  // Responsive layout — en móvil usamos scroll vertical en lugar de grid fijo
+  const layoutClass = "min-h-dvh flex flex-col p-1 sm:p-3 overflow-x-hidden";
+  const gridClass = "grid grid-cols-12 gap-1 sm:gap-3";
 
   return (
     <PageShell title="Panel de Control">
+      {/* Mobile Filter Bar - compacto para móvil */}
+      <div className="flex sm:hidden items-center gap-1 px-1 pb-1 sticky top-[57px] z-10 bg-background">
+        <button onClick={prevPage} className="p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"><ArrowLeft className="w-4 h-4" /></button>
+        <div className="flex gap-1">
+          {Array.from({ length: totalPaginas }).map((_, i) => (
+            <button key={i} onClick={() => setPagina(i)} className={`w-3 h-3 rounded-full transition ${i === pagina ? 'bg-blue-700 dark:bg-blue-400' : 'bg-slate-300 dark:bg-slate-600'}`} />
+          ))}
+        </div>
+        <button onClick={nextPage} className="p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"><ArrowRight className="w-4 h-4" /></button>
+        <div className="flex-1" />
+        <select value={filtroProyecto} onChange={e => setFiltroProyecto(e.target.value)} className="text-[10px] px-2 py-1.5 border rounded-lg bg-white dark:bg-gray-800 dark:border-gray-600 max-w-[120px] truncate">
+          <option value="todos">Todos</option>
+          {presupuestos.map(p => <option key={p.id} value={p.id} className="truncate">{p.proyecto}</option>)}
+        </select>
+      </div>
       <div className={layoutClass}>
         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
           <div className="flex items-center gap-2">
@@ -138,14 +154,14 @@ const Dashboard: React.FC = () => {
                 <button onClick={() => setView('compras')} className="text-left"><KPI icon={ShoppingCart} label="OC Pend." value={String(stats.ocPendientes)} color="purple" /></button>
               </div>
               
-              <div className="col-span-12 lg:col-span-7 bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-3 flex flex-col min-h-[250px]">
+              <div className="col-span-12 lg:col-span-7 bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-3 flex flex-col min-h-[200px] sm:min-h-[250px]">
                 <h3 className="font-bold text-xs text-slate-800 dark:text-gray-100 mb-2 flex items-center gap-1.5"><BarChart3 className="w-3.5 h-3.5 text-blue-700" />Análisis de Valor Ganado (Curva S)</h3>
                 <div className="flex-1 min-h-0">
                   <CurvaSChart data={curvaSData} />
                 </div>
               </div>
               
-              <div className="col-span-12 lg:col-span-5 bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-3 flex flex-col min-h-[250px]">
+              <div className="col-span-12 lg:col-span-5 bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-3 flex flex-col min-h-[200px] sm:min-h-[250px]">
                 <h3 className="font-bold text-xs text-slate-800 dark:text-gray-100 mb-2 flex items-center gap-1.5"><LayoutDashboard className="w-3.5 h-3.5 text-blue-700" />Proyectos en Gantt</h3>
                 <div className="flex-1 min-h-0 overflow-hidden">
                   <GanttView />
@@ -156,7 +172,7 @@ const Dashboard: React.FC = () => {
 
           {pagina === 1 && (
             <div className="grid grid-cols-12 gap-3 h-full">
-              <div className="col-span-12 lg:col-span-7 bg-white rounded-xl shadow-md p-3 flex flex-col">
+              <div className="col-span-12 lg:col-span-7 bg-white rounded-xl shadow-md p-3 flex flex-col min-h-[200px]">
                 <h3 className="font-bold text-xs text-slate-800 mb-1 flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5 text-blue-700" />Flujo de Caja Mensual</h3>
                 <div className="flex-1 min-h-0">
                   <ResponsiveContainer width="100%" height="100%">
@@ -171,7 +187,7 @@ const Dashboard: React.FC = () => {
                   </ResponsiveContainer>
                 </div>
               </div>
-              <div className="col-span-12 lg:col-span-5 bg-white rounded-xl shadow-md p-3 flex flex-col">
+              <div className="col-span-12 lg:col-span-5 bg-white rounded-xl shadow-md p-3 flex flex-col min-h-[200px]">
                 <h3 className="font-bold text-xs text-slate-800 mb-1 flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-blue-700" />Gastos por Categoría</h3>
                 <div className="flex-1 min-h-0">
                   <ResponsiveContainer width="100%" height="100%">
@@ -186,7 +202,7 @@ const Dashboard: React.FC = () => {
               </div>
               <div className="col-span-12 bg-white rounded-xl shadow-md p-3">
                 <h3 className="font-bold text-xs text-slate-800 mb-1 flex items-center gap-1.5"><BarChart3 className="w-3.5 h-3.5 text-blue-700" />Comparativa Mensual</h3>
-                <div className="h-24">
+                <div className="h-28 sm:h-24">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={flujoMensual} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
                       <XAxis dataKey="mes" tick={{ fontSize: 9 }} />

@@ -343,6 +343,32 @@
 .stagger-children > *:nth-child(10) { animation-delay: 0.30s; }
 
 /* ============================================
+   RESPONSIVE TABLE HELPERS
+   ============================================ */
+@media (max-width: 639px) {
+  .responsive-table {
+    font-size: 9px;
+  }
+  .responsive-table th,
+  .responsive-table td {
+    padding: 0.375rem 0.5rem;
+    white-space: nowrap;
+  }
+  .responsive-table td.text-right,
+  .responsive-table th.text-right {
+    padding-right: 0.25rem;
+  }
+}
+
+/* Touch target minimum size for mobile */
+@media (max-width: 639px) {
+  .touch-min {
+    min-height: 36px;
+    min-width: 36px;
+  }
+}
+
+/* ============================================
    CARD & SURFACE EFFECTS
    ============================================ */
 .card-hover {

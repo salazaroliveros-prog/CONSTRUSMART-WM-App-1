@@ -214,7 +214,7 @@ const BodegaScreen: React.FC = () => {
             {/* Material Table */}
             <div className="bg-white rounded-xl shadow-md overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <table className="w-full text-xs responsive-table">
                   <thead className="bg-gradient-to-r from-blue-800 to-blue-700 text-white">
                     <tr>
                       <th className="p-2.5 text-left">Material</th>
