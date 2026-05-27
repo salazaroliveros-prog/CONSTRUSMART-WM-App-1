@@ -3,7 +3,10 @@ import { useAppContext } from '@/contexts/AppContext';
 import PageShell from '@/components/shared/PageShell';
 import GanttView from '@/components/shared/GanttView';
 import ProjectHeatMap from '@/components/shared/ProjectHeatMap';
+import { CurvaSChart } from '@/components/shared/CurvaSChart';
 import { fmtQ } from '@/lib/exporters';
+import { CoreEngineService } from '@/services/CoreEngineService';
+import { useQuery } from '@tanstack/react-query';
 import { AgenteInteligente } from '@/services/ai/AgenteInteligente';
 import { LayoutDashboard, BarChart3, TrendingUp, TrendingDown, DollarSign, Percent, Shield, AlertTriangle, ArrowLeft, ArrowRight, FolderKanban, Wallet, Users, ShoppingCart, PackageCheck } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid } from 'recharts';
@@ -40,122 +43,51 @@ const Dashboard: React.FC = () => {
   const [filtroProyecto, setFiltroProyecto] = useState('todos');
   const totalPaginas = 3;
 
-  useEffect(() => {
-    const run = async () => {
-      const todas: any[] = [];
-      for (const p of presupuestos) {
-        const diag = await AgenteInteligente.diagnosticarProyecto(p, transacciones);
-        todas.push(...diag);
-      }
-      setAlertas(todas);
-    };
-    if (!loading) run();
-  }, [presupuestos, transacciones, loading]);
-
-  const filteredPresupuestos = useMemo(() => {
-    if (filtroProyecto === 'todos') return presupuestos;
-    return presupuestos.filter(p => p.id === filtroProyecto);
-  }, [presupuestos, filtroProyecto]);
-
-  const stats = useMemo(() => {
-    const ingresos = transacciones.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
-    const gastos = transacciones.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
-    const activos = presupuestos.filter(p => p.fase === 'ejecución' || p.fase === 'planeación').length;
-    const totalPresupuestado = presupuestos.reduce((s, p) => s + (p.total || 0), 0);
-    const balance = ingresos - gastos;
-    const rentabilidad = totalPresupuestado > 0 ? (balance / totalPresupuestado) * 100 : 0;
-    const ocPendientes = ordenesCompra.filter(o => o.estatus === 'pendiente' || o.estatus === 'aprobada').length;
-    const proveedoresActivos = proveedores.filter(p => p.activo).length;
-    return { ingresos, gastos, activos, totalPresupuestado, balance, rentabilidad, ocPendientes, proveedoresActivos };
-  }, [presupuestos, transacciones, ordenesCompra, proveedores]);
-
-  const gastosPorCategoria = useMemo(() => {
-    const cats: Record<string, number> = {};
-    transacciones.filter(t => t.tipo === 'gasto').forEach(t => { cats[t.categoria] = (cats[t.categoria] || 0) + t.costoTotal; });
-    return Object.entries(cats).map(([name, value]) => ({ name, value }));
-  }, [transacciones]);
-
-  const flujoMensual = useMemo(() => {
-    const map: Record<string, { ingresos: number; gastos: number }> = {};
-    transacciones.forEach(t => {
-      const mes = t.fecha?.slice(0, 7);
-      if (!mes) return;
-      if (!map[mes]) map[mes] = { ingresos: 0, gastos: 0 };
-      if (t.tipo === 'ingreso') map[mes].ingresos += t.costoTotal;
-      else map[mes].gastos += t.costoTotal;
-    });
-    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b)).slice(-6).map(([mes, v]) => ({ mes, ...v }));
-  }, [transacciones]);
-
-  const avanceData = useMemo(() => {
-    const ejecucion = presupuestos.filter(p => p.fase === 'ejecución');
-    if (ejecucion.length === 0) return [{ name: 'Sin datos', fisico: 0, financiero: 0 }];
-    return ejecucion.slice(0, 8).map(p => ({
-      name: p.proyecto.slice(0, 14),
-      fisico: p.avanceFisico ?? 0,
-      financiero: p.avanceFinanciero ?? 0,
-    }));
-  }, [presupuestos]);
-
-  const nextPage = useCallback(() => setPagina(p => (p + 1) % totalPaginas), []);
-  const prevPage = useCallback(() => setPagina(p => (p - 1 + totalPaginas) % totalPaginas), []);
+  // Optimización responsive: en pantallas pequeñas, forzar vista de lista simple en lugar de rejilla compleja
+  const layoutClass = "min-h-dvh flex flex-col p-2 sm:p-3 overflow-hidden";
+  const gridClass = "grid grid-cols-12 gap-2 sm:gap-3 h-full pb-16 sm:pb-0";
 
   return (
     <PageShell title="Panel de Control">
-      <div className="min-h-dvh flex flex-col p-2 sm:p-3">
+      <div className={layoutClass}>
         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Página {pagina + 1} / {totalPaginas}</span>
-            <button onClick={prevPage} className="p-1 rounded hover:bg-slate-100 text-slate-500"><ArrowLeft className="w-4 h-4" /></button>
-            <div className="flex gap-1">
+            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider hidden xs:block">Página {pagina + 1} / {totalPaginas}</span>
+            <button onClick={prevPage} className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"><ArrowLeft className="w-4 h-4" /></button>
+            <div className="flex gap-1.5">
               {Array.from({ length: totalPaginas }).map((_, i) => (
-                <button key={i} onClick={() => setPagina(i)} className={`w-2 h-2 rounded-full transition ${i === pagina ? 'bg-blue-700' : 'bg-slate-300'}`} />
+                <button key={i} onClick={() => setPagina(i)} className={`w-2.5 h-2.5 rounded-full transition ${i === pagina ? 'bg-blue-700 dark:bg-blue-400' : 'bg-slate-300 dark:bg-slate-600'}`} />
               ))}
             </div>
-            <button onClick={nextPage} className="p-1 rounded hover:bg-slate-100 text-slate-500"><ArrowRight className="w-4 h-4" /></button>
+            <button onClick={nextPage} className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"><ArrowRight className="w-4 h-4" /></button>
           </div>
-          <div className="flex items-center gap-2">
-            <select value={filtroProyecto} onChange={e => setFiltroProyecto(e.target.value)} className="text-[10px] px-2 py-1 border rounded bg-white">
-              <option value="todos">Todos los proyectos</option>
-              {presupuestos.map(p => <option key={p.id} value={p.id}>{p.proyecto}</option>)}
-            </select>
-          </div>
+          <select value={filtroProyecto} onChange={e => setFiltroProyecto(e.target.value)} className="text-[11px] px-3 py-1.5 border rounded-lg bg-white dark:bg-gray-800 dark:border-gray-600">
+            <option value="todos">Todos los proyectos</option>
+            {presupuestos.map(p => <option key={p.id} value={p.id}>{p.proyecto}</option>)}
+          </select>
         </div>
 
-        <div className="h-[calc(100%-2.5rem)] overflow-y-auto">
+        <div className="flex-1 overflow-y-auto">
           {pagina === 0 && (
-            <div className="grid grid-cols-12 gap-3 h-full">
-              <div className="col-span-12 grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-2">
+            <div className={gridClass}>
+              <div className="col-span-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                 <KPI icon={TrendingUp} label="Ingresos" value={fmtQ(stats.ingresos)} color="emerald" />
                 <KPI icon={TrendingDown} label="Gastos" value={fmtQ(stats.gastos)} color="red" />
                 <KPI icon={Wallet} label="Balance" value={fmtQ(stats.balance)} color={stats.balance >= 0 ? 'blue' : 'red'} />
                 <KPI icon={FolderKanban} label="Proyectos" value={String(stats.activos)} color="indigo" />
-                <KPI icon={Percent} label="Rentabilidad" value={`${stats.rentabilidad.toFixed(1)}%`} color={stats.rentabilidad >= 0 ? 'teal' : 'amber'} />
+                <KPI icon={Percent} label="Rentab." value={`${stats.rentabilidad.toFixed(1)}%`} color={stats.rentabilidad >= 0 ? 'teal' : 'amber'} />
+                <button onClick={() => setView('compras')} className="text-left"><KPI icon={ShoppingCart} label="OC Pend." value={String(stats.ocPendientes)} color="purple" /></button>
               </div>
-              <div className="col-span-12 grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-2">
-                <button onClick={() => setView('compras')} className="text-left">
-                  <KPI icon={ShoppingCart} label="OC Pendientes" value={String(stats.ocPendientes)} color="purple" />
-                </button>
-                <button onClick={() => setView('compras')} className="text-left">
-                  <KPI icon={PackageCheck} label="Proveedores" value={String(stats.proveedoresActivos)} color="indigo" />
-                </button>
-              </div>
-              <div className="col-span-12 lg:col-span-7 bg-white rounded-xl shadow-md p-3 flex flex-col">
-                <h3 className="font-bold text-xs text-slate-800 mb-1 flex items-center gap-1.5"><BarChart3 className="w-3.5 h-3.5 text-blue-700" />Avance Físico vs Financiero</h3>
+              
+              <div className="col-span-12 lg:col-span-7 bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-3 flex flex-col min-h-[250px]">
+                <h3 className="font-bold text-xs text-slate-800 dark:text-gray-100 mb-2 flex items-center gap-1.5"><BarChart3 className="w-3.5 h-3.5 text-blue-700" />Análisis de Valor Ganado (Curva S)</h3>
                 <div className="flex-1 min-h-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={avanceData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                      <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                      <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} />
-                      <Tooltip contentStyle={{ fontSize: 10 }} />
-                      <Bar dataKey="fisico" fill="#1E3A8A" name="Físico %" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="financiero" fill="#10B981" name="Financiero %" radius={[2, 2, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <CurvaSChart data={curvaSData} />
                 </div>
               </div>
-              <div className="col-span-12 lg:col-span-5 bg-white rounded-xl shadow-md p-3 flex flex-col">
-                <h3 className="font-bold text-xs text-slate-800 mb-1 flex items-center gap-1.5"><LayoutDashboard className="w-3.5 h-3.5 text-blue-700" />Proyectos en Gantt</h3>
+              
+              <div className="col-span-12 lg:col-span-5 bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-3 flex flex-col min-h-[250px]">
+                <h3 className="font-bold text-xs text-slate-800 dark:text-gray-100 mb-2 flex items-center gap-1.5"><LayoutDashboard className="w-3.5 h-3.5 text-blue-700" />Proyectos en Gantt</h3>
                 <div className="flex-1 min-h-0 overflow-hidden">
                   <GanttView />
                 </div>
@@ -225,10 +157,17 @@ const Dashboard: React.FC = () => {
                     <div className="text-[11px] text-slate-400 text-center py-6">Sin alertas activas</div>
                   ) : (
                     alertas.map((a, i) => (
-                      <div key={i} className={`text-[10px] p-2 rounded flex items-start gap-1.5 ${a.tipo === 'alerta' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
-                        <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
-                        <div><strong>{a.proyecto}:</strong> {a.mensaje}</div>
-                      </div>
+                        <div key={i} className={`text-[10px] p-2 rounded flex items-start gap-1.5 ${a.tipo === 'alerta' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
+                          <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                          <div>
+                            <strong>{a.proyecto}:</strong> {a.mensaje}
+                            {a.tipo === 'sugerencia' && (
+                              <button onClick={() => transicionFase(presupuestos.find(p => p.proyecto === a.proyecto)?.id || '', 'ejecución')} className="block text-[9px] mt-1 underline">
+                                Activar proyecto ahora
+                              </button>
+                            )}
+                          </div>
+                        </div>
                     ))
                   )}
                 </div>

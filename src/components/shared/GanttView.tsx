@@ -1,22 +1,23 @@
 import React, { useMemo, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { calcularAPU } from '@/data/renglones';
+import { GanttService, type RenglonCPM } from '@/services/seguimiento/GanttService';
 import type { Renglon } from '@/data/renglones';
 
-const faseGanttColor: Record<string, string> = {
-  'planeación': 'bg-purple-400',
-  'ejecución': 'bg-blue-500',
-  'pausa': 'bg-amber-400',
-  'finalizado': 'bg-emerald-500',
+const faseColor: Record<string, string> = {
+  planeación: 'bg-purple-400',
+  ejecución: 'bg-blue-500',
+  pausa: 'bg-amber-400',
+  finalizado: 'bg-emerald-500',
 };
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-interface Actividad {
+interface ActividadGantt {
   nombre: string;
   inicioSemana: number;
   duracionSemanas: number;
-  color: string;
+  esCritica: boolean;
+  holgura: number;
 }
 
 interface ProyectoGantt {
@@ -26,10 +27,14 @@ interface ProyectoGantt {
   avanceFisico: number;
   inicioSemana: number;
   duracionSemanas: number;
-  actividades: Actividad[];
+  actividades: ActividadGantt[];
 }
 
-const GanttView: React.FC = () => {
+interface GanttViewProps {
+  proyectoId?: string;
+}
+
+const GanttView: React.FC<GanttViewProps> = ({ proyectoId }) => {
   const { presupuestos } = useAppContext();
   const [semanaOffset, setSemanaOffset] = useState(0);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -40,80 +45,73 @@ const GanttView: React.FC = () => {
     return d;
   }, [semanaOffset]);
 
-  const semanas = useMemo(() => {
-    const inicio = new Date(hoy);
-    inicio.setDate(inicio.getDate() - inicio.getDay());
-    return Array.from({ length: 12 }, (_, i) => {
-      const d = new Date(inicio);
-      d.setDate(d.getDate() + i * 7);
-      return d;
-    });
-  }, [hoy]);
-
   const semanaRef = useMemo(() => {
     const inicio = new Date(hoy);
     inicio.setDate(inicio.getDate() - inicio.getDay());
     return inicio.getTime();
   }, [hoy]);
 
-  const proyectos = useMemo(() => {
-    const lineasColor = [
-      'bg-blue-400', 'bg-cyan-400', 'bg-teal-400', 'bg-indigo-400',
-      'bg-violet-400', 'bg-rose-400', 'bg-orange-400', 'bg-lime-500',
-    ];
+  const totalSemanas = 12;
 
-    function diffSemanas(fecha: Date): number {
-      return Math.round((fecha.getTime() - semanaRef) / (7 * 86400000));
-    }
+  const semanas = useMemo(() => {
+    const inicio = new Date(hoy);
+    inicio.setDate(inicio.getDate() - inicio.getDay());
+    return Array.from({ length: totalSemanas }, (_, i) => {
+      const d = new Date(inicio);
+      d.setDate(d.getDate() + i * 7);
+      return d;
+    });
+  }, [hoy]);
 
-    return presupuestos
-      .filter(p => p.fase === 'ejecución' || p.fase === 'planeación')
-      .slice(0, 8)
-      .map(p => {
-        const inicio = p.fechaInicio ? new Date(p.fechaInicio) : null;
-        const fin = p.fechaFin ? new Date(p.fechaFin) : null;
+  const proyectos = useMemo((): ProyectoGantt[] => {
+    const diffSemanas = (fecha: Date) =>
+      Math.round((fecha.getTime() - semanaRef) / (7 * 86400000));
+    const filtrados = proyectoId
+      ? presupuestos.filter(p => p.id === proyectoId)
+      : presupuestos.filter(p => p.fase === 'ejecución' || p.fase === 'planeación');
 
-        let inicioSemana: number;
-        let duracionSemanas: number;
+    return filtrados.slice(0, 6).map(p => {
+      const lineasArr = (p.lineas || []) as (Renglon & { cantidad: number })[];
+      const nodos: RenglonCPM[] = lineasArr.length > 0
+        ? GanttService.calcularRutaCritica(lineasArr)
+        : [];
 
-        if (inicio && fin && fin > inicio) {
-          inicioSemana = diffSemanas(inicio);
-          duracionSemanas = Math.max(1, Math.round((fin.getTime() - inicio.getTime()) / (7 * 86400000)));
-        } else {
-          const lineasArr = (p.lineas || []) as (Renglon & { cantidad: number })[];
-          const totalDias = lineasArr.reduce((s, l) => s + calcularAPU(l).dias, 0);
-          duracionSemanas = Math.max(2, Math.ceil(totalDias / 5));
-          inicioSemana = inicio ? diffSemanas(inicio) : (presupuestos.indexOf(p) % 3);
-        }
+      const inicio = p.fechaInicio ? new Date(p.fechaInicio) : null;
+      const fin = p.fechaFin ? new Date(p.fechaFin) : null;
 
-        const actividades: Actividad[] = [];
-        const lineasArr = (p.lineas || []) as (Renglon & { cantidad: number })[];
-        let accSem = 0;
-        lineasArr.slice(0, 10).forEach((l, i) => {
-          const d = calcularAPU(l).dias;
-          const sem = Math.max(0.5, d / 5);
-          if (accSem + sem <= duracionSemanas || actividades.length < 3) {
-            actividades.push({
-              nombre: l.descripcion || l.codigo,
-              inicioSemana: inicioSemana + accSem,
-              duracionSemanas: sem,
-              color: lineasColor[i % lineasColor.length],
-            });
-            accSem += sem;
-          }
-        });
+      let inicioSemana: number;
+      let duracionSemanas: number;
 
-        return {
-          id: p.id,
-          proyecto: p.proyecto,
-          fase: p.fase,
-          avanceFisico: p.avanceFisico ?? 0,
-          inicioSemana,
-          duracionSemanas,
-          actividades,
-        } as ProyectoGantt;
-      });
-  }, [presupuestos, semanaRef]);
+      if (inicio && fin && fin > inicio) {
+        inicioSemana = diffSemanas(inicio);
+        duracionSemanas = Math.max(1, Math.round((fin.getTime() - inicio.getTime()) / (7 * 86400000)));
+      } else if (nodos.length > 0) {
+        duracionSemanas = GanttService.diasASemanas(nodos[nodos.length - 1]?.EF ?? 1);
+        inicioSemana = inicio ? diffSemanas(inicio) : (presupuestos.indexOf(p) % 3);
+      } else {
+        duracionSemanas = 2;
+        inicioSemana = 0;
+      }
+
+      const actividades: ActividadGantt[] = nodos.map(n => ({
+        nombre: n.descripcion,
+        inicioSemana: inicioSemana + GanttService.diasASemanas(n.ES),
+        duracionSemanas: GanttService.diasASemanas(n.duracionDias),
+        esCritica: n.esRutaCritica,
+        holgura: n.holgura,
+      }));
+
+      return {
+        id: p.id,
+        proyecto: p.proyecto,
+        fase: p.fase,
+        avanceFisico: p.avanceFisico ?? 0,
+        inicioSemana,
+        duracionSemanas,
+        actividades,
+      };
+    });
+  }, [presupuestos, proyectoId, semanaRef]);
 
   const toggleExpand = (id: string) => {
     setExpanded(prev => {
@@ -129,9 +127,9 @@ const GanttView: React.FC = () => {
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xs font-bold text-slate-700">Línea de Tiempo Gantt</h3>
         <div className="flex gap-1">
-          <button onClick={() => setSemanaOffset(s => s - 4)} className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded btn-press-sm">‹ Anterior</button>
-          <button onClick={() => setSemanaOffset(0)} className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded btn-press-sm">Hoy</button>
-          <button onClick={() => setSemanaOffset(s => s + 4)} className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded btn-press-sm">Siguiente ›</button>
+          <button onClick={() => setSemanaOffset(s => s - 4)} className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded">‹ Anterior</button>
+          <button onClick={() => setSemanaOffset(0)} className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded">Hoy</button>
+          <button onClick={() => setSemanaOffset(s => s + 4)} className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded">Siguiente ›</button>
         </div>
       </div>
 
@@ -146,18 +144,15 @@ const GanttView: React.FC = () => {
 
       <div className="space-y-1 max-h-72 overflow-y-auto">
         {proyectos.map(p => {
-          const leftPct = `${(p.inicioSemana / 12) * 100}%`;
-          const widthPct = `${(p.duracionSemanas / 12) * 100}%`;
+          const leftPct = `${(p.inicioSemana / totalSemanas) * 100}%`;
+          const widthPct = `${(p.duracionSemanas / totalSemanas) * 100}%`;
 
           return (
             <div key={p.id}>
               <div className="flex items-center gap-2">
                 <div className="text-[10px] font-medium text-slate-700 truncate shrink-0 flex items-center gap-1" style={{ width: '130px' }}>
                   {p.actividades.length > 0 && (
-                    <button
-                      onClick={() => toggleExpand(p.id)}
-                      className="text-slate-400 hover:text-slate-600 p-0.5"
-                    >
+                    <button onClick={() => toggleExpand(p.id)} className="text-slate-400 hover:text-slate-600 p-0.5">
                       {expanded.has(p.id) ? '▾' : '▸'}
                     </button>
                   )}
@@ -165,29 +160,34 @@ const GanttView: React.FC = () => {
                 </div>
                 <div className="flex-1 relative h-5 bg-slate-100 rounded">
                   <div
-                    className={`absolute h-full rounded ${faseGanttColor[p.fase] || 'bg-slate-400'} opacity-80 hover:opacity-100 transition-opacity cursor-pointer`}
+                    className={`absolute h-full rounded ${faseColor[p.fase] || 'bg-slate-400'} opacity-80 hover:opacity-100 transition-opacity cursor-pointer`}
                     style={{ left: leftPct, width: widthPct, minWidth: '4px' }}
                     title={`${p.proyecto} · ${p.fase} · Avance: ${p.avanceFisico}%`}
                   >
-                    <div className="text-[7px] text-white font-bold px-1 leading-5 truncate">
-                      {p.avanceFisico}%
-                    </div>
+                    <div className="text-[7px] text-white font-bold px-1 leading-5 truncate">{p.avanceFisico}%</div>
                   </div>
                 </div>
               </div>
 
               {expanded.has(p.id) && p.actividades.map((act, i) => {
-                const aLeft = `${(act.inicioSemana / 12) * 100}%`;
-                const aWidth = `${(act.duracionSemanas / 12) * 100}%`;
+                const aLeft = `${(act.inicioSemana / totalSemanas) * 100}%`;
+                const aWidth = `${(act.duracionSemanas / totalSemanas) * 100}%`;
+                const barColor = act.esCritica
+                  ? 'bg-red-500'
+                  : act.holgura <= 2
+                    ? 'bg-amber-400'
+                    : 'bg-blue-400';
                 return (
                   <div key={i} className="flex items-center gap-2 pl-4">
-                    <div className="text-[8px] text-slate-500 truncate shrink-0 italic" style={{ width: '126px' }}>
-                      {act.nombre}
+                    <div className="text-[8px] text-slate-500 truncate shrink-0 italic flex items-center gap-1" style={{ width: '126px' }}>
+                      {act.esCritica && <span className="text-red-500 font-bold" title="Ruta crítica">⚠</span>}
+                      <span className="truncate">{act.nombre}</span>
                     </div>
                     <div className="flex-1 relative h-3 bg-slate-50 rounded">
                       <div
-                        className={`absolute h-full rounded ${act.color} opacity-70`}
+                        className={`absolute h-full rounded ${barColor} ${act.esCritica ? 'opacity-90' : 'opacity-70'}`}
                         style={{ left: aLeft, width: aWidth, minWidth: '3px' }}
+                        title={`${act.nombre} · ${act.duracionSemanas.toFixed(1)} sem · Holgura: ${act.holgura.toFixed(1)} días${act.esCritica ? ' · RUTA CRÍTICA' : ''}`}
                       />
                     </div>
                   </div>

@@ -1,7 +1,8 @@
 import { calcularAPU, type Renglon } from '@/data/renglones';
 
-interface RenglonCPM {
+export interface RenglonCPM {
   id: string;
+  codigo: string;
   descripcion: string;
   duracionDias: number;
   predecesores: string[];
@@ -21,66 +22,96 @@ interface RenglonConLinea extends Renglon {
   cantidad: number;
 }
 
+export interface Dependencia {
+  predecesor: string;
+  sucesor: string;
+}
+
+function buildNodos(renglones: RenglonConLinea[], dependencias: Dependencia[]): RenglonCPM[] {
+  const nodos: RenglonCPM[] = renglones.map((r) => {
+    const apu = calcularAPU(r);
+    const duracion = Math.max(1, Math.round(apu.dias || apu.totalPersonasDia || 1));
+    return {
+      id: r.id || r.codigo,
+      codigo: r.codigo,
+      descripcion: r.descripcion || r.codigo,
+      duracionDias: duracion,
+      predecesores: [] as string[],
+      sucesores: [] as string[],
+      ES: 0, EF: 0, LS: 0, LF: 0,
+      holgura: 0, esRutaCritica: false,
+    };
+  });
+
+  const idx = new Map(nodos.map(n => [n.id, n]));
+
+  for (const dep of dependencias) {
+    const pred = idx.get(dep.predecesor);
+    const suc = idx.get(dep.sucesor);
+    if (pred && suc) {
+      suc.predecesores.push(pred.id);
+      pred.sucesores.push(suc.id);
+    }
+  }
+
+  return nodos;
+}
+
 export const GanttService = {
-  calcularRutaCritica(renglones: RenglonConLinea[], duracionTotalDias: number): RenglonCPM[] {
+  calcularRutaCritica(
+    renglones: RenglonConLinea[],
+    dependencias?: Dependencia[]
+  ): RenglonCPM[] {
     if (renglones.length === 0) return [];
 
-    const nodos: RenglonCPM[] = renglones.map((r, i) => {
-      const apu = calcularAPU(r);
-      const duracion = Math.max(1, Math.round(apu.dias || apu.totalPersonasDia || 1));
-      const predecesores: string[] = [];
-      if (i > 0) predecesores.push(renglones[i - 1].codigo);
-      return {
-        id: r.id || r.codigo || String(i),
-        descripcion: r.descripcion || r.codigo,
-        duracionDias: duracion,
-        predecesores,
-        sucesores: [],
-        ES: 0, EF: 0,
-        LS: 0, LF: 0,
-        holgura: 0,
-        esRutaCritica: false,
-      };
-    });
+    const deps = dependencias ?? renglones.slice(1).map((r, i) => ({
+      predecesor: renglones[i].id || renglones[i].codigo,
+      sucesor: r.id || r.codigo,
+    }));
 
-    for (const n of nodos) {
-      for (const pred of n.predecesores) {
-        const p = nodos.find(x => x.id === pred);
-        if (p) p.sucesores.push(n.id);
-      }
-    }
+    const nodos = buildNodos(renglones, deps);
 
+    // Forward pass: Cálculo de ES (Early Start) y EF (Early Finish)
+    const sortedForward = [...nodos].sort((a, b) => a.id.localeCompare(b.id)); // Simulación de orden topológico básico
     for (const n of nodos) {
-      if (n.predecesores.length === 0) {
-        n.ES = 0;
-      } else {
-        n.ES = Math.max(...n.predecesores.map(p => {
-          const pred = nodos.find(x => x.id === p);
-          return pred ? pred.EF : 0;
-        }));
-      }
+      n.ES = n.predecesores.length === 0
+        ? 0
+        : Math.max(...n.predecesores.map(pId => {
+            const pred = nodos.find(x => x.id === pId);
+            return pred ? pred.EF : 0;
+          }));
       n.EF = n.ES + n.duracionDias;
     }
 
-    const proyectoFin = Math.max(...nodos.map(n => n.EF), duracionTotalDias);
+    // Backward pass: Cálculo de LS (Late Start) y LF (Late Finish)
+    const proyectoFin = Math.max(...nodos.map(n => n.EF));
 
     for (let i = nodos.length - 1; i >= 0; i--) {
       const n = nodos[i];
-      if (n.sucesores.length === 0) {
-        n.LF = proyectoFin;
-      } else {
-        n.LF = Math.min(...n.sucesores.map(s => {
-          const suc = nodos.find(x => x.id === s);
-          return suc ? suc.LS : proyectoFin;
-        }));
-      }
+      n.LF = n.sucesores.length === 0
+        ? proyectoFin
+        : Math.min(...n.sucesores.map(sId => {
+            const suc = nodos.find(x => x.id === sId);
+            return suc ? suc.LS : proyectoFin;
+          }));
       n.LS = n.LF - n.duracionDias;
-      n.holgura = n.LS - n.ES;
-      n.esRutaCritica = Math.abs(n.holgura) < 0.5;
+      n.holgura = Math.max(0, n.LS - n.ES);
+      n.esRutaCritica = n.holgura === 0;
     }
 
     return nodos;
   },
+
+  diasASemanas(dias: number): number {
+    return Math.max(0.5, Math.ceil(dias / 5));
+  },
+
+  generarDependenciasSecuenciales(renglones: RenglonConLinea[]): Dependencia[] {
+    return renglones.slice(1).map((r, i) => ({
+      predecesor: renglones[i].id || renglones[i].codigo,
+      sucesor: r.id || r.codigo,
+    }));
+  },
 };
 
-export type { RenglonCPM };
+export type { Dependencia };

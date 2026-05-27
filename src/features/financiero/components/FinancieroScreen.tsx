@@ -1,4 +1,4 @@
-import { CashFlowService } from '@/services/financiero/CashFlowService';
+import { CoreEngineService } from '@/services/CoreEngineService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import React, { useMemo, useState, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
@@ -49,7 +49,7 @@ const KPI: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: 
 
 const FinancieroScreen: React.FC = () => {
   const { transacciones, presupuestos, deleteTransaccion } = useAppContext();
-  const proyeccion = useMemo(() => CashFlowService.proyectarTendencia(transacciones), [transacciones]);
+  const proyeccion = useMemo(() => CoreEngineService.proyectarTendencia(transacciones), [transacciones]);
   const [filterTipo, setFilterTipo] = useState<'todos' | 'ingreso' | 'gasto'>('todos');
   const [filterCat, setFilterCat] = useState<string>('todos');
   const [filterProy, setFilterProy] = useState<string>('todos');

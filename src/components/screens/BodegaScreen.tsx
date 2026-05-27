@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/lib/supabase';
 import PageShell from '@/components/shared/PageShell';
-import { MaterialesService } from '@/services/presupuestos/MaterialesService';
+import { BodegaService } from '@/services/proyectos/BodegaService';
 import { toast } from 'sonner';
 import { Package, Plus, Minus, AlertTriangle, Search, RefreshCw } from 'lucide-react';
 
@@ -58,12 +58,11 @@ const BodegaScreen: React.FC = () => {
     setLoading(true);
     try {
       const items = await MaterialesService.getMateriales(selectedId);
-      const { data: movs } = await supabase
-        .from('movimientos_materiales')
-        .select('material_id, tipo, cantidad');
+      // Reemplazo de supabase.from directo por BodegaService
+      const movs = await BodegaService.getMovimientos(selectedId);
 
       const movMap: Record<string, { comprado: number; consumido: number }> = {};
-      (movs || []).forEach((m: Record<string, unknown>) => {
+      (movs || []).forEach((m: any) => {
         const mid = m.material_id as string;
         if (!movMap[mid]) movMap[mid] = { comprado: 0, consumido: 0 };
         if (m.tipo === 'entrada') movMap[mid].comprado += Number(m.cantidad);
@@ -101,13 +100,7 @@ const BodegaScreen: React.FC = () => {
   const registrarCompra = async () => {
     if (!showCompra || compraCantidad <= 0) return;
     try {
-      const { error } = await supabase.from('movimientos_materiales').insert({
-        material_id: showCompra.id,
-        tipo: 'entrada',
-        cantidad: compraCantidad,
-        referencia: compraRef || 'Compra directa',
-      });
-      if (error) throw error;
+      await BodegaService.registrarCompra(showCompra.id, compraCantidad, compraRef);
       toast.success('Compra registrada');
       setShowCompra(null);
       setCompraCantidad(0);

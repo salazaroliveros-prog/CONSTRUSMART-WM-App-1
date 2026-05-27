@@ -1,0 +1,296 @@
+si vamos a enfocarnos en el modulo de prsupuesto que es el nucleo y principal componente de esta aplicacion. 
+
+eres un arquitecto y a la vez tambien eres ingeniero civil e ingeniero en sistemas entoces haciendo uso de ese gran conocimiento y capacidad analiza todos los elementos y funciones del actual modulo y lo vamos a levar muchomas con mejores resultados agregandole nuevas capacidades, interandole mucha mas memoria de calculo y renglones asi como algoritmos automaticos de calculo, puedes factoriza el formato y la forma de procsar la informacion y presentarla en patalla en tiempo real per se necesita que tod sea automatico que el usuario selo agregara cantidades de trabajos y el sistema calcule todo en tiempo real, y tambien que puedan ser editables los datos para reajustes o cambio de algo y el sistema recalcua de nuevo todo para presentar nueo dato a la hora de cambiar algo. 
+
+bien entoces tambien se requiere que proporcione al usuario en pantalla todos los renglones que ya pose por defecto agregares mas subrengloes de los que tiene donde presente cantidad unitaria de materiales asi como sus costos de igual manera editales, todo automatico por ejemplo esta el renglon normal pero al despegarlo presenta sub renglones como cantidad de mtriales, costo unitario, mano de obra cantidad de persona asi si el usuario cambia un dato de mano de obra auntomaticamente el sistema cambia el tiempo de duracion de la obra, en fin presentara cantidad de materiales y costos unitario, cantidad y costo de mano de obra apus completas por renglon. tipo consertina. y en la exportacion de resumenes derenglones en pdf y csv que ya lleven le formato avanzado tipo tabla de rsumen derenglones y toda la informacion de cantidades o explosion de materiales unitarios.
+
+dejo en tus manos dejar este motor de cuatificador en tus manos agregando e implementado mas funciones avanzadas a tu sugerencia integra todo lo que consideres escencial y util para esta herramienta, los demas modulos son el complemento de darle seguimiento y analisis de datos para presentarlos en graficas a base de los resultados de este modulo y la activacion de los proyectos en ejecucion, ya que para eevarlo a un ERP tipo softwre empresarial ejecutivo tienes que im0lementarle las aplicaciones mas avanzadas y autonomas.
+
+los modulos requeridos y a tu sgerencia puedes implementar mas
+
+proyectos ( registro de clientes y datos datos generales del proyecto)
+
+presupuesto ( motor avaazodo que calculara costos totales de los proyectos y tiempo de jecucion )
+
+seguimiento ( llevar el contro de los avances fisicos y financieros de los proyectos asi como las bitaras, graficas visuales tipo gant completas con todos sus implementos de ajustes y tiempos, olguras y rutas ciriticas totalmente responsivas, en este modulo se agregan todos los registros del proyecto tambien el registro de personal y pago de planillas, integrar area de control de gastos personales para que el usuario sepa su ganacia por proyecto o por los proyetos que estan en ejecucion, y sepa cuanto puede gastar o el limmite de gastos personales que son todas las ganancias o sugieres de tu parte este apartado como se integrara, este modulo integrara todo lo financiero y lo fisico ademas de los recursos humanos asi que tiene que ser un modulo completo, responsivo, y de sistema de paginacion o como mejor lo apliques.
+
+bodega ( este modulo dependera pricipalmente del modulo de presupuesto y proyectos y enviara datos y recibira de modulo de seguimiento con respecto a la compra de materiales aqui se almacenan por proyecto la cantidad de materiales unitarios que genero el modulo de presupuesto. y en el modulo de seguimiento se haran las compras con la seleccion de proyectos y la seleccion de renglones de donde se jallara los datos que se iran a comprar y asi llvar el contol de stock por renglon y por proyecto para obtener resultados de lo presupuestado versus lo real, te dejo en tus manos tambien todos los ajustes de esta logica).
+
+
+modulo de tablero principal o Dashboard ( este modulo sera el enncargado de mostrar al usuario todos los datos generados y de seguiiento y control de cada proyecto contieniendo muchas graficas con metricas importantes para el usuario este dashboard tiene que ser vista por pantalla en sitema de paginacion integrando las graficas principales que consideres necesarias en cada pagina sin scroll vista completa por pantalla. y con filtros de seleccion de proyectos filtros de selccion de fechas analiza bien la logia de presentacion de estos dashboard, con las logicas de ejecucion y seguimiento y control fisico finaciero de los proyectos, este modulo sera el que se muestre principalmente al iniciar la aplicacion. 
+
+puedes impelementar mas modulos si lo consideras necesario y ajustes para que toda la aplicacion sea responsiva en ordenadores como en moviles. 
+
+
+# CHECKLIST: Estado Actual vs Estado Requerido
+> **Leyenda:** ✅ Completo | ⚠️ Parcial | ❌ No existe / No implementado
+---
+## 1. MÓDULO PRESUPUESTO (Motor APU Avanzado)
+| # | Funcionalidad | Estado | Detalle |
+|---|--------------|--------|---------|
+| 1.1 | Motor APU básico (Material + MO + Herramienta = Costo Unitario) | ✅ | `PresupuestoScreen.tsx` — useMemo `totales` recalcula en tiempo real |
+| 1.2 | Factores paramétricos (Indirectos, Admin, Imprevistos, Utilidad) | ✅ | Porcentajes editables con cálculo automático de total |
+| 1.3 | Catálogo de 40 renglones por tipología (8 tipos) | ⚠️ | `renglones.ts` con datos hardcodeados. Sin `subrenglones` ni `materiales` por renglón |
+| 1.4 | **Sub-renglones (explosión de materiales)** | ❌ | No existe. Cada renglón solo tiene `{costoMaterial, costoManoObra, costoHerramienta, rendimiento}`. No hay desglose de cantidades unitarias de materiales, jornales, equipos |
+| 1.5 | **Edición en tiempo real con auto-recalculo total** | ⚠️ | `totales` useMemo recalcula al cambiar `lineas` o `meta`. Pero solo hay 3 costos globales, no sub-renglones |
+| 1.6 | **Acordeón desplegable con APU completa por renglón** | ⚠️ | `RenglonCard` tiene expandible que muestra material/MO/herramienta como 3 inputs simples, sin sub-componentes |
+| 1.7 | **Cálculo de tiempo de ejecución vinculado a MO** | ❌ | `tiempo = Σ(cantidad / rendimiento)` — rendimiento es fijo por renglón, no se recalcula al cambiar MO/personas |
+| 1.8 | **Algoritmos predictivos (ML-like) sugeridos** | ⚠️ | `predictorAPU.ts` existe pero NO está conectado a `PresupuestoScreen` (nunca se llama) |
+| 1.9 | **Anomalías y validación conectadas a UI** | ⚠️ | `validacionPresupuesto.ts` existe, se usa `validarFactores` en screen, pero `detectarAnomalias` no se muestra |
+| 1.10 | **Exportación PDF/CSV con formato avanzado + explosión de materiales** | ❌ | Exportación básica existe (CSV con secciones, PDF con `window.print`). Sin tabla resumen con desglose de materiales unitarios |
+| 1.11 | **Cálculo de costo directo como suma de sub-renglones** | ❌ | `costoDirecto = Σ(cantidad × (material + MO + herramienta))` — no hay sub-renglones |
+| 1.12 | **Botón "Sugerir APU" desde históricos** | ❌ | `sugerirAPU()` existe en `predictorAPU.ts` pero no hay botón en UI |
+---
+## 2. MÓDULO PROYECTOS
+| # | Funcionalidad | Estado | Detalle |
+|---|--------------|--------|---------|
+| 2.1 | Registro de clientes | ✅ | `ClientesScreen` con CRUD completo + `clientes` en AppContext |
+| 2.2 | Datos generales del proyecto (nombre, ubicación, tipo) | ✅ | Campos en `PresupuestoScreen` formulario lateral |
+| 2.3 | Gestión de fases (planeación → ejecución → pausa → finalizado) | ✅ | `transicionFase()` en AppContext con notificaciones |
+| 2.4 | Selección de cliente desde proyecto | ✅ | Selector de cliente en sidebar |
+| 2.5 | Edición inline de datos financieros del proyecto | ⚠️ | `ProyectosScreen` permite editar ingresos/gastos/avance. No hay edición de todos los campos |
+---
+## 3. MÓDULO SEGUIMIENTO (Control Físico + Financiero + RRHH)
+| # | Funcionalidad | Estado | Detalle |
+|---|--------------|--------|---------|
+| 3.1 | Seguimiento de avance físico por renglón (slider %) | ✅ | `ProyectosScreen` — sliders por renglón + avance ponderado |
+| 3.2 | Avance financiero (ingresos vs gastos) | ✅ | `SeguimientoScreen` tabla con barras |
+| 3.3 | **Diagrama Gantt funcional con:** | ❌ | `GanttView` barras en posición **aleatoria**, sin datos reales |
+| 3.3a | Holguras (slack) | ❌ | `GanttService.calcularRutaCritica` — stub: `holgura = 0` para todo |
+| 3.3b | Ruta crítica real | ❌ | Stub: todos marcados como críticos |
+| 3.3c | Dependencias entre tareas | ❌ | No existe modelo de dependencias |
+| 3.3d | Responsivo / interactivo | ❌ | Solo vista estática, sin drag, sin zoom |
+| 3.3e | Línea de tiempo semanal real | ⚠️ | 12 semanas pero posiciones aleatorias |
+| 3.4 | **Bitácora de avance (fechas, notas, recursos)** | ⚠️ | `BitacoraAvancePanel` — tabla simple con fecha/avance/notas. Sin recursos ni fotos |
+| 3.5 | **Registro de personal y pago de planillas** | ⚠️ | `PlanillaService.registrarPago()` — registra en transacciones como 'mano-obra'. Sin empleados, sin desglose por trabajador |
+| 3.6 | **Control de gastos personales (ganancia por proyecto)** | ❌ | No existe. No hay cálculo de ganancia neta por proyecto ni límite de gasto personal |
+| 3.7 | **Dashboard financiero del proyecto (métricas integradas)** | ⚠️ | `DashboardFinanciero` — 4 tabs con validación, composición, cash flow (placeholder), alertas |
+| 3.8 | **Tablero de control con paginación** | ❌ | `SeguimientoScreen` muestra todo en una tabla, sin paginación |
+| 3.9 | **Gráficas visuales avanzadas (Gantt, Curva S, etc.)** | ❌ | No hay Curva S, no hay Earned Value Management |
+---
+## 4. MÓDULO BODEGA (Inventario / Materiales)
+| # | Funcionalidad | Estado | Detalle |
+|---|--------------|--------|---------|
+| 4.1 | **Pantalla de Bodega dedicada** | ❌ | No existe en navegación. No hay entrada en menú |
+| 4.2 | **Explosión de materiales desde presupuesto** | ⚠️ | `BodegaService.explosionarMateriales()` existe. No está conectado a UI |
+| 4.3 | Control de stock por renglón y proyecto | ⚠️ | `MaterialesPanel` muestra estimado/usado/restante. Stock es básico |
+| 4.4 | **Órdenes de compra (OC) vinculadas a renglones** | ❌ | No existe. `registrarCompra()` solo incrementa cantidad |
+| 4.5 | **Recepción de materiales (entrada vs salida)** | ⚠️ | `movimientos_materiales` con tipo 'entrada'/'salida'. Sin workflow de recepción |
+| 4.6 | **Proveedores** | ❌ | No existe tabla ni gestión de proveedores |
+| 4.7 | Comparativa presupuestado vs real (por renglón) | ⚠️ | `useTrazabilidadMateriales` + `PanelTrazabilidadMateriales` compara presupuestado/comprado/consumido |
+| 4.8 | Alertas de stock mínimo / sobrecompra | ❌ | No hay umbrales configurables |
+| 4.9 | **Órdenes de compra generadas desde seguimiento** | ❌ | No hay flujo: presupuesto→bodega→seguimiento→compra |
+---
+## 5. MÓDULO DASHBOARD (Tablero Principal)
+| # | Funcionalidad | Estado | Detalle |
+|---|--------------|--------|---------|
+| 5.1 | **Dashboard funcional** | ❌ | `Dashboard.tsx` — está **CORRUPTO** (definiciones duplicadas, sin return JSX válido). NO COMPILA |
+| 5.2 | KPIs principales (ingresos, gastos, balance, proyectos activos) | ❌ | No se renderiza nada por el error de compilación |
+| 5.3 | **Sistema de paginación (varias páginas, cada una sin scroll)** | ❌ | No existe ningún sistema de paginación |
+| 5.4 | **Gráficas principales por página:** | ❌ | — |
+| 5.4a | Gantt general de proyectos | ❌ | Existe `GanttView` aparte pero no integrado al dashboard |
+| 5.4b | Cash flow proyectado (línea) | ⚠️ | `PanelCashFlow` con Recharts LineChart. No integrado a dashboard |
+| 5.4c | Composición de costos (pastel) | ⚠️ | `DashboardFinanciero` con PieChart. No integrado a dashboard |
+| 5.4d | Heatmap de rentabilidad por proyecto | ⚠️ | `ProjectHeatMap` existe como componente aparte |
+| 5.4e | Curva S avance físico vs financiero | ❌ | No existe |
+| 5.5 | **Filtros: selector de proyectos, rango de fechas** | ❌ | No hay filtros persistentes en dashboard |
+| 5.6 | **Dashboard como pantalla de inicio** | ⚠️ | `view default → Dashboard` en AppLayout, pero como no compila, no funciona |
+| 5.7 | **Alertas en tiempo real** | ⚠️ | `NotificationBell` con Realtime. No hay alertas en dashboard |
+| 5.8 | **Notificaciones push** | ❌ | No hay service worker push. Solo Realtime cuando la app está abierta |
+---
+## 6. AGENTE FINANCIERO INTELIGENTE
+| # | Funcionalidad | Estado | Detalle |
+|---|--------------|--------|---------|
+| 6.1 | Diagnóstico financiero básico (desviación >90%) | ⚠️ | `AgenteInteligente.diagnosticarProyecto()` — solo 2 reglas |
+| 6.2 | **Alertas operativas en dashboard** | ❌ | `AgenteInteligente` no está conectado a UI (se llama en Dashboard corrupto) |
+| 6.3 | **Notificaciones push fuera de la app** | ❌ | Sin Web Push API |
+| 6.4 | **Recomendaciones de optimización presupuestal** | ❌ | No existe |
+| 6.5 | **Alertas de flujo de caja (proyección a 15/30/90 días)** | ⚠️ | `useCashflowProyectado` detecta alertas. No hay UI de dashboard |
+| 6.6 | **Análisis de rentabilidad por proyecto** | ❌ | No hay cálculo automático de rentabilidad neta por proyecto |
+---
+## 7. FUNCIONALIDADES TRANSVERSALES
+| # | Funcionalidad | Estado | Detalle |
+|---|--------------|--------|---------|
+| 7.1 | **Responsive: PC + Móvil** | ⚠️ | AppLayout usa `viewOrder` con animación. No hay layout responsive adaptativo para móvil |
+| 7.2 | Offline-first con cola de mutaciones | ✅ | `offline.ts` con cache localStorage + PendingMutation |
+| 7.3 | Tiempo real (Realtime Supabase ~17 canales) | ✅ | Live sync en todas las tablas principales |
+| 7.4 | Exportación Excel (xlsx) | ✅ | `exportExcel.ts` con múltiples sheets |
+| 7.5 | **Exportación PDF con formato profesional avanzado** | ❌ | `printPDF()` básico con `window.print()`. Sin tabla de resumen de renglones con desglose de materiales |
+| 7.6 | OCR para escaneo de facturas | ✅ | `OCRFactura.tsx` con Tesseract.js español |
+| 7.7 | Validación de factores + puntuación de salud | ✅ | `validacionPresupuesto.ts` con sistema de puntuación |
+| 7.8 | **Sistema de roles/permisos por equipo** | ⚠️ | `TeamsScreen` + `EquiposService`. Solo compartición básica |
+---
+## 8. PROBLEMAS CRÍTICOS DETECTADOS
+| # | Problema | Impacto |
+|---|----------|---------|
+| 8.1 | `Dashboard.tsx` — archivo **corrupto** (no compila) | ❌ La pantalla principal de la app no funciona |
+| 8.2 | `GanttView.tsx` — posiciones de barras **aleatorias** | ❌ Datos no representan la realidad |
+| 8.3 | `GanttService.calcularRutaCritica()` — **stub** sin CPM real | ❌ No se puede confiar en la ruta crítica |
+| 8.4 | `PlanillaService` ignora `empleadoId` en `registrarPago()` | ⚠️ No hay trazabilidad por empleado |
+| 8.5 | `renglones.ts` — datos **hardcodeados** en cliente | ⚠️ No se pueden editar desde Supabase |
+| 8.6 | 3 implementaciones de cash flow no unificadas | ⚠️ Resultados inconsistentes |
+| 8.7 | `SeguimientoAvanceScreen` tiene `transacciones` hardcodeado como `[]` | ❌ Panel de conciliación sin datos |
+---
+## 9. RESUMEN DE PRIORIDADES (ARQUITECTURA SUGERIDA)
+```
+FASE 1 — CRÍTICO (Arreglar lo que no funciona)
+  ├── 8.1 Dashboard.tsx → Reescribir completamente
+  ├── 8.2/8.3 Gantt → Implementar CPM real
+  └── 8.7 SeguimientoAvanceScreen → Conectar datos reales
+FASE 2 — MOTOR APU EXPANDIDO (Corazón del sistema)
+  ├── 1.4 Sub-renglones con explosión de materiales
+  ├── 1.6 Acordeón APU completo (materiales, MO, equipos por renglón)
+  ├── 1.7 Tiempo de ejecución dinámico vinculado a MO
+  └── 1.10 Exportación avanzada con desglose
+FASE 3 — BODEGA + COMPRAS
+  ├── 4.1 Pantalla de Bodega dedicada (entrada de navegación)
+  ├── 4.4 Órdenes de compra
+  ├── 4.6 Proveedores
+  └── 4.9 Flujo presupuesto→bodega→seguimiento→compra
+FASE 4 — DASHBOARD + ANALYTICS
+  ├── 5.1-5.6 Dashboard con paginación, KPIs, filtros
+  ├── 5.4e Curva S (Earned Value Management)
+  └── 5.8 Notificaciones push
+FASE 5 — RRHH + GASTOS PERSONALES
+  ├── 3.6 Control de ganancia por proyecto
+  ├── 3.5 Planilla completa con empleados
+  └── 6.2 Agente financiero expandido
+FASE 6 — RESPONSIVE + UI/UX
+  ├── 7.1 Layout responsive completo
+  └── 7.5 Exportación PDF profesional
+```
+Thought: The checklist has been written. Let me provide a summary to the user explaining the findings.
+He completado el análisis arquitectónico completo de la aplicación. Aquí está el resumen ejecutivo:
+Resumen del Análisis
+Archivo generado: CHECKLIST_MODULOS.md — 68 ítems evaluados con estado ✅ ⚠️ ❌
+Principales Hallazgos
+🔴 Crítico: El Dashboard.tsx está corrupto (definiciones duplicadas, sin return JSX válido). La pantalla principal no compila.
+🔴 Motor APU actual es básico: Cada renglón hoy es una caja negra con 3 costos fijos. No hay:
+Sub-renglones (explosión de materiales con cantidades unitarias)
+Cálculo de tiempo vinculado a MO/personal
+Acordeón con APU completa (materiales, jornales, equipos, rendimientos)
+Exportación con desglose de materiales unitarios
+🔴 Gantt no es funcional: GanttService.calcularRutaCritica() es un stub (todo marcado como crítico con holgura 0). Las barras en GanttView se posicionan aleatoriamente.
+⚠️ Bodega no existe como módulo: Solo hay servicios sueltos (BodegaService, MaterialesPanel) sin pantalla dedicada ni entrada en navegación.
+⚠️ 3 implementaciones de cash flow distintas sin unificar (CashFlowService, useCashflowProyectado, CashFlowProjection).
+Prioridades Sugeridas (6 Fases)
+Fase	Enfoque	Principales tareas
+1	Reparar críticos	Dashboard, Gantt real con CPM, conectar datos reales
+2	Motor APU expandido	Sub-renglones, acordeón completo, tiempo dinámico, exportación avanzada
+3	Bodega + Compras	Pantalla dedicada, OC, proveedores, flujo completo
+4	Dashboard + Analytics	Paginación, KPIs, Curva S (EVM), notificaciones push
+5	RRHH + Gastos	Planilla completa, ganancia por proyecto, agente financiero
+6	Responsive + UI/UX	Layout adaptativo, PDF profesional
+
+
+
+
+
+✅ Lo que ya está implementado y el checklist no refleja:
+Motor APU con sub-renglones y auto-recalculo
+Dashboard con 3 páginas, KPIs, gráficas (Bar/Line/Pie)
+Seguimiento con charts paginados (3 páginas)
+Bodega como módulo completo con stock, compras, consumos
+Exportación avanzada con desglose de materiales
+Responsive completo (xs 320px + min-h-dvh)
+Acordeón APU con tablas editables
+❌ Lo que SÍ sigue pendiente (gaps reales):
+1. GanttService.calcularRutaCritica — stub sin algoritmo CPM real
+2. GanttView fallback random — cuando no hay fechaInicio
+3. PlanillaService — empleadoId no se persiste en DB
+4. ExportService.ts — schema no coincide con el modelo actual
+5. Gastos personales / ganancia por proyecto — no implementado
+6. Órdenes de compra + proveedores — no existen
+7. Roles/permisos avanzados — solo compartición básica
+
+
+
+
+
+ESTADO REAL vs CHECKLIST ORIGINAL
+Módulo	Checklist decía	Realidad actual
+Presupuesto	❌ Sin subrenglones	✅ 40 renglones con SubMaterial[], SubManoObra[], SubEquipo[], auto-recalculo vía calcularAPU(), acordeón expandible, edición inline, CSV con explosión de materiales, PDF
+Dashboard	❌ Corrupto/no compila	✅ 3 páginas, KPIs (ingresos, gastos, rentabilidad, OC pendientes, proveedores), gráficas Bar/Line/Pie, filtro por proyecto, Gantt, alertas, transacciones recientes
+Seguimiento	❌ Gantt aleatorio	⚠️ Gantt funcional (12 semanas), 3 páginas (tablero/finanzas/detalle), BitacoraAvancePanel, PlanillaService, tabla con "Ver", ruta crítica
+Bodega	❌ Sin pantalla	✅ BodegaScreen completa con selector proyecto, tabla materiales, stock, compras/uso modals
+Compras	❌ No existe	✅ Proveedores CRUD, OC con items y recepción, folio auto, flujo completo
+Financiero	❌ Sin ProfitReport	✅ 3 páginas: transacciones, cash flow, ProfitReport con margen/proyecto y gastos personales separados
+Export	❌ Sin desglose	✅ CSV con explosión materiales/MO/equipos, PDF con tablas, Excel multi-sheet
+Tests	❌ Sin pruebas	✅ 17 tests (6 files) — servicios, profit, export
+Problemas reales detectados (a corregir):
+1. GanttService.calcularRutaCritica — dias / 8 + 1 bug, predecesores solo secuenciales
+2. predictorAPU.ts y validacionPresupuesto.detectarAnomalias — existen pero NO conectados a UI
+3. 3 cash flow distintos sin unificar (CashFlowService, useCashflowProyectado, FinancieroScreen)
+4. BodegaScreen usa supabase.from() directo (viola AGENTS.md)
+5. Gastos personales — separados en ProfitReport pero no hay límite/bloqueo automático
+6. ViewType no incluye 'compras' (error TS silencioso)
+PLAN MAESTRO DE UPGRADE (Motor APU + Integración Total)
+Antes de ejecutar, confirma que esta arquitectura cumple tu visión:
+FASE 0 — REPARAR CRÍTICOS (hoy)
+  ├── Bug GanttService: duración = Math.max(1, Math.round(apu.dias))
+  ├── Conectar predictorAPU y validacionAnomalias a UI
+  ├── Unificar cash flow (FinancieroService.proyectarTendencia)
+  └── ViewType agregar 'compras'
+FASE 1 — MOTOR APU EXPANDIDO (el corazón)
+  ├── Expandir catálogo: 40 → 80+ renglones (más acabados, estructuras, instalaciones)
+  ├── Subrenglones extendidos: cada material con desperdicio %, cada MO con rendimiento específico
+  ├── Acordeón APU versión pro: tablas embedidas editables con totales parciales
+  ├── Auto-recálculo en CSS (no esperar onChange): cada keystroke recalcula todo el árbol
+  ├── Tiempo de ejecución dinámico: vinculado a MO × personas × rendimiento
+  ├── Curva S generada automáticamente desde las lineas
+  ├── "Sugerir APU" desde históricos (predictor conectado)
+  └── Export PDF profesional con logo, tablas de explosión, resumen financiero
+FASE 2 — SEGUIMIENTO + BODEGA + COMPRAS (triada operativa)
+  ├── Gantt con CPM real, dependencias, holguras, ruta crítica coloreada
+  ├── Bitácora con fotos, recursos asignados, firma digital
+  ├── Flujo automático: Presupuesto → Bodega (explosión) → Compras (OC) → Recepción → Seguimiento
+  ├── Stock mínimo con alertas automáticas
+  └── Planilla por empleado con desglose, retenciones, ISR, IGSS
+FASE 3 — DASHBOARD + ANALYTICS
+  ├── Página 1: KPIs + Gantt general + Curva S global
+  ├── Página 2: Cash Flow proyectado 15/30/90 + Composición costos
+  ├── Página 3: Profit por proyecto + Heatmap + Alertas inteligentes
+  └── Filtro de fechas global + selector proyecto persistente
+FASE 4 — GASTOS PERSONALES + GANANCIA REAL
+  ├── Límite automático: ganancia = ingresos - gastos operativos - admin
+  ├── Si gastos personales > ganancia: alerta roja, bloqueo preventivo
+  └── Dashboard de salud financiera personal
+
+
+I. Análisis Comparativo: Estado Requerido vs. Estado Realizado
+Característica / Requerimiento	Perspectiva Técnica (Civil + Sistemas + UX)
+Cálculo en Tiempo Real de Cantidades	Civil: Cuantificación dimensional precisa de obra.<br>Sistemas: Enlace bidireccional reactivo en React.
+Estructura APU Desglosada (Concertina)	Civil: Desglose unitario (Materiales, Mano de Obra, Equipo).<br>UX: Acordeón colapsable limpio y legible.
+Tiempo Dinámico vinculado a Mano de Obra	Civil: $Tiempo = Cantidad / RendimientoAdjustado$<br>donde $Rendimiento = RendimientoBase \times (PersonalActual/PersonalBase)$.
+Exportaciones Profesionales	Sistemas: Generación de PDFs y CSVs optimizada para impresión.<br>UX: Formato ejecutivo limpio.
+Capa de Persistencia y Seguridad	Sistemas: Single Source of Truth (SST), sin fugas de base de datos a la UI.
+II. Mi Esquema Estructural de Ingeniería (El Plan de Upgrade)
+Para llevar el ERP a la categoría de Software Empresarial Autónomo de Nivel Ejecutivo, implementaré la lógica bajo el siguiente modelo arquitectónico:
+                  ┌───────────────────────────────────────────┐
+                  │          CORE ENGINE SERVICE              │
+                  │  (Algoritmos CPM, EVM, Proyección y APU)  │
+                  └──────┬─────────────────────────────┬──────┘
+                         │                             │
+                         ▼                             ▼
+            ┌─────────────────────────┐   ┌──────────────────────────┐
+            │     BODEGA SERVICE      │   │    FINANCIERO SERVICE    │
+            │  (Inventario Teórico vs  │   │  (Gastos Operativos vs   │
+            │     Consumo Real)       │   │    Personales + Límites) │
+            └────────────┬────────────┘   └────────────┬─────────────┘
+                         │                             │
+                         └──────────────┬──────────────┘
+                                        ▼
+                         ┌─────────────────────────────┐
+                         │    DASHBOARD EJECUTIVO      │
+                         │ (3-Páginas, EVM, Carousel)  │
+                         └─────────────────────────────┘
+III. Próximas Implementaciones Estratégicas y Lógica de Ejecución
+Para finalizar el ERP bajo tu visión autónoma y sin romper el código que ya compila a la perfección, ejecutaré las siguientes tres mejoras clave en orden secuencial:
+1. Módulo Financiero: Control de Gastos Personales y Bloqueo de Ganancia Real
+- La Lógica: La ganancia neta real de un contratista es $Ingresos - GastosOperativos - GastosAdministrativos$. 
+- La Implementación: Crearemos un validador en FinancieroScreen que compare los gastos de categoría personal u hogar frente a la utilidad proyectada acumulada de las obras activas. Si el usuario intenta registrar un gasto personal que supere el 80% de sus ganancias reales de obra, el sistema emitirá una alerta visual inteligente roja: "⚠️ Alerta: Este gasto personal compromete la liquidez de sus proyectos."
+2. Módulo Seguimiento: El Algoritmo CPM Real para Ruta Crítica (Gantt sin Stubs)
+- La Lógica: En lugar de marcar todos los renglones como críticos por defecto, implementaremos el método del camino crítico (CPM) real. Calcularemos los tiempos de inicio temprano (ES), fin temprano (EF), inicio tardío (LS) y fin tardío (LF) mediante recorridos hacia adelante y atrás (forward & backward pass), determinando la holgura de cada tarea. Las tareas con holgura cero se pintarán de color rojo (Ruta Crítica) en el Gantt.
+- La Implementación: Ajustar la lógica del servicio GanttService.ts para que mapee las dependencias y calcule las holguras reales del proyecto.
+3. Módulo Bodega: Flujo Cerrado de Abastecimiento (Presupuesto $\to$ Bodega $\to$ Compras)
+- La Lógica: Al guardar un presupuesto en fase de "Ejecución", el sistema debe "explosiona" la lista de materiales teóricos en materiales_proyecto. La Bodega los registrará como stock esperado. Al crear una orden de compra, el usuario seleccionará el renglón y el sistema cargará automáticamente el material presupuestado restante para evitar sobre-compras.

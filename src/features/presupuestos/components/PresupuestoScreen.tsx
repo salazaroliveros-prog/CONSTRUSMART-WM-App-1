@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import PageShell from '@/components/shared/PageShell';
 import { renglonesPorTipologia, Tipologia, tipologiaLabels, Renglon, SubMaterial, SubManoObra, SubEquipo, calcularAPU } from '@/data/renglones';
-import { downloadCSV, printPDF, fmtQ } from '@/lib/exporters';
+import { downloadCSV, exportPresupuestoPDF, fmtQ } from '@/lib/exporters';
 import { BitacoraAvancePanel } from '@/components/shared/BitacoraAvancePanel';
 import { Plus, Trash2, ChevronDown, ChevronRight, Download, FileText, Calculator, Search, Save, FolderOpen, AlertTriangle, CheckCircle2, Info, Users, Wrench, Package } from 'lucide-react';
 import ChecklistPanel from '@/components/shared/ChecklistPanel';
@@ -12,8 +12,18 @@ import { sugerirAPU } from '@/utils/predictorAPU';
 import type { Suggestion } from '@/utils/predictorAPU';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
+export interface MemoriaCalculo {
+  veces: number;
+  largo: number;
+  ancho: number;
+  alto: number;
+  tipo: 'lineal' | 'area' | 'volumen' | 'unidades';
+}
+
 interface LineaPresupuesto extends Renglon {
   cantidad: number;
+  baseTotalPersonas: number;
+  memoriaCalculo?: MemoriaCalculo;
 }
 
 type TabFase = 'nuevo' | 'planeación' | 'ejecución' | 'pausa' | 'finalizado';
@@ -68,15 +78,41 @@ const PresupuestoScreen: React.FC = () => {
   );
 
   const addRenglon = useCallback((r: Renglon) => {
+    const baseTotalPersonas = r.subrenglones.manoObra.reduce((s, m) => s + m.cantidadPersonas, 0);
     setLineas(prev => {
       if (prev.find(l => l.id === r.id)) return prev;
-      return [{ ...r, cantidad: 1 }];
+      return [...prev, { ...r, cantidad: 1, baseTotalPersonas }];
     });
     setExpanded(prev => new Set(prev).add(r.id));
   }, []);
 
-  const updateLinea = useCallback((id: string, field: keyof LineaPresupuesto, value: number) => {
+  const updateLinea = useCallback((id: string, field: keyof LineaPresupuesto, value: any) => {
     setLineas(prev => prev.map(l => l.id === id ? { ...l, [field]: value } : l));
+  }, []);
+
+  const updateMemoriaCalculo = useCallback((id: string, memoria: Partial<MemoriaCalculo>) => {
+    setLineas(prev => prev.map(l => {
+      if (l.id !== id) return l;
+      const mOld = l.memoriaCalculo || { veces: 1, largo: 0, ancho: 0, alto: 0, tipo: 'unidades' };
+      const mNew = { ...mOld, ...memoria };
+      
+      let computedCantidad = l.cantidad;
+      if (mNew.tipo === 'lineal') {
+        computedCantidad = mNew.veces * mNew.largo;
+      } else if (mNew.tipo === 'area') {
+        computedCantidad = mNew.veces * mNew.largo * mNew.ancho;
+      } else if (mNew.tipo === 'volumen') {
+        computedCantidad = mNew.veces * mNew.largo * mNew.ancho * mNew.alto;
+      } else if (mNew.tipo === 'unidades') {
+        computedCantidad = mNew.veces * (mNew.largo || 1);
+      }
+      
+      return { 
+        ...l, 
+        memoriaCalculo: mNew,
+        cantidad: Math.round(computedCantidad * 100) / 100
+      };
+    }));
   }, []);
 
   const updateSubMaterial = useCallback((id: string, idx: number, field: keyof SubMaterial, value: number) => {
@@ -86,7 +122,7 @@ const PresupuestoScreen: React.FC = () => {
         i === idx ? { ...m, [field]: value } : m
       );
       const nuevosSub = { ...l.subrenglones, materiales };
-      const cm = materiales.reduce((s, m) => s + m.cantidad * m.costoUnitario, 0);
+      const cm = materiales.reduce((s, m) => s + m.cantidad * (1 + (m.desperdicio ?? 0) / 100) * m.costoUnitario, 0);
       const co = nuevosSub.manoObra.reduce((s, m) => s + m.cantidadPersonas * m.jornal / l.rendimiento, 0);
       const ce = nuevosSub.equipos.reduce((s, e) => s + e.cantidad * e.costoHora, 0);
       return { ...l, subrenglones: nuevosSub, costoMaterial: Math.round(cm), costoManoObra: Math.round(co), costoHerramienta: Math.round(ce) };
@@ -100,7 +136,7 @@ const PresupuestoScreen: React.FC = () => {
         i === idx ? { ...m, [field]: value } : m
       );
       const nuevosSub = { ...l.subrenglones, manoObra };
-      const cm = nuevosSub.materiales.reduce((s, m) => s + m.cantidad * m.costoUnitario, 0);
+      const cm = nuevosSub.materiales.reduce((s, m) => s + m.cantidad * (1 + (m.desperdicio ?? 0) / 100) * m.costoUnitario, 0);
       const co = manoObra.reduce((s, m) => s + m.cantidadPersonas * m.jornal / l.rendimiento, 0);
       const ce = nuevosSub.equipos.reduce((s, e) => s + e.cantidad * e.costoHora, 0);
       return { ...l, subrenglones: nuevosSub, costoMaterial: Math.round(cm), costoManoObra: Math.round(co), costoHerramienta: Math.round(ce) };
@@ -114,7 +150,7 @@ const PresupuestoScreen: React.FC = () => {
         i === idx ? { ...e, [field]: value } : e
       );
       const nuevosSub = { ...l.subrenglones, equipos };
-      const cm = nuevosSub.materiales.reduce((s, m) => s + m.cantidad * m.costoUnitario, 0);
+      const cm = nuevosSub.materiales.reduce((s, m) => s + m.cantidad * (1 + (m.desperdicio ?? 0) / 100) * m.costoUnitario, 0);
       const co = nuevosSub.manoObra.reduce((s, m) => s + m.cantidadPersonas * m.jornal / l.rendimiento, 0);
       const ce = equipos.reduce((s, e) => s + e.cantidad * e.costoHora, 0);
       return { ...l, subrenglones: nuevosSub, costoMaterial: Math.round(cm), costoManoObra: Math.round(co), costoHerramienta: Math.round(ce) };
@@ -224,64 +260,31 @@ const PresupuestoScreen: React.FC = () => {
   };
 
   const handleExportPDF = () => {
-    const lineRows = totales.calculadas.map(c => `
-      <tr><td>${c.linea.codigo}</td><td>${c.linea.descripcion}</td><td>${c.linea.unidad}</td><td class="num">${c.linea.cantidad}</td><td class="num">${fmtQ(c.apu.costoUnitario)}</td><td class="num">${fmtQ(c.apu.subtotal)}</td></tr>
-    `).join('');
-    const matRows = lineas.flatMap(l =>
-      l.subrenglones.materiales.map(m => `
-        <tr><td>${l.codigo}</td><td>${l.descripcion}</td><td>${m.nombre}</td><td class="num">${m.cantidad}</td><td>${m.unidad}</td><td class="num">${fmtQ(m.costoUnitario)}</td><td class="num">${fmtQ(m.cantidad * m.costoUnitario)}</td></tr>
-      `)
-    ).join('');
-    const moRows = lineas.flatMap(l =>
-      l.subrenglones.manoObra.map(m => `
-        <tr><td>${l.codigo}</td><td>${l.descripcion}</td><td>${m.descripcion}</td><td class="num">${m.cantidadPersonas}</td><td class="num">${fmtQ(m.jornal)}</td><td class="num">${fmtQ(m.cantidadPersonas * m.jornal / l.rendimiento)}</td></tr>
-      `)
-    ).join('');
-
-    printPDF(`Presupuesto - ${meta.proyecto}`, `
-      <h2>Informaci\u00f3n General del Proyecto</h2>
-      <table>
-        <tr><th style="width:30%">Proyecto</th><td>${meta.proyecto}</td></tr>
-        <tr><th>Cliente</th><td>${meta.cliente || 'N/A'}</td></tr>
-        <tr><th>Ubicaci\u00f3n</th><td>${meta.ubicacion}</td></tr>
-        <tr><th>Tipolog\u00eda</th><td>${tipologiaLabels[tipologia]}</td></tr>
-        <tr><th>Tiempo Estimado</th><td>${totales.tiempo.toFixed(1)} d\u00edas</td></tr>
-        <tr><th>Total Personas-d\u00eda</th><td>${totales.totalPersonasDia.toFixed(0)}</td></tr>
-      </table>
-
-      <h2>Resumen de Renglones</h2>
-      <table>
-        <thead><tr><th>C\u00f3digo</th><th>Descripci\u00f3n</th><th>Unidad</th><th class="num">Cantidad</th><th class="num">C. Unitario</th><th class="num">Subtotal</th></tr></thead>
-        <tbody>${lineRows}<tr class="total-row"><td colspan="5">COSTO DIRECTO TOTAL</td><td class="num">${fmtQ(totales.costoDirecto)}</td></tr></tbody>
-      </table>
-
-      <h2>Explosi\u00f3n de Materiales</h2>
-      <table>
-        <thead><tr><th>C\u00f3d.</th><th>Rengl\u00f3n</th><th>Material</th><th class="num">Cant.</th><th>Unidad</th><th class="num">C. Unitario</th><th class="num">Subtotal</th></tr></thead>
-        <tbody>${matRows}</tbody>
-      </table>
-
-      <h2>Mano de Obra por Rengl\u00f3n</h2>
-      <table>
-        <thead><tr><th>C\u00f3d.</th><th>Rengl\u00f3n</th><th>Cuadrilla</th><th class="num">Personas</th><th class="num">Jornal</th><th class="num">C. Unitario</th></tr></thead>
-        <tbody>${moRows}</tbody>
-      </table>
-
-      <h2>Resumen Financiero</h2>
-      <table>
-        <tr><th style="width:60%">Concepto</th><th class="num">Valor (Q)</th></tr>
-        <tr><td>Costo Directo</td><td class="num">${fmtQ(totales.costoDirecto)}</td></tr>
-        <tr><td><span style="padding-left:20px">Materiales</span></td><td class="num">${fmtQ(totales.totalMaterial)}</td></tr>
-        <tr><td><span style="padding-left:20px">Mano de Obra</span></td><td class="num">${fmtQ(totales.totalMO)}</td></tr>
-        <tr><td><span style="padding-left:20px">Equipo</span></td><td class="num">${fmtQ(totales.totalEquipo)}</td></tr>
-        <tr><td>Costos Indirectos (${meta.factorIndirectos}%)</td><td class="num">${fmtQ(totales.indirectos)}</td></tr>
-        <tr><td>Costos Administrativos (${meta.factorAdministrativos}%)</td><td class="num">${fmtQ(totales.administrativos)}</td></tr>
-        <tr><td>Imprevistos (${meta.factorImprevistos}%)</td><td class="num">${fmtQ(totales.imprevistos)}</td></tr>
-        <tr><td><strong>Subtotal</strong></td><td class="num"><strong>${fmtQ(totales.subtotal)}</strong></td></tr>
-        <tr><td>Utilidad (${meta.factorUtilidad}%)</td><td class="num">${fmtQ(totales.utilidad)}</td></tr>
-        <tr class="total-row"><td>TOTAL DEL PROYECTO</td><td class="num">${fmtQ(totales.total)}</td></tr>
-      </table>
-    `);
+    exportPresupuestoPDF({
+      proyecto: meta.proyecto,
+      cliente: meta.cliente,
+      ubicacion: meta.ubicacion,
+      tipologia: tipologiaLabels[tipologia],
+      factorIndirectos: meta.factorIndirectos,
+      factorAdministrativos: meta.factorAdministrativos,
+      factorImprevistos: meta.factorImprevistos,
+      factorUtilidad: meta.factorUtilidad,
+      lineas,
+      totales: {
+        costoDirecto: totales.costoDirecto,
+        totalMaterial: totales.totalMaterial,
+        totalMO: totales.totalMO,
+        totalEquipo: totales.totalEquipo,
+        indirectos: totales.indirectos,
+        administrativos: totales.administrativos,
+        imprevistos: totales.imprevistos,
+        subtotal: totales.subtotal,
+        utilidad: totales.utilidad,
+        total: totales.total,
+        tiempo: totales.tiempo,
+        totalPersonasDia: totales.totalPersonasDia,
+      },
+    });
   };
 
   const handleSave = async () => {
@@ -392,8 +395,7 @@ const PresupuestoScreen: React.FC = () => {
                 </div>
               )}
             </div>
-          </div>
-
+          
           {savedPresupuestoId && (
             <>
               <div className="bg-white rounded-xl shadow-md p-3"><ChecklistPanel presupuestoId={savedPresupuestoId} fase={faseAlGuardar} /></div>
@@ -496,6 +498,7 @@ const PresupuestoScreen: React.FC = () => {
                       onUpdateSubMaterial={updateSubMaterial}
                       onUpdateSubMO={updateSubMO}
                       onUpdateSubEquipo={updateSubEquipo}
+                      onUpdateMemoria={updateMemoriaCalculo}
                       onRemove={removeLinea}
                       onToggle={toggleExpand}
                     />
@@ -542,17 +545,21 @@ const RenglonCard = React.memo<{
   linea: LineaPresupuesto;
   apu?: { costoMaterial: number; costoManoObra: number; costoHerramienta: number; costoUnitario: number; subtotal: number; dias: number; totalPersonasDia: number };
   isOpen: boolean;
-  onUpdate: (id: string, field: keyof LineaPresupuesto, value: number) => void;
+  onUpdate: (id: string, field: keyof LineaPresupuesto, value: any) => void;
   onUpdateSubMaterial: (id: string, idx: number, field: keyof SubMaterial, value: number) => void;
   onUpdateSubMO: (id: string, idx: number, field: keyof SubManoObra, value: number) => void;
   onUpdateSubEquipo: (id: string, idx: number, field: keyof SubEquipo, value: number) => void;
+  onUpdateMemoria: (id: string, memoria: Partial<MemoriaCalculo>) => void;
   onRemove: (id: string) => void;
   onToggle: (id: string) => void;
-}>(({ linea: l, apu, isOpen, onUpdate, onUpdateSubMaterial, onUpdateSubMO, onUpdateSubEquipo, onRemove, onToggle }) => {
+}>(({ linea: l, apu, isOpen, onUpdate, onUpdateSubMaterial, onUpdateSubMO, onUpdateSubEquipo, onUpdateMemoria, onRemove, onToggle }) => {
+  const [showMemoria, setShowMemoria] = useState(false);
   const costoUnit = apu?.costoUnitario ?? l.costoMaterial + l.costoManoObra + l.costoHerramienta;
   const subtotal = apu?.subtotal ?? costoUnit * l.cantidad;
   const dias = apu?.dias ?? (l.rendimiento > 0 ? l.cantidad / l.rendimiento : 0);
   const sub = l.subrenglones;
+  const m = l.memoriaCalculo || { veces: 1, largo: 0, ancho: 0, alto: 0, tipo: 'unidades' };
+
   return (
     <div>
       <div className="flex items-center gap-2 p-3 hover:bg-slate-50">
@@ -563,11 +570,97 @@ const RenglonCard = React.memo<{
           <div className="text-xs font-semibold text-slate-800 truncate">{l.codigo} · {l.descripcion}</div>
           <div className="text-[10px] text-slate-500">{l.unidad} · {fmtQ(costoUnit)} c/u</div>
         </div>
-        <input type="number" value={l.cantidad} onChange={e => onUpdate(l.id, 'cantidad', parseFloat(e.target.value) || 0)}
-          className="w-20 px-2 py-1 text-xs border rounded text-right" />
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setShowMemoria(!showMemoria)}
+            className={`p-1 rounded text-xs hover:bg-slate-100 ${showMemoria ? 'bg-blue-100 text-blue-800 font-bold' : 'text-slate-400'}`}
+            title="Memoria de cálculo 📐"
+          >
+            📐
+          </button>
+          <input type="number" value={l.cantidad} onChange={e => onUpdate(l.id, 'cantidad', parseFloat(e.target.value) || 0)}
+            className="w-20 px-2 py-1 text-xs border rounded text-right" />
+        </div>
         <div className="w-24 text-right text-xs font-bold text-blue-900">{fmtQ(subtotal)}</div>
         <button onClick={() => onRemove(l.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
       </div>
+
+      {showMemoria && (
+        <div className="mx-3 mb-3 p-3 bg-blue-50/40 border border-blue-100 rounded-lg space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-blue-900 uppercase">Auxiliar de Memoria de Cálculo</span>
+            <span className="text-[9px] text-slate-500 font-semibold">Cálculo en base a dimensiones</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+            <div>
+              <label className="text-[9px] text-slate-500 font-medium">Tipo de Dimensión</label>
+              <select
+                value={m.tipo}
+                onChange={e => onUpdateMemoria(l.id, { tipo: e.target.value as any })}
+                className="w-full px-1.5 py-1 text-xs border rounded bg-white"
+              >
+                <option value="unidades">Unidades (Veces × Cant)</option>
+                <option value="lineal">Lineal (Veces × Largo)</option>
+                <option value="area">Área (Largo × Ancho)</option>
+                <option value="volumen">Volumen (L × A × Alto)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[9px] text-slate-500 font-medium">Veces / Cant.</label>
+              <input
+                type="number"
+                value={m.veces}
+                onChange={e => onUpdateMemoria(l.id, { veces: parseFloat(e.target.value) || 0 })}
+                className="w-full px-1.5 py-1 text-xs border rounded"
+              />
+            </div>
+            {(m.tipo === 'lineal' || m.tipo === 'area' || m.tipo === 'volumen' || m.tipo === 'unidades') && (
+              <div>
+                <label className="text-[9px] text-slate-500 font-medium">
+                  {m.tipo === 'unidades' ? 'Cantidad Unit' : 'Largo (m)'}
+                </label>
+                <input
+                  type="number"
+                  value={m.largo}
+                  onChange={e => onUpdateMemoria(l.id, { largo: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-1.5 py-1 text-xs border rounded"
+                />
+              </div>
+            )}
+            {(m.tipo === 'area' || m.tipo === 'volumen') && (
+              <div>
+                <label className="text-[9px] text-slate-500 font-medium">Ancho (m)</label>
+                <input
+                  type="number"
+                  value={m.ancho}
+                  onChange={e => onUpdateMemoria(l.id, { ancho: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-1.5 py-1 text-xs border rounded"
+                />
+              </div>
+            )}
+            {m.tipo === 'volumen' && (
+              <div>
+                <label className="text-[9px] text-slate-500 font-medium">Alto / Espesor (m)</label>
+                <input
+                  type="number"
+                  value={m.alto}
+                  onChange={e => onUpdateMemoria(l.id, { alto: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-1.5 py-1 text-xs border rounded"
+                />
+              </div>
+            )}
+          </div>
+          <div className="text-[10px] text-blue-800 bg-blue-100/50 p-1.5 rounded flex justify-between items-center">
+            <span>Fórmula de Cálculo: <strong>
+              {m.tipo === 'unidades' && `${m.veces} veces × ${m.largo || 1}`}
+              {m.tipo === 'lineal' && `${m.veces} veces × ${m.largo}m`}
+              {m.tipo === 'area' && `${m.veces} veces × (${m.largo}m × ${m.ancho}m)`}
+              {m.tipo === 'volumen' && `${m.veces} veces × (${m.largo}m × ${m.ancho}m × ${m.alto}m)`}
+            </strong></span>
+            <span>Resultado: <strong className="text-xs">{l.cantidad.toFixed(2)}</strong> {l.unidad}</span>
+          </div>
+        </div>
+      )}
       {isOpen && (
         <div className="bg-slate-50 p-3 border-t border-dashed space-y-3">
           <div className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
@@ -579,7 +672,7 @@ const RenglonCard = React.memo<{
               <h4 className="text-[10px] font-bold text-blue-800 mb-1 flex items-center gap-1"><Package className="w-3 h-3" /> Materiales</h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-[10px]">
-                  <thead><tr className="text-slate-500 border-b"><th className="text-left py-0.5">Material</th><th className="text-center py-0.5">Unidad</th><th className="text-right py-0.5">Cant.</th><th className="text-right py-0.5">Q/Und</th><th className="text-right py-0.5">Subtotal</th></tr></thead>
+                  <thead><tr className="text-slate-500 border-b"><th className="text-left py-0.5">Material</th><th className="text-center py-0.5">Unidad</th><th className="text-right py-0.5">Cant.</th><th className="text-right py-0.5">Q/Und</th><th className="text-right py-0.5">Desp.%</th><th className="text-right py-0.5">Subtotal</th></tr></thead>
                   <tbody>
                     {sub.materiales.map((m, i) => (
                       <tr key={i} className="border-b border-dashed border-slate-200">
@@ -587,11 +680,12 @@ const RenglonCard = React.memo<{
                         <td className="py-0.5 text-center text-slate-500">{m.unidad}</td>
                         <td className="py-0.5"><input type="number" value={m.cantidad} onChange={e => onUpdateSubMaterial(l.id, i, 'cantidad', parseFloat(e.target.value) || 0)} className="w-14 px-1 py-0.5 text-xs border rounded text-right" /></td>
                         <td className="py-0.5"><input type="number" value={m.costoUnitario} onChange={e => onUpdateSubMaterial(l.id, i, 'costoUnitario', parseFloat(e.target.value) || 0)} className="w-16 px-1 py-0.5 text-xs border rounded text-right" /></td>
-                        <td className="py-0.5 text-right font-semibold text-slate-700">{fmtQ(m.cantidad * m.costoUnitario)}</td>
+                        <td className="py-0.5"><input type="number" value={m.desperdicio ?? 0} onChange={e => onUpdateSubMaterial(l.id, i, 'desperdicio', parseFloat(e.target.value) || 0)} className="w-12 px-1 py-0.5 text-xs border rounded text-right" min={0} max={100} /></td>
+                        <td className="py-0.5 text-right font-semibold text-slate-700">{fmtQ(m.cantidad * (1 + (m.desperdicio ?? 0) / 100) * m.costoUnitario)}</td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot><tr className="font-bold text-blue-800"><td colSpan={4} className="py-0.5 text-right">Total Material por unidad</td><td className="py-0.5 text-right">{fmtQ(apu?.costoMaterial ?? 0)}</td></tr></tfoot>
+                  <tfoot><tr className="font-bold text-blue-800"><td colSpan={5} className="py-0.5 text-right">Total Material por unidad</td><td className="py-0.5 text-right">{fmtQ(apu?.costoMaterial ?? 0)}</td></tr></tfoot>
                 </table>
               </div>
             </div>

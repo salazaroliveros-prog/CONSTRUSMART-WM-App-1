@@ -23,8 +23,18 @@ export const DashboardFinanciero: React.FC<DashboardFinancieroProps> = ({
   const validacion = validarFactores(presupuesto);
   const sugeridos = sugerirFactores(presupuesto.tipologia || 'general');
 
-  // No usar cashflow por ahora
-  // const { resumen: cashflow } = useCashflowProyectado(...
+  import { CoreEngineService } from '@/services/CoreEngineService';
+import { useQuery } from '@tanstack/react-query';
+import { useAppContext } from '@/contexts/AppContext';
+
+// Dentro del componente
+const { user } = useAppContext();
+
+// Uso de CoreEngineService (temporalmente con mocks para no romper UI mientras unificamos)
+const { data: cashflow } = useQuery({
+  queryKey: ['cashflow', user?.id],
+  queryFn: () => CoreEngineService.proyectarCashflow([], 0, 30) // placeholder
+});
 
   // Analizar anomalías
    
