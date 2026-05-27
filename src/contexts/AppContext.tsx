@@ -4,6 +4,8 @@ import { FinancieroService } from '@/services/financiero/FinancieroService';
 import { PresupuestosService } from '@/services/presupuestos/PresupuestosService';
 import { ProyectosService } from '@/services/proyectos/ProyectosService';
 import { EquiposService } from '@/services/equipos/EquiposService';
+import { ClientesService } from '@/services/clientes/ClientesService';
+import { ActividadesService } from '@/services/ActividadesService';
 import type { Session, RealtimeChannel } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { 
@@ -23,7 +25,7 @@ import {
 } from '@/services/offline';
 import { crearNotificacion } from '@/utils/notificaciones';
 
-export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos';
+export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos' | 'bodega' | 'cotizacion';
 
 export interface User {
   nombre: string;
@@ -335,7 +337,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        syncingRef.current = false;
      };
      sync().catch(() => { syncingRef.current = false; });
-   }, [isOnline, session?.user.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOnline, session?.user.id]);
 
  // Setup realtime listeners para todas las tablas
    const setupRealtimeListeners = (userId: string) => {
@@ -677,13 +680,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast.success('Guardado localmente (sin conexión)');
         return;
       }
-      const { data, error } = await supabase.from('clientes').insert(dbRecord).select().single();
-      if (error) throw error;
-      if (data) {
-        const mapped = dbToCliente(data);
-        setClientes(p => [mapped, ...p]);
-        saveCachedData('clientes', userId, [mapped, ...clientes]);
-      }
+      const mapped = await ClientesService.addCliente(c as CreateCliente, userId);
+      setClientes(p => [mapped, ...p]);
+      saveCachedData('clientes', userId, [mapped, ...clientes]);
       toast.success('Cliente guardado');
     } catch (error) {
       console.error('Error al agregar cliente:', error);
@@ -704,12 +703,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast.success('Actualizado localmente (sin conexión)');
         return;
       }
-      const { data, error } = await supabase.from('clientes').update(dbRecord).eq('id', id).eq('user_id', userId).select().single();
-      if (error) throw error;
-      if (data) {
-        const mapped = dbToCliente(data);
-        setClientes(p => { const updated = p.map(x => x.id === id ? mapped : x); saveCachedData('clientes', userId, updated); return updated; });
-      }
+      const mapped = await ClientesService.updateCliente(id, c, userId);
+      setClientes(p => { const updated = p.map(x => x.id === id ? mapped : x); saveCachedData('clientes', userId, updated); return updated; });
       toast.success('Cliente actualizado');
     } catch (error) {
       console.error('Error al actualizar cliente:', error);
@@ -728,8 +723,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toast.success('Eliminado localmente (sin conexión)');
       return;
     }
-    const { error } = await supabase.from('clientes').delete().eq('id', id).eq('user_id', userId);
-    if (error) { toast.error('Error al eliminar cliente'); throw error; }
+    await ClientesService.deleteCliente(id, userId);
     setClientes(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('clientes', userId, filtered); return filtered; });
     toast.success('Cliente eliminado');
   };
@@ -763,13 +757,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast.success('Guardado localmente (sin conexión)');
         return;
       }
-      const { data, error } = await supabase.from('proyectos').insert(dbRecord).select().single();
-      if (error) throw error;
-      if (data) {
-        const mapped = dbToProyecto(data);
-        setProyectos(prev => [mapped, ...prev]);
-        saveCachedData('proyectos', userId, [mapped, ...proyectos]);
-      }
+      const data = await ProyectosService.addProyecto(dbRecord);
+      const mapped = dbToProyecto(data);
+      setProyectos(prev => [mapped, ...prev]);
+      saveCachedData('proyectos', userId, [mapped, ...proyectos]);
       toast.success('Proyecto guardado');
     } catch (error) {
       console.error('Error al agregar proyecto:', error);
@@ -790,12 +781,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast.success('Actualizado localmente (sin conexión)');
         return;
       }
-      const { data, error } = await supabase.from('proyectos').update(dbRecord).eq('id', id).eq('user_id', userId).select().single();
-      if (error) throw error;
-      if (data) {
-        const mapped = dbToProyecto(data);
-        setProyectos(prev => { const updated = prev.map(x => x.id === id ? mapped : x); saveCachedData('proyectos', userId, updated); return updated; });
-      }
+      const data = await ProyectosService.updateProyecto(id, userId, dbRecord);
+      const mapped = dbToProyecto(data);
+      setProyectos(prev => { const updated = prev.map(x => x.id === id ? mapped : x); saveCachedData('proyectos', userId, updated); return updated; });
       toast.success('Proyecto actualizado');
     } catch (error) {
       console.error('Error al actualizar proyecto:', error);
@@ -814,8 +802,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toast.success('Eliminado localmente (sin conexión)');
       return;
     }
-    const { error } = await supabase.from('presupuestos').delete().eq('id', id).eq('user_id', userId);
-    if (error) { toast.error('Error al eliminar proyecto'); throw error; }
+    await PresupuestosService.deletePresupuesto(id, userId);
     setPresupuestos(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('presupuestos', userId, filtered); return filtered; });
     toast.success('Proyecto eliminado');
   };
@@ -873,8 +860,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
     try {
-      const { error } = await supabase.from('transacciones').delete().eq('id', id).eq('user_id', userId);
-      if (error) throw error;
+      await FinancieroService.deleteTransaccion(id, userId);
       setTransacciones(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('transacciones', userId, filtered); return filtered; });
       toast.success('Transacción eliminada');
     } catch {
@@ -904,14 +890,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast.success('Guardado localmente (sin conexión)');
         return;
       }
-      const { data, error } = await supabase.from('actividades').insert(dbRecord).select().single();
-      if (error) throw error;
-      if (data) {
-        const mapped = dbToActividad(data);
-        setActividades(p => [mapped, ...p]);
-        saveCachedData('actividades', userId, [mapped, ...actividades]);
-        toast.success('Actividad guardada');
-      }
+      const data = await ActividadesService.addActividad(dbRecord);
+      const mapped = dbToActividad(data);
+      setActividades(p => [mapped, ...p]);
+      saveCachedData('actividades', userId, [mapped, ...actividades]);
+      toast.success('Actividad guardada');
     } catch (error) {
       console.error('Error al agregar actividad:', error);
       toast.error('Error al guardar actividad', { description: error instanceof Error ? error.message : 'Error desconocido' });
@@ -930,8 +913,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
     try {
-      const { error } = await supabase.from('actividades').delete().eq('id', id).eq('user_id', userId);
-      if (error) throw error;
+      await ActividadesService.deleteActividad(id, userId);
       setActividades(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('actividades', userId, filtered); return filtered; });
       toast.success('Actividad eliminada');
     } catch {
@@ -985,21 +967,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return tmpId;
       }
 
-      const { data, error } = await supabase.from('presupuestos')
-        .insert(dbRecord)
-        .select();
-      if (error) {
-        console.error('Error Supabase al insertar presupuesto:', JSON.stringify(error));
-        throw error;
-      }
-      if (data && data.length > 0) {
-        const inserted = data[0];
-        setPresupuestos(prev => [dbToPresupuesto(inserted), ...prev]);
-        cachePresupuestos(userId);
-        toast.success('Presupuesto guardado');
-        return inserted.id;
-      }
-      return null;
+      const inserted = await PresupuestosService.addPresupuesto(dbRecord);
+      setPresupuestos(prev => [dbToPresupuesto(inserted), ...prev]);
+      cachePresupuestos(userId);
+      toast.success('Presupuesto guardado');
+      return inserted.id;
     } catch (error: any) {
       console.error('Error al agregar presupuesto:', error);
       const msg = error?.message || error?.description || 'Error desconocido';
@@ -1022,17 +994,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast.success('Actualizado localmente (sin conexión)');
         return;
       }
-      const { data, error } = await supabase.from('presupuestos')
-        .update(dbPayload).eq('id', id).eq('user_id', userId).select();
-      if (error) {
-        console.error('Error Supabase al actualizar presupuesto:', JSON.stringify(error));
-        throw error;
-      }
-      if (data && data.length > 0) {
-        const mapped = dbToPresupuesto(data[0]);
-        setPresupuestos(prev => { const updated = prev.map(x => x.id === id ? mapped : x); saveCachedData('presupuestos', userId, updated); return updated; });
-        toast.success('Presupuesto actualizado');
-      }
+      const data = await PresupuestosService.updatePresupuesto(id, userId, dbPayload);
+      const mapped = dbToPresupuesto(data);
+      setPresupuestos(prev => { const updated = prev.map(x => x.id === id ? mapped : x); saveCachedData('presupuestos', userId, updated); return updated; });
+      toast.success('Presupuesto actualizado');
     } catch (error: any) {
       console.error('Error al actualizar presupuesto:', error);
       const msg = error?.message || error?.description || 'Error desconocido';
@@ -1055,15 +1020,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast.success('Fase cambiada localmente (sin conexión)');
         return;
       }
-      const { data, error } = await supabase
-        .from('presupuestos')
-        .update({ fase: nuevaFase, updated_at: new Date().toISOString() })
-        .eq('id', id).eq('user_id', userId).select();
-      if (error) {
-        console.error('Error Supabase en transicionFase:', JSON.stringify(error));
-        throw error;
-      }
-      if (data && data.length > 0) setPresupuestos(prev => prev.map(p => p.id === id ? dbToPresupuesto(data[0]) : p));
+      const data = await PresupuestosService.updatePresupuesto(id, userId, { fase: nuevaFase, updated_at: new Date().toISOString() });
+      setPresupuestos(prev => prev.map(p => p.id === id ? dbToPresupuesto(data) : p));
       cachePresupuestos(userId);
       const nombreProyecto = presupuestos.find(p => p.id === id)?.proyecto || 'Proyecto';
       crearNotificacion(userId, 'info', `Fase cambiada: ${nuevaFase}`, `"${nombreProyecto}" movido a ${nuevaFase}`);
@@ -1092,13 +1050,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast.success('Guardado localmente (sin conexión)');
         return;
       }
-      const { data, error } = await supabase.from('equipos').insert(dbRecord).select().single();
-      if (error) throw error;
-      if (data) {
-        const mapped = dbToEquipo(data);
-        setEquipos(p => [mapped, ...p]);
-        saveCachedData('equipos', userId, [mapped, ...equipos]);
-      }
+      const data = await EquiposService.addEquipo(dbRecord);
+      const mapped = dbToEquipo(data);
+      setEquipos(p => [mapped, ...p]);
+      saveCachedData('equipos', userId, [mapped, ...equipos]);
       toast.success('Equipo guardado');
     } catch (error) {
       console.error('Error al agregar equipo:', error);
@@ -1120,12 +1075,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast.success('Actualizado localmente (sin conexión)');
         return;
       }
-      const { data, error } = await supabase.from('equipos').update(dbRecord).eq('id', id).eq('user_id', userId).select().single();
-      if (error) throw error;
-      if (data) {
-        const mapped = dbToEquipo(data);
-        setEquipos(p => { const updated = p.map(x => x.id === id ? mapped : x); saveCachedData('equipos', userId, updated); return updated; });
-      }
+      const data = await EquiposService.updateEquipo(id, dbRecord, userId);
+      const mapped = dbToEquipo(data);
+      setEquipos(p => { const updated = p.map(x => x.id === id ? mapped : x); saveCachedData('equipos', userId, updated); return updated; });
       toast.success('Equipo actualizado');
     } catch (error) {
       console.error('Error al actualizar equipo:', error);
@@ -1144,8 +1096,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toast.success('Eliminado localmente (sin conexión)');
       return;
     }
-    const { error } = await supabase.from('equipos').delete().eq('id', id).eq('user_id', userId);
-    if (error) { toast.error('Error al eliminar equipo'); throw error; }
+    await EquiposService.deleteEquipo(id, userId);
     setEquipos(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('equipos', userId, filtered); return filtered; });
     toast.success('Equipo eliminado');
   };
@@ -1166,13 +1117,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast.success('Guardado localmente (sin conexión)');
         return;
       }
-      const { data, error } = await supabase.from('equipo_miembros').insert(dbRecord).select().single();
-      if (error) throw error;
-      if (data) {
-        const mapped = dbToEquipoMiembro(data);
-        setEquipoMiembros(p => [mapped, ...p]);
-        saveCachedData('equipo_miembros', userId, [mapped, ...equipoMiembros]);
-      }
+      const data = await EquiposService.addMiembro(dbRecord);
+      const mapped = dbToEquipoMiembro(data);
+      setEquipoMiembros(p => [mapped, ...p]);
+      saveCachedData('equipo_miembros', userId, [mapped, ...equipoMiembros]);
       toast.success('Miembro agregado al equipo');
     } catch (error) {
       console.error('Error al agregar miembro:', error);
@@ -1194,12 +1142,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast.success('Actualizado localmente (sin conexión)');
         return;
       }
-      const { data, error } = await supabase.from('equipo_miembros').update(dbRecord).eq('id', id).select().single();
-      if (error) throw error;
-      if (data) {
-        const mapped = dbToEquipoMiembro(data);
-        setEquipoMiembros(p => { const updated = p.map(x => x.id === id ? mapped : x); saveCachedData('equipo_miembros', userId, updated); return updated; });
-      }
+      const data = await EquiposService.updateMiembro(id, dbRecord);
+      const mapped = dbToEquipoMiembro(data);
+      setEquipoMiembros(p => { const updated = p.map(x => x.id === id ? mapped : x); saveCachedData('equipo_miembros', userId, updated); return updated; });
       toast.success('Miembro actualizado');
     } catch (error) {
       console.error('Error al actualizar miembro:', error);
@@ -1218,8 +1163,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toast.success('Eliminado localmente (sin conexión)');
       return;
     }
-    const { error } = await supabase.from('equipo_miembros').delete().eq('id', id).eq('user_id', userId);
-    if (error) { toast.error('Error al eliminar miembro'); throw error; }
+    await EquiposService.deleteMiembro(id, userId);
     setEquipoMiembros(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('equipo_miembros', userId, filtered); return filtered; });
     toast.success('Miembro removido del equipo');
   };
@@ -1239,12 +1183,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     sidebarOpen, toggleSidebar,
     darkMode, toggleDarkMode,
     isOnline, pendingCount,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [
     view, session, loading, authError, user,
     clientes, proyectos, transacciones, actividades, presupuestos, equipos, equipoMiembros,
     sidebarOpen, darkMode, isOnline, pendingCount,
   ]);
-
   return (
     <AppContext.Provider value={contextValue}>
       {children}

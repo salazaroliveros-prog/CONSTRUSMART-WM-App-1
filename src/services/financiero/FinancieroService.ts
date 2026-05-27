@@ -8,9 +8,9 @@ import { toast } from 'sonner';
  */
 export const FinancieroService = {
   /**
-   * Calcula el balance de un presupuesto o general basado en transacciones
+   * Calcula el balance incluyendo la nómina real (mano-obra)
    */
-  async getResumenFinanciero(userId: string) {
+  async getResumenFinancieroDetallado(userId: string) {
     const { data, error } = await supabase
       .from('transacciones')
       .select('*')
@@ -20,14 +20,36 @@ export const FinancieroService = {
     
     const transacciones = data as Transaccion[];
     const ingresos = transacciones.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
-    const gastos = transacciones.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
+    const gastosGenerales = transacciones.filter(t => t.tipo === 'gasto' && t.categoria !== 'mano-obra').reduce((s, t) => s + t.costoTotal, 0);
+    const gastosPersonal = transacciones.filter(t => t.tipo === 'gasto' && t.categoria === 'mano-obra').reduce((s, t) => s + t.costoTotal, 0);
     
     return {
       ingresos,
-      gastos,
-      balance: ingresos - gastos,
-      transacciones
+      gastosGenerales,
+      gastosPersonal,
+      rentabilidadNeta: ingresos - gastosGenerales - gastosPersonal
     };
+  },
+
+
+  /**
+   * Obtiene transacciones, opcionalmente filtradas por proyecto
+   */
+  async getTransacciones(userId?: string, proyectoId?: string) {
+    let query = supabase.from('transacciones').select('*');
+    if (userId) query = query.eq('user_id', userId);
+    if (proyectoId) query = query.eq('proyecto_id', proyectoId);
+    query = query.order('fecha', { ascending: false });
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data || []) as Transaccion[];
+  },
+
+  async deleteTransaccion(id: string, userId?: string) {
+    let query = supabase.from('transacciones').delete().eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+    const { error } = await query;
+    if (error) throw error;
   },
 
   /**

@@ -59,6 +59,35 @@ export const PresupuestosService = {
     };
   },
 
+  async addPresupuesto(payload: Record<string, unknown>) {
+    const { data, error } = await supabase
+      .from('presupuestos')
+      .insert(payload)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updatePresupuesto(id: string, userId: string, payload: Record<string, unknown>) {
+    const { data, error } = await supabase
+      .from('presupuestos')
+      .update(payload)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deletePresupuesto(id: string, userId?: string) {
+    let query = supabase.from('presupuestos').delete().eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+    const { error } = await query;
+    if (error) throw error;
+  },
+
   /**
    * Actualiza el estado financiero y avance de un presupuesto
    */

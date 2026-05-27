@@ -1,8 +1,17 @@
 import { supabase } from '@/lib/supabase';
-import { Proyecto } from '@/types/supabase';
 
 export const ProyectosService = {
-  async updateProyecto(id: string, userId: string, payload: Partial<Proyecto>) {
+  async addProyecto(payload: Record<string, unknown>) {
+    const { data, error } = await supabase
+      .from('proyectos')
+      .insert(payload)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateProyecto(id: string, userId: string, payload: Record<string, unknown>) {
     const { data, error } = await supabase
       .from('proyectos')
       .update(payload)

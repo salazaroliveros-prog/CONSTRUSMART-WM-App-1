@@ -1,6 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { supabase } from '@/lib/supabase';
 import type { Presupuesto } from '@/types/supabase';
 import PageShell from '@/components/shared/PageShell';
 import { Play, PauseCircle, CheckCircle, Folder, Filter, Edit3, Save, Trash2, X, ChevronDown, ChevronRight, DollarSign, TrendingUp, TrendingDown, Ruler, Percent } from 'lucide-react';

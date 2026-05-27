@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import NotificationBell from '@/components/shared/NotificationBell';
-import { Home, LogOut, Search, Moon, Sun, User, Menu, X, LayoutGrid, Users, Calculator, Folder, LineChart, Wallet, Shield } from 'lucide-react';
+import { Home, LogOut, Search, Moon, Sun, User, Menu, X, LayoutGrid, Users, Calculator, Folder, LineChart, Wallet, Shield, Package, FileText } from 'lucide-react';
 import { ViewType } from '@/types/supabase';
 
 const modules = [
@@ -9,9 +9,11 @@ const modules = [
   { id: 'clientes' as ViewType, label: 'Clientes', icon: Users },
   { id: 'presupuesto' as ViewType, label: 'Presupuestos', icon: Calculator },
   { id: 'proyectos' as ViewType, label: 'Proyectos', icon: Folder },
+  { id: 'bodega' as ViewType, label: 'Bodega', icon: Package },
   { id: 'seguimiento' as ViewType, label: 'Seguimiento', icon: LineChart },
   { id: 'financiero' as ViewType, label: 'Financiero', icon: Wallet },
   { id: 'equipos' as ViewType, label: 'Equipos', icon: Shield },
+  { id: 'cotizacion' as ViewType, label: 'Cotización', icon: FileText },
 ];
 
 const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = true, title }) => {
