@@ -68,6 +68,20 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('recharts')) return 'vendor-charts';
             if (id.includes('lucide')) return 'vendor-icons';
             if (id.includes('zod') || id.includes('hook-form')) return 'vendor-forms';
+            if (id.includes('framer-motion')) return 'vendor-motion';
+            if (id.includes('supabase')) return 'vendor-supabase';
+            if (id.includes('tanstack')) return 'vendor-query';
+            if (id.includes('tesseract')) return 'vendor-tesseract';
+            if (id.includes('xlsx')) return 'vendor-xlsx';
+            if (id.includes('html2pdf')) return 'vendor-pdf';
+            if (id.includes('highlight')) return 'vendor-highlight';
+            if (id.includes('react-router')) return 'vendor-router';
+            if (id.includes('date-fns')) return 'vendor-dates';
+            if (id.includes('@radix-ui')) return 'vendor-radix';
+            if (id.includes('embla-carousel')) return 'vendor-ui';
+            if (id.includes('sonner') || id.includes('vaul') || id.includes('cmdk')) return 'vendor-ui';
+            if (id.includes('day-picker')) return 'vendor-ui';
+            if (id.includes('resizable-panels')) return 'vendor-ui';
             return 'vendor-other';
           }
         },
