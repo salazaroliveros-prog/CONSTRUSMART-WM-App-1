@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { supabase } from '@/lib/supabase';
 import PageShell from '@/components/shared/PageShell';
+import { MaterialesService } from '@/services/presupuestos/MaterialesService';
 import { BodegaService } from '@/services/proyectos/BodegaService';
 import { toast } from 'sonner';
 import { Package, Plus, Minus, AlertTriangle, Search, RefreshCw } from 'lucide-react';
@@ -27,8 +27,7 @@ interface ProyectoSimple {
 }
 
 const BodegaScreen: React.FC = () => {
-  const { user } = useAppContext();
-  const [proyectos, setProyectos] = useState<ProyectoSimple[]>([]);
+  const { presupuestos } = useAppContext();
   const [selectedId, setSelectedId] = useState('');
   const [materiales, setMateriales] = useState<MaterialRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,19 +38,13 @@ const BodegaScreen: React.FC = () => {
   const [showUso, setShowUso] = useState<MaterialRow | null>(null);
   const [usoCantidad, setUsoCantidad] = useState(0);
 
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from('presupuestos')
-        .select('id, proyecto, cliente')
-        .order('created_at', { ascending: false });
-      setProyectos((data || []).map((p: Record<string, unknown>) => ({
-        id: p.id as string,
-        nombre: p.proyecto as string,
-        cliente: p.cliente as string | null,
-      })));
-    })();
-  }, []);
+  const proyectos = useMemo<ProyectoSimple[]>(() => {
+    return presupuestos.map((p) => ({
+      id: p.id,
+      nombre: p.proyecto,
+      cliente: p.cliente ?? null,
+    }));
+  }, [presupuestos]);
 
   const loadMateriales = useCallback(async () => {
     if (!selectedId) return;
@@ -114,7 +107,7 @@ const BodegaScreen: React.FC = () => {
   const registrarUso = async () => {
     if (!showUso || usoCantidad <= 0) return;
     try {
-      await MaterialesService.registrarUso(showUso.id, usoCantidad);
+      await BodegaService.registrarUso(showUso.id, usoCantidad, `Uso manual`, undefined);
       toast.success('Uso registrado');
       setShowUso(null);
       setUsoCantidad(0);

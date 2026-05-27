@@ -186,6 +186,20 @@ AS $$
   );
 $$;
 
+-- 4.10.b FUNCIÓN DE SEGURIDAD PARA PRESUPUESTOS
+CREATE OR REPLACE FUNCTION public.user_owns_presupuesto(p_presupuesto_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = 'public, auth'
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.presupuestos
+    WHERE id = p_presupuesto_id AND user_id = auth.uid()
+  );
+$$;
+
 -- 4.11. renglones (catálogo de APU — análisis de precios unitarios)
 CREATE TABLE IF NOT EXISTS public.renglones (
   id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -216,6 +230,80 @@ CREATE TABLE IF NOT EXISTS public.renglones (
   created_at        timestamptz DEFAULT now(),
   updated_at        timestamptz DEFAULT now()
 );
+
+-- 4.12. subrenglones (explosión detallada por presupuesto)
+CREATE TABLE IF NOT EXISTS public.subrenglones (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  presupuesto_id uuid NOT NULL REFERENCES public.presupuestos(id) ON DELETE CASCADE,
+  renglon_id uuid REFERENCES public.renglones(id) ON DELETE SET NULL,
+  codigo text,
+  descripcion text NOT NULL,
+  unidad text DEFAULT 'pza',
+  cantidad numeric(14,4) DEFAULT 1,
+  rendimiento numeric(14,4) DEFAULT NULL,
+  costo_material_total numeric(18,4) DEFAULT 0,
+  costo_mano_obra_total numeric(18,4) DEFAULT 0,
+  costo_equipos_total numeric(18,4) DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_subrenglones_presupuesto_id ON public.subrenglones(presupuesto_id);
+CREATE INDEX IF NOT EXISTS idx_subrenglones_renglon_id ON public.subrenglones(renglon_id);
+
+-- trigger updated_at
+DROP TRIGGER IF EXISTS trg_subrenglones_updated_at ON public.subrenglones;
+CREATE TRIGGER trg_subrenglones_updated_at
+  BEFORE UPDATE ON public.subrenglones
+  FOR EACH ROW EXECUTE FUNCTION public.fn_set_updated_at();
+
+-- 4.13. subrenglon_materiales (detalle de materiales por subrenglón)
+CREATE TABLE IF NOT EXISTS public.subrenglon_materiales (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  subrenglon_id uuid NOT NULL REFERENCES public.subrenglones(id) ON DELETE CASCADE,
+  material_id uuid REFERENCES public.materiales_proyecto(id) ON DELETE SET NULL,
+  nombre text NOT NULL,
+  unidad text DEFAULT 'pza',
+  cantidad numeric(18,4) DEFAULT 0,
+  costo_unitario numeric(18,4) DEFAULT 0,
+  desperdicio numeric(8,4) DEFAULT 0,
+  subtotal numeric(18,4) DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE IF EXISTS public.subrenglon_materiales
+  ADD COLUMN IF NOT EXISTS material_id uuid REFERENCES public.materiales_proyecto(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_srm_subrenglon_id ON public.subrenglon_materiales(subrenglon_id);
+CREATE INDEX IF NOT EXISTS idx_srm_material_id ON public.subrenglon_materiales(material_id);
+
+-- 4.14. subrenglon_mano_obra (detalle de mano de obra por subrenglón)
+CREATE TABLE IF NOT EXISTS public.subrenglon_mano_obra (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  subrenglon_id uuid NOT NULL REFERENCES public.subrenglones(id) ON DELETE CASCADE,
+  descripcion text NOT NULL,
+  cantidad_personas numeric(10,4) DEFAULT 1,
+  jornal numeric(18,4) DEFAULT 0,
+  rendimiento_especifico numeric(18,4) DEFAULT NULL,
+  costo_unidad numeric(18,4) DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_smo_subrenglon_id ON public.subrenglon_mano_obra(subrenglon_id);
+
+-- 4.15. subrenglon_equipos (detalle de equipos por subrenglón)
+CREATE TABLE IF NOT EXISTS public.subrenglon_equipos (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  subrenglon_id uuid NOT NULL REFERENCES public.subrenglones(id) ON DELETE CASCADE,
+  descripcion text NOT NULL,
+  cantidad numeric(14,4) DEFAULT 1,
+  costo_hora numeric(18,4) DEFAULT 0,
+  horas_uso numeric(14,4) DEFAULT 0,
+  subtotal numeric(18,4) DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sre_subrenglon_id ON public.subrenglon_equipos(subrenglon_id);
 
 -- 4.12. renglon_usage (historial de uso de renglones en presupuestos)
 CREATE TABLE IF NOT EXISTS public.renglon_usage (
@@ -272,6 +360,9 @@ CREATE TABLE IF NOT EXISTS public.movimientos_materiales (
   user_id      uuid REFERENCES auth.users(id),
   created_at   timestamptz DEFAULT now()
 );
+
+ALTER TABLE IF EXISTS public.movimientos_materiales
+  ADD COLUMN IF NOT EXISTS material_id uuid REFERENCES public.materiales_proyecto(id) ON DELETE CASCADE;
 
 -- 4.17. conciliaciones (conciliaciones bancarias)
 CREATE TABLE IF NOT EXISTS public.conciliaciones (
@@ -366,11 +457,15 @@ CREATE TABLE IF NOT EXISTS public.orden_compra_items (
   descripcion      text NOT NULL,
   cantidad         numeric(12,2) NOT NULL,
   unidad           text DEFAULT 'pza',
+  material_id      uuid REFERENCES public.materiales_proyecto(id),
   precio_unitario  numeric(12,2) DEFAULT 0,
   importe          numeric(12,2) DEFAULT 0,
   cantidad_recibida numeric(12,2) DEFAULT 0,
   created_at       timestamptz DEFAULT now()
 );
+
+ALTER TABLE IF EXISTS public.orden_compra_items
+  ADD COLUMN IF NOT EXISTS material_id uuid REFERENCES public.materiales_proyecto(id);
 
 -- 4.24. recepcion_oc (registro de recepciones parciales/totales)
 CREATE TABLE IF NOT EXISTS public.recepcion_oc (
@@ -417,6 +512,10 @@ ALTER TABLE public.ordenes_compra         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orden_compra_items     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recepcion_oc           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recepcion_oc_items     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subrenglones           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subrenglon_materiales  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subrenglon_mano_obra   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subrenglon_equipos     ENABLE ROW LEVEL SECURITY;
 
 -- 6. ELIMINAR POLÍTICAS EXISTENTES (para reinicio idempotente)
 -- clientes
@@ -788,6 +887,62 @@ CREATE POLICY "mov_delete" ON public.movimientos_materiales
   FOR DELETE TO authenticated
   USING (material_id IN (SELECT id FROM public.materiales_proyecto WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
 
+-- 7.XX. subrenglones (explosión de renglones por presupuesto)
+CREATE POLICY "sr_select" ON public.subrenglones
+  FOR SELECT TO authenticated
+  USING (presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
+CREATE POLICY "sr_insert" ON public.subrenglones
+  FOR INSERT TO authenticated
+  WITH CHECK (presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
+CREATE POLICY "sr_update" ON public.subrenglones
+  FOR UPDATE TO authenticated
+  USING (presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
+CREATE POLICY "sr_delete" ON public.subrenglones
+  FOR DELETE TO authenticated
+  USING (presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
+
+-- 7.XX+1. subrenglon_materiales
+CREATE POLICY "srm_select" ON public.subrenglon_materiales
+  FOR SELECT TO authenticated
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+CREATE POLICY "srm_insert" ON public.subrenglon_materiales
+  FOR INSERT TO authenticated
+  WITH CHECK (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+CREATE POLICY "srm_update" ON public.subrenglon_materiales
+  FOR UPDATE TO authenticated
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+CREATE POLICY "srm_delete" ON public.subrenglon_materiales
+  FOR DELETE TO authenticated
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+
+-- 7.XX+2. subrenglon_mano_obra
+CREATE POLICY "smo_select" ON public.subrenglon_mano_obra
+  FOR SELECT TO authenticated
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+CREATE POLICY "smo_insert" ON public.subrenglon_mano_obra
+  FOR INSERT TO authenticated
+  WITH CHECK (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+CREATE POLICY "smo_update" ON public.subrenglon_mano_obra
+  FOR UPDATE TO authenticated
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+CREATE POLICY "smo_delete" ON public.subrenglon_mano_obra
+  FOR DELETE TO authenticated
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+
+-- 7.XX+3. subrenglon_equipos
+CREATE POLICY "sre_select" ON public.subrenglon_equipos
+  FOR SELECT TO authenticated
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+CREATE POLICY "sre_insert" ON public.subrenglon_equipos
+  FOR INSERT TO authenticated
+  WITH CHECK (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+CREATE POLICY "sre_update" ON public.subrenglon_equipos
+  FOR UPDATE TO authenticated
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+CREATE POLICY "sre_delete" ON public.subrenglon_equipos
+  FOR DELETE TO authenticated
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+
 -- 7.16. conciliaciones
 CREATE POLICY "conc_select" ON public.conciliaciones
   FOR SELECT TO authenticated
@@ -889,8 +1044,15 @@ CREATE INDEX IF NOT EXISTS idx_ordenes_compra_user_id       ON public.ordenes_co
 CREATE INDEX IF NOT EXISTS idx_ordenes_compra_proveedor     ON public.ordenes_compra(proveedor_id);
 CREATE INDEX IF NOT EXISTS idx_ordenes_compra_estatus       ON public.ordenes_compra(estatus);
 CREATE INDEX IF NOT EXISTS idx_oci_orden_compra_id          ON public.orden_compra_items(orden_compra_id);
+CREATE INDEX IF NOT EXISTS idx_oci_material_id              ON public.orden_compra_items(material_id);
 CREATE INDEX IF NOT EXISTS idx_recepcion_oc_orden_compra_id ON public.recepcion_oc(orden_compra_id);
 CREATE INDEX IF NOT EXISTS idx_recepcion_oc_user_id         ON public.recepcion_oc(user_id);
+CREATE INDEX IF NOT EXISTS idx_subrenglones_presupuesto_id ON public.subrenglones(presupuesto_id);
+CREATE INDEX IF NOT EXISTS idx_subrenglones_renglon_id     ON public.subrenglones(renglon_id);
+CREATE INDEX IF NOT EXISTS idx_srm_subrenglon_id           ON public.subrenglon_materiales(subrenglon_id);
+CREATE INDEX IF NOT EXISTS idx_srm_material_id             ON public.subrenglon_materiales(material_id);
+CREATE INDEX IF NOT EXISTS idx_smo_subrenglon_id           ON public.subrenglon_mano_obra(subrenglon_id);
+CREATE INDEX IF NOT EXISTS idx_sre_subrenglon_id           ON public.subrenglon_equipos(subrenglon_id);
 CREATE INDEX IF NOT EXISTS idx_actividades_user_id         ON public.actividades(user_id);
 CREATE INDEX IF NOT EXISTS idx_actividades_fecha           ON public.actividades(fecha);
 CREATE INDEX IF NOT EXISTS idx_actividades_presupuesto_id  ON public.actividades(presupuesto_id);

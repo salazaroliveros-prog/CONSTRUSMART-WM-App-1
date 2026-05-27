@@ -1,28 +1,29 @@
 import { supabase } from '@/lib/supabase';
+import { MovimientosMaterialesService } from '@/services/proyectos/MovimientosMaterialesService';
 
 export const BodegaService = {
-  async registrarMovimiento(materialId: string, tipo: 'entrada' | 'salida', cantidad: number, referencia: string = 'Movimiento automático') {
-    const { error } = await supabase.from('movimientos_materiales').insert({
+  async registrarMovimiento(materialId: string, tipo: 'entrada' | 'salida', cantidad: number, referencia: string = 'Movimiento automático', userId?: string) {
+    const payload: Record<string, unknown> = {
       material_id: materialId,
       tipo,
       cantidad,
       referencia,
-    });
+    };
+    if (userId) payload.user_id = userId;
+
+    const { error } = await supabase.from('movimientos_materiales').insert(payload);
     if (error) throw error;
   },
 
-  async registrarCompra(materialId: string, cantidad: number, referencia: string) {
-    return await this.registrarMovimiento(materialId, 'entrada', cantidad, referencia || 'Compra directa');
+  async registrarCompra(materialId: string, cantidad: number, referencia: string, userId?: string) {
+    return await this.registrarMovimiento(materialId, 'entrada', cantidad, referencia || 'Compra directa', userId);
   },
 
-  async getMovimientos(proyectoId: string) {
-    // Nota: Esta consulta debe ser optimizada si la tabla crece mucho.
-    // Actualmente obtiene movimientos para el proyecto, asumiendo relacion indirecta o directa.
-    const { data, error } = await supabase
-      .from('movimientos_materiales')
-      .select('material_id, tipo, cantidad');
-    
-    if (error) throw error;
-    return data || [];
+  async registrarUso(materialId: string, cantidad: number, referencia: string = 'Uso de almacén', userId?: string) {
+    return await this.registrarMovimiento(materialId, 'salida', cantidad, referencia, userId);
+  },
+
+  async getMovimientos(presupuestoId: string) {
+    return await MovimientosMaterialesService.listarPorPresupuesto(presupuestoId);
   }
 };

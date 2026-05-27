@@ -1,5 +1,15 @@
 # CONSTRUSMART WM — Agent Guide
 
+## AI Coding Agent Guide
+
+- This file is the primary repository-specific guide for AI coding agents.
+- When you need more context, refer to `README.md` and `scripts/ERP_SCHEMA_FINAL.sql`.
+- Use `npm run build`, `npm run typecheck`, and `npm run test -- --run` before finalizing changes.
+- Preserve the app architecture: React + Vite + Tailwind + Shadcn/ui, with a single-page app and internal view switching in `AppContext.view`.
+- Do not add direct `supabase.from()` calls inside UI components. Always use `src/services/*` for Supabase interaction.
+- Prefer schema changes in `scripts/ERP_SCHEMA_FINAL.sql`; use `scripts/CLEANUP_ALL.sql` only to reset the DB when needed.
+- The alias `@/` resolves to `./src/` in both Vite and Vitest.
+
 ## Dev commands
 ```bash
 npm run dev          # Vite on port 8080 (NOT 5173)

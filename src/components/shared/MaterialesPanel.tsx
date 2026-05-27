@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MaterialesService } from '@/services/presupuestos/MaterialesService';
+import { BodegaService } from '@/services/proyectos/BodegaService';
 import { Package, Plus, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -43,7 +44,7 @@ const MaterialesPanel: React.FC<Props> = ({ presupuestoId, onClose }) => {
 
   const registrarCompra = async (id: string, cantidad: number) => {
     try {
-      await MaterialesService.registrarCompra(id, cantidad, 'Compra Directa');
+      await BodegaService.registrarCompra(id, cantidad, 'Compra Directa');
       toast.success('Compra registrada en Bodega');
       await load();
     } catch (err) {
@@ -54,7 +55,7 @@ const MaterialesPanel: React.FC<Props> = ({ presupuestoId, onClose }) => {
 
   const registrarUso = async (id: string, cantidad: number) => {
     try {
-      await MaterialesService.registrarUso(id, cantidad);
+      await BodegaService.registrarUso(id, cantidad, 'Uso de material');
       toast.success('Uso registrado');
       await load();
     } catch (err) {

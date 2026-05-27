@@ -21,6 +21,23 @@ export const MaterialesService = {
     return data;
   },
 
+  async buscarPorNombre(presupuestoId: string, nombre: string) {
+    const criterio = nombre.trim();
+    if (!criterio) return null;
+
+    const { data, error } = await supabase
+      .from('materiales_proyecto')
+      .select('*')
+      .eq('presupuesto_id', presupuestoId)
+      .or(
+        `nombre.ilike.%${criterio}%,descripcion_material.ilike.%${criterio}%`
+      )
+      .limit(1);
+
+    if (error) throw error;
+    return (data && data[0]) || null;
+  },
+
   async registrarUso(materialId: string, cantidad: number) {
     const { data, error } = await supabase
       .from('movimientos_materiales')
