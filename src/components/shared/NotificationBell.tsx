@@ -3,6 +3,7 @@ import { Bell, BellDot, X, Check, Info, AlertTriangle, CheckCircle, AlertCircle,
 import { useAppContext } from '@/contexts/AppContext';
 import { NotificationService } from '@/services/equipos/NotificationService';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
 interface Notif {
   id: string;
@@ -23,6 +24,7 @@ const NotificationBell: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const { session } = useAppContext();
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     if (!session) return;
@@ -104,7 +106,7 @@ const NotificationBell: React.FC = () => {
                   </div>
                   <div className="flex flex-col gap-1">
                     {!n.leido && <button onClick={() => marcarLeido(n.id)} className="p-0.5 rounded hover:bg-blue-100"><Check className="w-3 h-3 text-blue-500" /></button>}
-                    <button onClick={() => eliminar(n.id)} className="p-0.5 rounded hover:bg-red-100"><Trash2 className="w-3 h-3 text-red-400" /></button>
+                    <button onClick={() => setConfirmDelete(n.id)} className="p-0.5 rounded hover:bg-red-100"><Trash2 className="w-3 h-3 text-red-400" /></button>
                   </div>
                 </div>
               );
@@ -112,6 +114,14 @@ const NotificationBell: React.FC = () => {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        onOpenChange={o => { if (!o) setConfirmDelete(null); }}
+        onConfirm={() => { if (confirmDelete) eliminar(confirmDelete); setConfirmDelete(null); }}
+        title="Eliminar notificación"
+        description="¿Estás seguro de eliminar esta notificación?"
+        confirmText="Aceptar"
+      />
     </div>
   );
 };

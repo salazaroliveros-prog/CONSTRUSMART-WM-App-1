@@ -4,6 +4,7 @@ import PageShell from '@/components/shared/PageShell';
 import { toast } from 'sonner';
 import { FileText, Plus, Trash2, Download, Printer, Search, Copy } from 'lucide-react';
 import type { Presupuesto } from '@/types/supabase';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
 interface CotizacionItem {
   id: string;
@@ -62,6 +63,8 @@ const CotizacionScreen: React.FC = () => {
   const [selectedId, setSelectedId] = useState('');
   const [showForm, setShowForm] = useState(true);
   const [search, setSearch] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [confirmRemoveItem, setConfirmRemoveItem] = useState<string | null>(null);
 
   const current = cotizaciones.find(c => c.id === selectedId);
   const isNew = selectedId && !current;
@@ -159,7 +162,6 @@ const CotizacionScreen: React.FC = () => {
   };
 
   const eliminarCotizacion = (id: string) => {
-    if (!window.confirm('¿Eliminar esta cotización?')) return;
     setCotizaciones(prev => prev.filter(c => c.id !== id));
     if (selectedId === id) nuevaCotizacion();
     toast.success('Cotización eliminada');
@@ -329,7 +331,7 @@ const CotizacionScreen: React.FC = () => {
                     className="p-0.5 text-slate-400 hover:text-blue-600" title="Duplicar">
                     <Copy className="w-3 h-3" />
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); eliminarCotizacion(c.id); }}
+                  <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(c.id); }}
                     className="p-0.5 text-slate-400 hover:text-red-600" title="Eliminar">
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -443,7 +445,7 @@ const CotizacionScreen: React.FC = () => {
                               Q {(i.cantidad * i.precioUnitario).toFixed(2)}
                             </td>
                             <td className="p-1.5 text-center">
-                              <button onClick={() => setItems(prev => prev.filter(x => x.id !== i.id))}
+                              <button onClick={() => setConfirmRemoveItem(i.id)}
                                 className="p-1 text-red-400 hover:text-red-600 transition">
                                 <Trash2 className="w-3 h-3" />
                               </button>
@@ -508,6 +510,22 @@ const CotizacionScreen: React.FC = () => {
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        onOpenChange={o => { if (!o) setConfirmDelete(null); }}
+        onConfirm={() => { if (confirmDelete) eliminarCotizacion(confirmDelete); setConfirmDelete(null); }}
+        title="Eliminar cotización"
+        description="Esta acción no se puede deshacer. ¿Estás seguro de eliminar esta cotización?"
+        confirmText="Aceptar"
+      />
+      <ConfirmDialog
+        open={confirmRemoveItem !== null}
+        onOpenChange={o => { if (!o) setConfirmRemoveItem(null); }}
+        onConfirm={() => { if (confirmRemoveItem) { setItems(prev => prev.filter(x => x.id !== confirmRemoveItem)); setConfirmRemoveItem(null); } }}
+        title="Eliminar partida"
+        description="¿Estás seguro de eliminar esta partida de la cotización?"
+        confirmText="Aceptar"
+      />
     </PageShell>
   );
 };

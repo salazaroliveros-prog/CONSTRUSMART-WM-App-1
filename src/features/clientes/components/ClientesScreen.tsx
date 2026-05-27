@@ -4,6 +4,7 @@ import { Cliente } from '@/types/supabase';
 import PageShell from '@/components/shared/PageShell';
 import { Plus, Search, Trash2, Edit2, Phone, Mail, MapPin, Download, X } from 'lucide-react';
 import { downloadCSV } from '@/lib/exporters';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
 const ClientesScreen: React.FC = () => {
   const { clientes, addCliente, updateCliente, deleteCliente } = useAppContext();
@@ -11,6 +12,7 @@ const ClientesScreen: React.FC = () => {
   const [filtro, setFiltro] = useState('todos');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [form, setForm] = useState<Omit<Cliente, 'id'>>({
     nombre: '',
     telefono: '',
@@ -153,7 +155,7 @@ const ClientesScreen: React.FC = () => {
                     <td className="p-3">
                       <div className="flex justify-center gap-1">
                         <button onClick={() => handleEdit(c)} className="p-1 text-blue-600 hover:bg-blue-100 rounded"><Edit2 className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => deleteCliente(c.id)} className="p-1 text-red-600 hover:bg-red-100 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => setConfirmDelete(c.id)} className="p-1 text-red-600 hover:bg-red-100 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     </td>
                   </tr>
@@ -166,6 +168,14 @@ const ClientesScreen: React.FC = () => {
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        onOpenChange={o => { if (!o) setConfirmDelete(null); }}
+        onConfirm={() => { if (confirmDelete) deleteCliente(confirmDelete); setConfirmDelete(null); }}
+        title="Eliminar cliente"
+        description="Esta acción no se puede deshacer. ¿Estás seguro de eliminar este cliente?"
+        confirmText="Aceptar"
+      />
     </PageShell>
   );
 };
