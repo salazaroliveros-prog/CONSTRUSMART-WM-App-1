@@ -253,7 +253,7 @@ const FinancieroScreen: React.FC = () => {
 const OcrToggle: React.FC = () => {
   const [open, setOpen] = useState(false);
   return (
-    <div className="w-64 shrink-0">
+    <div className="w-full md:w-64 shrink-0">
       {open ? <OCRFactura onClose={() => setOpen(false)} /> : (
         <button onClick={() => setOpen(true)}
           className="w-full h-full flex flex-col items-center justify-center gap-1.5 py-6 border-2 border-dashed border-slate-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/50 transition btn-press">

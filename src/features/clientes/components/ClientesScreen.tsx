@@ -79,7 +79,7 @@ const ClientesScreen: React.FC = () => {
       <div className="p-3 sm:p-5 max-w-7xl mx-auto">
         <div className="bg-white rounded-xl shadow-md p-4 mb-4 flex flex-wrap items-center gap-3 justify-between">
           <div className="flex flex-wrap items-center gap-2 flex-1">
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar cliente..." className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg" />
             </div>
