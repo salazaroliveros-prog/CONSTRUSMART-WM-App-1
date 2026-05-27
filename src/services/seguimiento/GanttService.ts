@@ -27,7 +27,7 @@ export const GanttService = {
 
     const nodos: RenglonCPM[] = renglones.map((r, i) => {
       const apu = calcularAPU(r);
-      const duracion = Math.max(1, Math.round((apu.dias || apu.totalPersonasDia || 1) / 8) + 1);
+      const duracion = Math.max(1, Math.round(apu.dias || apu.totalPersonasDia || 1));
       const predecesores: string[] = [];
       if (i > 0) predecesores.push(renglones[i - 1].codigo);
       return {

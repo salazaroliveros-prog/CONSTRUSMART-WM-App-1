@@ -7,7 +7,9 @@ import { BitacoraAvancePanel } from '@/components/shared/BitacoraAvancePanel';
 import { Plus, Trash2, ChevronDown, ChevronRight, Download, FileText, Calculator, Search, Save, FolderOpen, AlertTriangle, CheckCircle2, Info, Users, Wrench, Package } from 'lucide-react';
 import ChecklistPanel from '@/components/shared/ChecklistPanel';
 import MaterialesPanel from '@/components/shared/MaterialesPanel';
-import { validarFactores, sugerirFactores } from '@/utils/validacionPresupuesto';
+import { validarFactores, sugerirFactores, detectarAnomalias } from '@/utils/validacionPresupuesto';
+import { sugerirAPU } from '@/utils/predictorAPU';
+import type { Suggestion } from '@/utils/predictorAPU';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
 interface LineaPresupuesto extends Renglon {
@@ -57,6 +59,7 @@ const PresupuestoScreen: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [savedPresupuestoId, setSavedPresupuestoId] = useState<string | null>(null);
   const [confirmRemoveLinea, setConfirmRemoveLinea] = useState<string | null>(null);
+  const [sugerenciasAPU, setSugerenciasAPU] = useState<Suggestion[]>([]);
 
   const catalogo = renglonesPorTipologia[tipologia];
   const catalogoFiltrado = catalogo.filter(r =>
@@ -165,6 +168,16 @@ const PresupuestoScreen: React.FC = () => {
   }, [calculadas, meta]);
 
   const validacion = useMemo(() => validarFactores({ ...meta, total: totales.total }), [meta, totales.total]);
+
+  const anomalias = useMemo(() =>
+    lineas.length > 0 ? detectarAnomalias(totales.costoDirecto, totales.totalMaterial, totales.totalMO, totales.totalEquipo) : [],
+    [lineas, totales]
+  );
+
+  const handleSugerirAPU = useCallback(() => {
+    const suggestions = sugerirAPU(presupuestos, tipologia);
+    setSugerenciasAPU(suggestions);
+  }, [presupuestos, tipologia]);
 
   const handleExportCSV = () => {
     const rows: (string | number)[][] = [
@@ -352,9 +365,32 @@ const PresupuestoScreen: React.FC = () => {
                   ))}
                 </div>
               )}
+            </div>
+              {anomalias.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {anomalias.map((a, i) => (
+                    <div key={i} className="flex items-start gap-1.5 text-[10px] p-1.5 rounded bg-red-50 text-red-700">
+                      <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" /><span>{a}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <button onClick={handleSugerirFactores} className="mt-1.5 text-[10px] text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3" /> Sugerir factores para {tipologiaLabels[tipologia]}
               </button>
+              <button onClick={handleSugerirAPU} className="mt-1 text-[10px] text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-1">
+                <Info className="w-3 h-3" /> Sugerir APU desde hist\u00f3ricos
+              </button>
+              {sugerenciasAPU.length > 0 && (
+                <div className="mt-2 space-y-1 p-2 bg-purple-50 border border-purple-200 rounded">
+                  {sugerenciasAPU.map((s, i) => (
+                    <div key={i} className="text-[10px] text-purple-800 flex items-start gap-1">
+                      <Info className="w-3 h-3 mt-0.5 shrink-0" /><span>{s.mensaje}{s.confianza ? ` (confianza: ${s.confianza}%)` : ''}</span>
+                    </div>
+                  ))}
+                  <button onClick={() => setSugerenciasAPU([])} className="text-[9px] text-purple-500 hover:underline mt-1">Cerrar sugerencias</button>
+                </div>
+              )}
             </div>
           </div>
 
