@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Command } from 'cmdk';
 import { useAppContext, ViewType } from '@/contexts/AppContext';
-import { Search, Folder, Users, Calculator, LineChart, Wallet, LayoutDashboard, Plus, Shield, DollarSign } from 'lucide-react';
+import { Search, Folder, Users, Calculator, LineChart, Wallet, LayoutDashboard, Plus, Shield, DollarSign, ShoppingCart } from 'lucide-react';
 
 const views = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -11,6 +11,7 @@ const views = [
   { id: 'seguimiento', label: 'Seguimiento', icon: LineChart },
   { id: 'financiero', label: 'Control Financiero', icon: Wallet },
   { id: 'equipos', label: 'Equipos', icon: Shield },
+  { id: 'compras', label: 'Compras', icon: ShoppingCart },
 ];
 
 const CommandPalette: React.FC = () => {

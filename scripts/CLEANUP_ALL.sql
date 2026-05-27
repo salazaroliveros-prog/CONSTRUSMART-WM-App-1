@@ -26,6 +26,11 @@ DROP FUNCTION IF EXISTS public.fn_set_updated_at() CASCADE;
 DROP FUNCTION IF EXISTS public.user_owns_equipo(uuid) CASCADE;
 
 -- 4. ELIMINAR TABLAS (orden inverso al de creación para respetar FKs)
+DROP TABLE IF EXISTS public.recepcion_oc_items CASCADE;
+DROP TABLE IF EXISTS public.recepcion_oc CASCADE;
+DROP TABLE IF EXISTS public.orden_compra_items CASCADE;
+DROP TABLE IF EXISTS public.ordenes_compra CASCADE;
+DROP TABLE IF EXISTS public.proveedores CASCADE;
 DROP TABLE IF EXISTS public.notificaciones CASCADE;
 DROP TABLE IF EXISTS public.checklist_items CASCADE;
 DROP TABLE IF EXISTS public.partidas_conciliacion CASCADE;
@@ -62,7 +67,8 @@ WHERE schemaname = 'public'
     'renglones','renglon_usage','renglon_precios_historial',
     'cambios_presupuesto','materiales_proyecto','movimientos_materiales',
     'conciliaciones','partidas_conciliacion','checklist_items',
-    'notificaciones'
+    'notificaciones',
+    'proveedores','ordenes_compra','orden_compra_items','recepcion_oc','recepcion_oc_items'
   );
 
 -- Si el SELECT anterior no devuelve filas, la base está limpia ✅

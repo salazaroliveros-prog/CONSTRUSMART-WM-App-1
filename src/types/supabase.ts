@@ -113,6 +113,68 @@ const EquipoMiembroSchema = z.object({
   created_at: z.string().optional(),
 });
 
+// ====== Zod schemas: Compras ======
+const ProveedorSchema = z.object({
+  id: z.string().optional(),
+  user_id: z.string().min(1, 'user_id requerido'),
+  nombre: z.string().min(1, 'El nombre del proveedor es requerido'),
+  contacto: z.string().optional(),
+  telefono: z.string().optional(),
+  email: z.string().optional(),
+  direccion: z.string().optional(),
+  rfc: z.string().optional(),
+  notas: z.string().optional(),
+  activo: z.boolean().default(true),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
+
+const OrdenCompraSchema = z.object({
+  id: z.string().optional(),
+  user_id: z.string().min(1, 'user_id requerido'),
+  folio: z.string().min(1, 'Folio requerido'),
+  proveedor_id: z.string().optional(),
+  proyecto_id: z.string().optional(),
+  fecha_emision: z.string().default(() => new Date().toISOString().split('T')[0]),
+  fecha_entrega: z.string().optional(),
+  estatus: z.enum(['pendiente', 'aprobada', 'recibida_parcial', 'recibida', 'cancelada']).default('pendiente'),
+  subtotal: z.number().default(0),
+  iva: z.number().default(0),
+  total: z.number().default(0),
+  notas: z.string().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
+
+const OrdenCompraItemSchema = z.object({
+  id: z.string().optional(),
+  orden_compra_id: z.string().min(1, 'orden_compra_id requerido'),
+  descripcion: z.string().min(1, 'La descripción es requerida'),
+  cantidad: z.number().positive('La cantidad debe ser mayor a 0'),
+  unidad: z.string().default('pza'),
+  precio_unitario: z.number().min(0).default(0),
+  importe: z.number().default(0),
+  cantidad_recibida: z.number().default(0),
+  created_at: z.string().optional(),
+});
+
+const RecepcionOCSchema = z.object({
+  id: z.string().optional(),
+  orden_compra_id: z.string().min(1, 'orden_compra_id requerido'),
+  user_id: z.string().min(1, 'user_id requerido'),
+  fecha_recepcion: z.string().default(() => new Date().toISOString().split('T')[0]),
+  observaciones: z.string().optional(),
+  created_at: z.string().optional(),
+});
+
+const RecepcionOCItemSchema = z.object({
+  id: z.string().optional(),
+  recepcion_id: z.string().min(1, 'recepcion_id requerido'),
+  orden_compra_item_id: z.string().min(1, 'orden_compra_item_id requerido'),
+  cantidad_recibida: z.number().positive('La cantidad debe ser mayor a 0'),
+  created_at: z.string().optional(),
+});
+
 // ====== Tipos TypeScript inferidos de Zod ======
 export type DBCliente = z.infer<typeof ClienteSchema>;
 export type DBProyecto = z.infer<typeof ProyectoSchema>;
@@ -121,6 +183,11 @@ export type DBActividad = z.infer<typeof ActividadSchema>;
 export type DBPresupuesto = z.infer<typeof PresupuestoSchema>;
 export type DBEquipo = z.infer<typeof EquipoSchema>;
 export type DBEquipoMiembro = z.infer<typeof EquipoMiembroSchema>;
+export type DBProveedor = z.infer<typeof ProveedorSchema>;
+export type DBOrdenCompra = z.infer<typeof OrdenCompraSchema>;
+export type DBOrdenCompraItem = z.infer<typeof OrdenCompraItemSchema>;
+export type DBRecepcionOC = z.infer<typeof RecepcionOCSchema>;
+export type DBRecepcionOCItem = z.infer<typeof RecepcionOCItemSchema>;
 
 // ====== Tipos de interfaz para la aplicación (transformados) ======
 export interface Cliente {
@@ -310,7 +377,82 @@ export interface EquipoMiembro {
   created_at?: string;
 }
 
-export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos' | 'bodega' | 'cotizacion';
+// ====== Proveedores ======
+export interface Proveedor {
+  id: string;
+  userId: string;
+  nombre: string;
+  contacto?: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  rfc?: string;
+  notas?: string;
+  activo: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+export type CreateProveedor = Omit<Proveedor, 'id' | 'created_at' | 'updated_at'>;
+export type UpdateProveedor = Partial<CreateProveedor>;
+
+// ====== Órdenes de Compra ======
+export interface OrdenCompra {
+  id: string;
+  userId: string;
+  folio: string;
+  proveedorId?: string;
+  proyectoId?: string;
+  fechaEmision: string;
+  fechaEntrega?: string;
+  estatus: 'pendiente' | 'aprobada' | 'recibida_parcial' | 'recibida' | 'cancelada';
+  subtotal: number;
+  iva: number;
+  total: number;
+  notas?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+export type CreateOrdenCompra = Omit<OrdenCompra, 'id' | 'created_at' | 'updated_at'>;
+export type UpdateOrdenCompra = Partial<CreateOrdenCompra>;
+
+// ====== Items de Órdenes de Compra ======
+export interface OrdenCompraItem {
+  id: string;
+  ordenCompraId: string;
+  descripcion: string;
+  cantidad: number;
+  unidad: string;
+  precioUnitario: number;
+  importe: number;
+  cantidadRecibida: number;
+  created_at?: string;
+}
+export type CreateOrdenCompraItem = Omit<OrdenCompraItem, 'id' | 'created_at'>;
+export type UpdateOrdenCompraItem = Partial<CreateOrdenCompraItem>;
+
+// ====== Recepción de OC ======
+export interface RecepcionOC {
+  id: string;
+  ordenCompraId: string;
+  userId: string;
+  fechaRecepcion: string;
+  observaciones?: string;
+  created_at?: string;
+}
+export type CreateRecepcionOC = Omit<RecepcionOC, 'id' | 'created_at'>;
+export type UpdateRecepcionOC = Partial<CreateRecepcionOC>;
+
+// ====== Items de Recepción ======
+export interface RecepcionOCItem {
+  id: string;
+  recepcionId: string;
+  ordenCompraItemId: string;
+  cantidadRecibida: number;
+  created_at?: string;
+}
+export type CreateRecepcionOCItem = Omit<RecepcionOCItem, 'id' | 'created_at'>;
+
+export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos' | 'bodega' | 'cotizacion' | 'compras';
 
 export interface User {
   nombre: string;
@@ -562,3 +704,119 @@ export const equipoMiembroToDb = (miembro: UpdateEquipoMiembro): Partial<DBEquip
   if (miembro.userId !== undefined) out.user_id = miembro.userId;
   return out as Partial<DBEquipoMiembro>;
 };
+
+// ====== Validadores para Compras ======
+export const validateProveedor = (data: unknown): DBProveedor => ProveedorSchema.parse(data);
+export const validateOrdenCompra = (data: unknown): DBOrdenCompra => OrdenCompraSchema.parse(data);
+export const validateOrdenCompraItem = (data: unknown): DBOrdenCompraItem => OrdenCompraItemSchema.parse(data);
+export const validateRecepcionOC = (data: unknown): DBRecepcionOC => RecepcionOCSchema.parse(data);
+export const validateRecepcionOCItem = (data: unknown): DBRecepcionOCItem => RecepcionOCItemSchema.parse(data);
+
+// ====== Transformadores para Compras ======
+export const dbToProveedor = (db: DBRow): Proveedor => ({
+  id: (db.id as string) || '',
+  userId: (db.user_id as string) ?? '',
+  nombre: (db.nombre as string) ?? '',
+  contacto: (db.contacto as string) ?? undefined,
+  telefono: (db.telefono as string) ?? undefined,
+  email: (db.email as string) ?? undefined,
+  direccion: (db.direccion as string) ?? undefined,
+  rfc: (db.rfc as string) ?? undefined,
+  notas: (db.notas as string) ?? undefined,
+  activo: (db.activo as boolean) ?? true,
+  created_at: (db.created_at as string) ?? undefined,
+  updated_at: (db.updated_at as string) ?? undefined,
+});
+
+export const proveedorToDb = (prov: UpdateProveedor): Partial<DBProveedor> => {
+  const out: DBRow = {};
+  if (prov.nombre !== undefined) out.nombre = prov.nombre;
+  if (prov.contacto !== undefined) out.contacto = prov.contacto;
+  if (prov.telefono !== undefined) out.telefono = prov.telefono;
+  if (prov.email !== undefined) out.email = prov.email;
+  if (prov.direccion !== undefined) out.direccion = prov.direccion;
+  if (prov.rfc !== undefined) out.rfc = prov.rfc;
+  if (prov.notas !== undefined) out.notas = prov.notas;
+  if (prov.activo !== undefined) out.activo = prov.activo;
+  return out as Partial<DBProveedor>;
+};
+
+export const dbToOrdenCompra = (db: DBRow): OrdenCompra => ({
+  id: (db.id as string) || '',
+  userId: (db.user_id as string) ?? '',
+  folio: (db.folio as string) ?? '',
+  proveedorId: (db.proveedor_id as string) ?? undefined,
+  proyectoId: (db.proyecto_id as string) ?? undefined,
+  fechaEmision: (db.fecha_emision as string) ?? '',
+  fechaEntrega: (db.fecha_entrega as string) ?? undefined,
+  estatus: (db.estatus as OrdenCompra['estatus']) ?? 'pendiente',
+  subtotal: Number(db.subtotal) || 0,
+  iva: Number(db.iva) || 0,
+  total: Number(db.total) || 0,
+  notas: (db.notas as string) ?? undefined,
+  created_at: (db.created_at as string) ?? undefined,
+  updated_at: (db.updated_at as string) ?? undefined,
+});
+
+export const ordenCompraToDb = (oc: UpdateOrdenCompra): Partial<DBOrdenCompra> => {
+  const out: DBRow = {};
+  if (oc.folio !== undefined) out.folio = oc.folio;
+  if (oc.proveedorId !== undefined) out.proveedor_id = oc.proveedorId;
+  if (oc.proyectoId !== undefined) out.proyecto_id = oc.proyectoId;
+  if (oc.fechaEmision !== undefined) out.fecha_emision = oc.fechaEmision;
+  if (oc.fechaEntrega !== undefined) out.fecha_entrega = oc.fechaEntrega;
+  if (oc.estatus !== undefined) out.estatus = oc.estatus;
+  if (oc.subtotal !== undefined) out.subtotal = oc.subtotal;
+  if (oc.iva !== undefined) out.iva = oc.iva;
+  if (oc.total !== undefined) out.total = oc.total;
+  if (oc.notas !== undefined) out.notas = oc.notas;
+  return out as Partial<DBOrdenCompra>;
+};
+
+export const dbToOrdenCompraItem = (db: DBRow): OrdenCompraItem => ({
+  id: (db.id as string) || '',
+  ordenCompraId: (db.orden_compra_id as string) ?? '',
+  descripcion: (db.descripcion as string) ?? '',
+  cantidad: Number(db.cantidad) || 0,
+  unidad: (db.unidad as string) ?? 'pza',
+  precioUnitario: Number(db.precio_unitario) || 0,
+  importe: Number(db.importe) || 0,
+  cantidadRecibida: Number(db.cantidad_recibida) || 0,
+  created_at: (db.created_at as string) ?? undefined,
+});
+
+export const ordenCompraItemToDb = (item: UpdateOrdenCompraItem): Partial<DBOrdenCompraItem> => {
+  const out: DBRow = {};
+  if (item.descripcion !== undefined) out.descripcion = item.descripcion;
+  if (item.cantidad !== undefined) out.cantidad = item.cantidad;
+  if (item.unidad !== undefined) out.unidad = item.unidad;
+  if (item.precioUnitario !== undefined) out.precio_unitario = item.precioUnitario;
+  if (item.importe !== undefined) out.importe = item.importe;
+  if (item.cantidadRecibida !== undefined) out.cantidad_recibida = item.cantidadRecibida;
+  return out as Partial<DBOrdenCompraItem>;
+};
+
+export const dbToRecepcionOC = (db: DBRow): RecepcionOC => ({
+  id: (db.id as string) || '',
+  ordenCompraId: (db.orden_compra_id as string) ?? '',
+  userId: (db.user_id as string) ?? '',
+  fechaRecepcion: (db.fecha_recepcion as string) ?? '',
+  observaciones: (db.observaciones as string) ?? undefined,
+  created_at: (db.created_at as string) ?? undefined,
+});
+
+export const recepcionOCToDb = (rec: UpdateRecepcionOC): Partial<DBRecepcionOC> => {
+  const out: DBRow = {};
+  if (rec.ordenCompraId !== undefined) out.orden_compra_id = rec.ordenCompraId;
+  if (rec.fechaRecepcion !== undefined) out.fecha_recepcion = rec.fechaRecepcion;
+  if (rec.observaciones !== undefined) out.observaciones = rec.observaciones;
+  return out as Partial<DBRecepcionOC>;
+};
+
+export const dbToRecepcionOCItem = (db: DBRow): RecepcionOCItem => ({
+  id: (db.id as string) || '',
+  recepcionId: (db.recepcion_id as string) ?? '',
+  ordenCompraItemId: (db.orden_compra_item_id as string) ?? '',
+  cantidadRecibida: Number(db.cantidad_recibida) || 0,
+  created_at: (db.created_at as string) ?? undefined,
+});
