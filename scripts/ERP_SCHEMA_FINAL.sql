@@ -206,20 +206,101 @@ CREATE TABLE IF NOT EXISTS public.renglones (
 );
 
 -- 4.12. renglon_usage (historial de uso de renglones en presupuestos)
+CREATE TABLE IF NOT EXISTS public.renglon_usage (
+  id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  renglon_id      uuid REFERENCES public.renglones(id) ON DELETE CASCADE,
+  presupuesto_id  uuid REFERENCES public.presupuestos(id) ON DELETE SET NULL,
+  user_id         uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at      timestamptz DEFAULT now()
+);
 
 -- 4.13. renglon_precios_historial (historial de precios de renglones)
+CREATE TABLE IF NOT EXISTS public.renglon_precios_historial (
+  id         uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  renglon_id uuid REFERENCES public.renglones(id) ON DELETE CASCADE,
+  fecha      timestamptz DEFAULT now(),
+  costo      numeric NOT NULL,
+  variacion  numeric DEFAULT 0
+);
 
 -- 4.14. cambios_presupuesto (control de cambios / change orders)
+CREATE TABLE IF NOT EXISTS public.cambios_presupuesto (
+  id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  presupuesto_id  uuid REFERENCES public.presupuestos(id) ON DELETE CASCADE,
+  version         int NOT NULL DEFAULT 1,
+  cambios         jsonb NOT NULL DEFAULT '[]'::jsonb,
+  motivo          text NOT NULL DEFAULT '',
+  aprobado_por    uuid REFERENCES auth.users(id),
+  estado          text DEFAULT 'pendiente' CHECK (estado IN ('pendiente','aprobado','rechazado')),
+  created_at      timestamptz DEFAULT now()
+);
 
 -- 4.15. materiales_proyecto (materiales asignados a cada presupuesto)
+CREATE TABLE IF NOT EXISTS public.materiales_proyecto (
+  id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  presupuesto_id    uuid REFERENCES public.presupuestos(id) ON DELETE CASCADE,
+  nombre            text NOT NULL,
+  codigo            text,
+  unidad            text DEFAULT 'unidad',
+  cantidad_estimada numeric(12,2) DEFAULT 0,
+  cantidad_utilizada numeric(12,2) DEFAULT 0,
+  costo_unitario    numeric(12,2) DEFAULT 0,
+  proveedor         text,
+  created_at        timestamptz DEFAULT now()
+);
 
 -- 4.16. movimientos_materiales (entradas/salidas de materiales)
+CREATE TABLE IF NOT EXISTS public.movimientos_materiales (
+  id           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  material_id  uuid REFERENCES public.materiales_proyecto(id) ON DELETE CASCADE,
+  tipo         text NOT NULL CHECK (tipo IN ('entrada','salida','devolucion')),
+  cantidad     numeric(12,2) NOT NULL,
+  ubicacion    text,
+  referencia   text,
+  user_id      uuid REFERENCES auth.users(id),
+  created_at   timestamptz DEFAULT now()
+);
 
 -- 4.17. conciliaciones (conciliaciones bancarias)
+CREATE TABLE IF NOT EXISTS public.conciliaciones (
+  id            uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id       uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  banco         text NOT NULL,
+  periodo       date NOT NULL,
+  saldo_libros  numeric(12,2) DEFAULT 0,
+  saldo_banco   numeric(12,2) DEFAULT 0,
+  diferencia    numeric(12,2) GENERATED ALWAYS AS (saldo_banco - saldo_libros) STORED,
+  conciliado    boolean DEFAULT false,
+  notas         text,
+  proyecto_id   text,
+  created_at    timestamptz DEFAULT now(),
+  updated_at    timestamptz DEFAULT now()
+);
 
 -- 4.18. partidas_conciliacion (partidas individuales de conciliación)
+CREATE TABLE IF NOT EXISTS public.partidas_conciliacion (
+  id               uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  conciliacion_id  uuid REFERENCES public.conciliaciones(id) ON DELETE CASCADE,
+  tipo             text NOT NULL CHECK (tipo IN ('pendiente_libros','pendiente_banco','ajuste')),
+  monto            numeric(12,2) NOT NULL,
+  descripcion      text,
+  fecha            date,
+  aplicado         boolean DEFAULT false,
+  created_at       timestamptz DEFAULT now()
+);
 
 -- 4.19. checklist_items (checklist de calidad por fase)
+CREATE TABLE IF NOT EXISTS public.checklist_items (
+  id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  presupuesto_id  uuid REFERENCES public.presupuestos(id) ON DELETE CASCADE,
+  fase            text NOT NULL CHECK (fase IN ('planeación','ejecución','pausa','finalizado')),
+  item            text NOT NULL,
+  completado      boolean DEFAULT false,
+  foto_url        text,
+  completado_por  uuid REFERENCES auth.users(id),
+  completado_en   timestamptz,
+  created_at      timestamptz DEFAULT now()
+);
 
 -- 4.20. notificaciones (notificaciones del sistema)
 CREATE TABLE IF NOT EXISTS public.notificaciones (

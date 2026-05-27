@@ -10,6 +10,7 @@ import { Download, FileText, Trash2, TrendingUp, TrendingDown, Wallet, Filter, F
 import OCRFactura from '@/components/shared/OCRFactura';
 import { exportTransacciones } from '@/utils/exportExcel';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
 const categoriaLabels: Record<string, string> = {
   'materiales': 'Materiales',
@@ -31,6 +32,7 @@ const FinancieroScreen: React.FC = () => {
   const [filterTipo, setFilterTipo] = useState<'todos' | 'ingreso' | 'gasto'>('todos');
   const [filterCat, setFilterCat] = useState<string>('todos');
   const [filterProy, setFilterProy] = useState<string>('todos');
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const filtered = transacciones.filter(t => {
     if (filterTipo !== 'todos' && t.tipo !== filterTipo) return false;
@@ -224,7 +226,7 @@ const FinancieroScreen: React.FC = () => {
                     <td className="p-2.5 text-right hidden md:table-cell">{fmtQ(t.costoUnitario)}</td>
                     <td className={`p-2.5 text-right font-bold ${t.tipo === 'ingreso' ? 'text-emerald-700' : 'text-red-700'}`}>{fmtQ(t.costoTotal)}</td>
                     <td className="p-2.5 text-center">
-                      <button onClick={() => deleteTransaccion(t.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 className="w-3 h-3" /></button>
+                      <button onClick={() => setConfirmDelete(t.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 className="w-3 h-3" /></button>
                     </td>
                   </tr>
                 ))}
@@ -236,6 +238,14 @@ const FinancieroScreen: React.FC = () => {
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        onOpenChange={o => { if (!o) setConfirmDelete(null); }}
+        onConfirm={() => { if (confirmDelete) deleteTransaccion(confirmDelete); setConfirmDelete(null); }}
+        title="Eliminar transacción"
+        description="Esta acción no se puede deshacer. ¿Estás seguro de eliminar esta transacción?"
+        confirmText="Aceptar"
+      />
     </PageShell>
   );
 };

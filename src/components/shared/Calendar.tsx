@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalIcon, X, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
 const Calendar: React.FC = () => {
   const { actividades, addActividad, deleteActividad } = useAppContext();
@@ -9,6 +10,7 @@ const Calendar: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string | null>(new Date().toISOString().split('T')[0]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ titulo: '', hora: '09:00', descripcion: '' });
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   // Notificaciones anticipadas
   useEffect(() => {
@@ -133,7 +135,7 @@ const Calendar: React.FC = () => {
                   <div className="font-semibold text-blue-900 truncate">{a.titulo}</div>
                   <div className="text-slate-600 text-[10px]">{a.hora} · {a.descripcion}</div>
                 </div>
-                <button onClick={() => deleteActividad(a.id)} className="opacity-0 group-hover:opacity-100 text-red-500"><X className="w-3 h-3" /></button>
+                <button onClick={() => setConfirmDelete(a.id)} className="opacity-0 group-hover:opacity-100 text-red-500"><X className="w-3 h-3" /></button>
               </div>
             ))}
             {actividades.filter(a => a.fecha === selectedDate).length === 0 && !showForm && (
@@ -142,6 +144,14 @@ const Calendar: React.FC = () => {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        onOpenChange={o => { if (!o) setConfirmDelete(null); }}
+        onConfirm={() => { if (confirmDelete) deleteActividad(confirmDelete); setConfirmDelete(null); }}
+        title="Eliminar actividad"
+        description="Esta acción no se puede deshacer. ¿Estás seguro de eliminar esta actividad?"
+        confirmText="Aceptar"
+      />
     </div>
   );
 };

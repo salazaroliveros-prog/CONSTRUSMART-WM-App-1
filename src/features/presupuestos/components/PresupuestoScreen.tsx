@@ -8,6 +8,7 @@ import { Plus, Trash2, ChevronDown, ChevronRight, Download, FileText, Calculator
 import ChecklistPanel from '@/components/shared/ChecklistPanel';
 import MaterialesPanel from '@/components/shared/MaterialesPanel';
 import { validarFactores, sugerirFactores } from '@/utils/validacionPresupuesto';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
 interface LineaPresupuesto extends Renglon {
   cantidad: number;
@@ -55,6 +56,7 @@ const PresupuestoScreen: React.FC = () => {
   });
   const [saving, setSaving] = useState(false);
   const [savedPresupuestoId, setSavedPresupuestoId] = useState<string | null>(null);
+  const [confirmRemoveLinea, setConfirmRemoveLinea] = useState<string | null>(null);
 
   const catalogo = renglonesPorTipologia[tipologia];
   const catalogoFiltrado = catalogo.filter(r =>
@@ -117,8 +119,15 @@ const PresupuestoScreen: React.FC = () => {
   }, []);
 
   const removeLinea = useCallback((id: string) => {
-    setLineas(prev => prev.filter(l => l.id !== id));
+    setConfirmRemoveLinea(id);
   }, []);
+
+  const confirmRemoveLineaAction = useCallback(() => {
+    if (confirmRemoveLinea) {
+      setLineas(prev => prev.filter(l => l.id !== confirmRemoveLinea));
+      setConfirmRemoveLinea(null);
+    }
+  }, [confirmRemoveLinea]);
 
   const toggleExpand = useCallback((id: string) => {
     setExpanded(prev => {
@@ -481,6 +490,14 @@ const PresupuestoScreen: React.FC = () => {
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmRemoveLinea !== null}
+        onOpenChange={o => { if (!o) setConfirmRemoveLinea(null); }}
+        onConfirm={confirmRemoveLineaAction}
+        title="Eliminar renglón"
+        description="Esta acción no se puede deshacer. ¿Estás seguro de eliminar este renglón del presupuesto?"
+        confirmText="Aceptar"
+      />
     </PageShell>
   );
 };
