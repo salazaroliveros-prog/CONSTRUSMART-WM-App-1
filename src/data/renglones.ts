@@ -3,6 +3,7 @@ export interface SubMaterial {
   unidad: string;
   cantidad: number;
   costoUnitario: number;
+  desperdicio?: number;
 }
 
 export interface SubManoObra {
@@ -37,8 +38,8 @@ export interface Renglon {
 
 export type Tipologia = 'general' | 'residencial' | 'comercial' | 'industrial' | 'civil' | 'publica';
 
-function mat(nombre: string, unidad: string, cantidad: number, costoUnitario: number): SubMaterial {
-  return { nombre, unidad, cantidad, costoUnitario };
+function mat(nombre: string, unidad: string, cantidad: number, costoUnitario: number, desperdicio?: number): SubMaterial {
+  return { nombre, unidad, cantidad, costoUnitario, desperdicio };
 }
 function mo(descripcion: string, cantidadPersonas: number, jornal: number): SubManoObra {
   return { descripcion, cantidadPersonas, jornal };
@@ -84,19 +85,19 @@ const baseRenglones = (prefix: string): Renglon[] => [
     [eq('Compactador vibratorio', 0.17, 45), eq('Carretilla', 0.17, 5)]
   ),
   reng(`${prefix}-05`, '03.01', 'Cimiento corrido de concreto ciclópeo', 'm³', 2.5,
-    [mat('Cemento UGC', 'bolsa', 3.5, 85), mat('Arena de río', 'm³', 0.4, 120), mat('Piedra bola 6"', 'm³', 0.5, 150), mat('Agua', 'L', 170, 0.008)],
+    [mat('Cemento UGC', 'bolsa', 3.5, 85, 5), mat('Arena de río', 'm³', 0.4, 120, 5), mat('Piedra bola 6"', 'm³', 0.5, 150, 3), mat('Agua', 'L', 170, 0.008)],
     [mo('Albañil', 2, 250), mo('Ayudante', 3, 150)],
     [eq('Mezcladora de concreto 1 saco', 0.4, 55), eq('Carretilla', 0.4, 5), eq('Vibrador', 0.2, 35)]
   ),
   reng(`${prefix}-06`, '03.02', 'Zapata aislada de concreto reforzado', 'm³', 1.5,
-    [mat('Cemento UGC', 'bolsa', 6, 85), mat('Arena de río', 'm³', 0.5, 120), mat('Grava 3/4"', 'm³', 0.8, 165),
-     mat('Acero refuerzo No.4', 'qq', 0.9, 420), mat('Alambre de amarre', 'lb', 2, 8), mat('Madera para encofrado', 'pt', 8, 8)],
+    [mat('Cemento UGC', 'bolsa', 6, 85, 5), mat('Arena de río', 'm³', 0.5, 120, 5), mat('Grava 3/4"', 'm³', 0.8, 165, 5),
+     mat('Acero refuerzo No.4', 'qq', 0.9, 420, 5), mat('Alambre de amarre', 'lb', 2, 8), mat('Madera para encofrado', 'pt', 8, 8, 10)],
     [mo('Albañil', 2, 250), mo('Ayudante', 3, 150), mo('Armador', 1, 280)],
     [eq('Mezcladora de concreto', 0.67, 55), eq('Vibrador', 0.33, 35), eq('Cizalla para acero', 0.1, 25)]
   ),
   reng(`${prefix}-07`, '03.03', 'Solera de humedad 0.15x0.20m', 'ml', 18,
-    [mat('Cemento UGC', 'bolsa', 0.35, 85), mat('Arena de río', 'm³', 0.03, 120), mat('Grava 3/4"', 'm³', 0.04, 165),
-     mat('Acero No.3', 'qq', 0.08, 420), mat('Madera encofrado', 'pt', 1, 8)],
+    [mat('Cemento UGC', 'bolsa', 0.35, 85, 5), mat('Arena de río', 'm³', 0.03, 120, 5), mat('Grava 3/4"', 'm³', 0.04, 165, 5),
+     mat('Acero No.3', 'qq', 0.08, 420, 5), mat('Madera encofrado', 'pt', 1, 8, 10)],
     [mo('Albañil', 1, 250), mo('Ayudante', 1, 150)],
     [eq('Mezcladora', 0.056, 55)]
   ),
@@ -119,20 +120,20 @@ const baseRenglones = (prefix: string): Renglon[] => [
     [eq('Mezcladora', 0.063, 55)]
   ),
   reng(`${prefix}-11`, '05.01', 'Levantado de muro block 0.14m', 'm²', 12,
-    [mat('Block 0.14x0.19x0.39m', 'u', 13, 5.5), mat('Cemento UGC', 'bolsa', 0.3, 85), mat('Arena de río', 'm³', 0.025, 120),
+    [mat('Block 0.14x0.19x0.39m', 'u', 13, 5.5, 5), mat('Cemento UGC', 'bolsa', 0.3, 85, 5), mat('Arena de río', 'm³', 0.025, 120, 5),
      mat('Agua', 'L', 15, 0.008), mat('Alambre', 'lb', 0.05, 8)],
     [mo('Albañil', 1, 250), mo('Ayudante', 1, 150)],
     [eq('Mezcladora', 0.083, 55), eq('Andamio', 0.083, 8)]
   ),
   reng(`${prefix}-12`, '05.02', 'Levantado de muro block 0.19m', 'm²', 10,
-    [mat('Block 0.19x0.19x0.39m', 'u', 13, 7.5), mat('Cemento UGC', 'bolsa', 0.35, 85), mat('Arena de río', 'm³', 0.03, 120),
+    [mat('Block 0.19x0.19x0.39m', 'u', 13, 7.5, 5), mat('Cemento UGC', 'bolsa', 0.35, 85, 5), mat('Arena de río', 'm³', 0.03, 120, 5),
      mat('Agua', 'L', 18, 0.008)],
     [mo('Albañil', 1, 250), mo('Ayudante', 1, 150)],
     [eq('Mezcladora', 0.1, 55), eq('Andamio', 0.1, 8)]
   ),
   reng(`${prefix}-13`, '06.01', 'Losa tradicional t=0.10m', 'm²', 15,
-    [mat('Cemento UGC', 'bolsa', 0.65, 85), mat('Arena de río', 'm³', 0.05, 120), mat('Grava 3/4"', 'm³', 0.08, 165),
-     mat('Acero No.3', 'qq', 0.12, 420), mat('Malla electro soldada', 'm²', 1, 32), mat('Madera para losa', 'pt', 3, 8),
+    [mat('Cemento UGC', 'bolsa', 0.65, 85, 5), mat('Arena de río', 'm³', 0.05, 120, 5), mat('Grava 3/4"', 'm³', 0.08, 165, 5),
+     mat('Acero No.3', 'qq', 0.12, 420, 5), mat('Malla electro soldada', 'm²', 1, 32), mat('Madera para losa', 'pt', 3, 8, 10),
      mat('Clavos', 'lb', 0.2, 6), mat('Alambre', 'lb', 0.15, 8)],
     [mo('Albañil', 2, 250), mo('Ayudante', 2, 150), mo('Armador', 0.5, 280)],
     [eq('Mezcladora', 0.067, 55), eq('Vibrador', 0.067, 35), eq('Andamio', 0.067, 8)]
@@ -144,42 +145,42 @@ const baseRenglones = (prefix: string): Renglon[] => [
     [eq('Mezcladora', 0.04, 55), eq('Andamio', 0.04, 8)]
   ),
   reng(`${prefix}-15`, '07.01', 'Repello vertical', 'm²', 18,
-    [mat('Cemento UGC', 'bolsa', 0.2, 85), mat('Arena fina', 'm³', 0.015, 135), mat('Agua', 'L', 8, 0.008)],
+    [mat('Cemento UGC', 'bolsa', 0.2, 85, 5), mat('Arena fina', 'm³', 0.015, 135, 8), mat('Agua', 'L', 8, 0.008)],
     [mo('Albañil', 1, 250), mo('Ayudante', 0.5, 150)],
     [eq('Andamio', 0.056, 8), eq('Mezcladora', 0.056, 55)]
   ),
   reng(`${prefix}-16`, '07.02', 'Cernido vertical', 'm²', 20,
-    [mat('Cemento blanco', 'bolsa', 0.15, 95), mat('Cal hidratada', 'bolsa', 0.05, 35), mat('Arena fina', 'm³', 0.012, 135)],
+    [mat('Cemento blanco', 'bolsa', 0.15, 95, 5), mat('Cal hidratada', 'bolsa', 0.05, 35), mat('Arena fina', 'm³', 0.012, 135, 8)],
     [mo('Albañil', 1, 250), mo('Ayudante', 0.5, 150)],
     [eq('Andamio', 0.05, 8)]
   ),
   reng(`${prefix}-17`, '07.03', 'Repello + cernido en cielo', 'm²', 12,
-    [mat('Cemento UGC', 'bolsa', 0.25, 85), mat('Cemento blanco', 'bolsa', 0.1, 95), mat('Arena fina', 'm³', 0.02, 135),
+    [mat('Cemento UGC', 'bolsa', 0.25, 85, 5), mat('Cemento blanco', 'bolsa', 0.1, 95, 5), mat('Arena fina', 'm³', 0.02, 135, 8),
      mat('Agua', 'L', 10, 0.008)],
     [mo('Albañil', 1, 250), mo('Ayudante', 1, 150)],
     [eq('Andamio', 0.083, 8), eq('Mezcladora', 0.083, 55)]
   ),
   reng(`${prefix}-18`, '08.01', 'Piso cerámico 0.45x0.45m', 'm²', 15,
-    [mat('Cerámico 0.45x0.45m', 'm²', 1.05, 95), mat('Pegamento para cerámico', 'bolsa', 0.35, 42), mat('Boquilla cementicia', 'lb', 0.15, 8),
-     mat('Cemento UGC', 'bolsa', 0.08, 85), mat('Arena fina', 'm³', 0.008, 135)],
+    [mat('Cerámico 0.45x0.45m', 'm²', 1.05, 95, 8), mat('Pegamento para cerámico', 'bolsa', 0.35, 42, 5), mat('Boquilla cementicia', 'lb', 0.15, 8),
+     mat('Cemento UGC', 'bolsa', 0.08, 85, 5), mat('Arena fina', 'm³', 0.008, 135, 5)],
     [mo('Pisero', 1, 300), mo('Ayudante', 1, 150)],
     [eq('Cortadora de cerámico', 0.067, 25), eq('Nivel', 0.067, 3)]
   ),
   reng(`${prefix}-19`, '08.02', 'Piso porcelanato 0.60x0.60m', 'm²', 12,
-    [mat('Porcelanato 0.60x0.60m', 'm²', 1.05, 175), mat('Pegamento porcelanato', 'bolsa', 0.4, 55), mat('Boquilla epóxica', 'lb', 0.12, 18),
-     mat('Cemento UGC', 'bolsa', 0.08, 85), mat('Arena fina', 'm³', 0.008, 135)],
+    [mat('Porcelanato 0.60x0.60m', 'm²', 1.05, 175, 8), mat('Pegamento porcelanato', 'bolsa', 0.4, 55, 5), mat('Boquilla epóxica', 'lb', 0.12, 18),
+     mat('Cemento UGC', 'bolsa', 0.08, 85, 5), mat('Arena fina', 'm³', 0.008, 135, 5)],
     [mo('Pisero', 1, 300), mo('Ayudante', 1, 150)],
     [eq('Cortadora de cerámico', 0.083, 25), eq('Nivel', 0.083, 3)]
   ),
   reng(`${prefix}-20`, '08.03', 'Azulejo en pared baño', 'm²', 10,
-    [mat('Azulejo 0.33x0.33m', 'm²', 1.05, 120), mat('Pegamento', 'bolsa', 0.4, 42), mat('Boquilla', 'lb', 0.18, 8),
+    [mat('Azulejo 0.33x0.33m', 'm²', 1.05, 120, 8), mat('Pegamento', 'bolsa', 0.4, 42, 5), mat('Boquilla', 'lb', 0.18, 8),
      mat('Cruz para azulejo', 'u', 8, 0.1)],
     [mo('Pisero', 1, 300), mo('Ayudante', 1, 150)],
     [eq('Cortadora', 0.1, 25), eq('Nivel', 0.1, 3)]
   ),
   reng(`${prefix}-21`, '09.01', 'Instalación hidráulica PVC 1/2"', 'pto', 4,
-    [mat('Tubo PVC 1/2"', 'm', 2.5, 12), mat('Codo PVC 1/2"', 'u', 4, 3.5), mat('Tee PVC 1/2"', 'u', 2, 4.5),
-     mat('Adaptador PVC', 'u', 2, 3), mat('Pegamento PVC', 'Lata', 0.05, 45), mat('Cinta teflón', 'u', 0.3, 5)],
+    [mat('Tubo PVC 1/2"', 'm', 2.5, 12, 5), mat('Codo PVC 1/2"', 'u', 4, 3.5, 5), mat('Tee PVC 1/2"', 'u', 2, 4.5, 5),
+     mat('Adaptador PVC', 'u', 2, 3, 5), mat('Pegamento PVC', 'Lata', 0.05, 45), mat('Cinta teflón', 'u', 0.3, 5)],
     [mo('Fontanero', 1, 300), mo('Ayudante', 0.5, 150)],
     [eq('Llave para PVC', 0.25, 5), eq('Cortatubo', 0.25, 8)]
   ),
@@ -297,6 +298,283 @@ const baseRenglones = (prefix: string): Renglon[] => [
     [mo('Ingeniero residente', 1, 600), mo('Supervisor', 1, 400), mo('Dibujante', 0.5, 300)],
     [eq('Cámara fotográfica', 1, 15), eq('Impresora', 0.5, 8)]
   ),
+
+  // ===== 17.xx ACERO DE REFUERZO ADICIONAL =====
+  reng(`${prefix}-41`, '17.01', 'Acero de refuerzo No.3 (3/8")', 'qq', 4,
+    [mat('Varilla corrugada No.3', 'qq', 1, 420), mat('Alambre de amarre', 'lb', 3, 8), mat('Ganchos', 'u', 2, 5)],
+    [mo('Armador', 1, 280), mo('Ayudante', 2, 150)],
+    [eq('Cizalla', 0.25, 25), eq('Dobladora', 0.25, 15)]
+  ),
+  reng(`${prefix}-42`, '17.02', 'Acero de refuerzo No.4 (1/2")', 'qq', 3,
+    [mat('Varilla corrugada No.4', 'qq', 1, 420), mat('Alambre de amarre', 'lb', 2.5, 8), mat('Separadores', 'u', 8, 1.5)],
+    [mo('Armador', 1, 280), mo('Ayudante', 2, 150)],
+    [eq('Cizalla', 0.333, 25), eq('Dobladora', 0.333, 15)]
+  ),
+  reng(`${prefix}-43`, '17.03', 'Malla electro soldada 5mm', 'm²', 20,
+    [mat('Malla electrosoldada 5mm', 'm²', 1.05, 35), mat('Alambre', 'lb', 0.1, 8)],
+    [mo('Armador', 0.5, 280), mo('Ayudante', 1, 150)],
+    [eq('Cizalla', 0.05, 25)]
+  ),
+
+  // ===== 18.xx FORMALETAS Y ENCOFRADOS =====
+  reng(`${prefix}-44`, '18.01', 'Encofrado de madera para losa', 'm²', 12,
+    [mat('Madera pino 1x8"', 'pt', 4, 8), mat('Triplay 1/2"', 'hoja', 0.25, 185), mat('Clavos 3"', 'lb', 0.35, 6),
+     mat('Clavos 2"', 'lb', 0.2, 6), mat('Alambre', 'lb', 0.15, 8), mat('Desmoldante', 'L', 0.05, 35)],
+    [mo('Carpintero', 1, 300), mo('Ayudante', 2, 150)],
+    [eq('Sierra circular', 0.083, 25), eq('Andamio', 0.083, 8)]
+  ),
+  reng(`${prefix}-45`, '18.02', 'Encofrado metálico para columna', 'm²', 15,
+    [mat('Panel metálico 2x2m', 'u', 0.2, 120), mat('Desmoldante', 'L', 0.08, 35), mat('Tornillos', 'u', 4, 0.75)],
+    [mo('Carpintero metálico', 1, 350), mo('Ayudante', 1, 150)],
+    [eq('Grúa torre', 0.067, 180)]
+  ),
+
+  // ===== 19.xx IMPERMEABILIZACIÓN =====
+  reng(`${prefix}-46`, '19.01', 'Impermeabilización losa con membrana', 'm²', 30,
+    [mat('Membrana asfáltica 3mm', 'm²', 1.1, 65), mat('Imprimante asfáltico', 'galón', 0.04, 95),
+     mat('Sellador juntas', 'L', 0.02, 55), mat('Gas propano', 'lb', 0.15, 12)],
+    [mo('Impermeabilizador', 1, 300), mo('Ayudante', 1, 150)],
+    [eq('Soplete', 0.033, 18), eq('Rodillo', 0.033, 5)]
+  ),
+  reng(`${prefix}-47`, '19.02', 'Impermeabilización acrílica', 'm²', 35,
+    [mat('Pintura impermeabilizante acrílica', 'galón', 0.06, 185), mat('Malla de refuerzo', 'm²', 1, 12),
+     mat('Sellador', 'galón', 0.03, 120)],
+    [mo('Pintor', 0.5, 250), mo('Ayudante', 0.5, 150)],
+    [eq('Rodillo', 0.029, 5)]
+  ),
+
+  // ===== 20.xx DRENAJES PLUVIALES =====
+  reng(`${prefix}-48`, '20.01', 'Canaleta pluvial PVC 3"', 'ml', 15,
+    [mat('Canaleta PVC 3"', 'ml', 1, 28), mat('Conector PVC', 'u', 0.5, 8), mat('Bajada PVC 3"', 'ml', 0.3, 22),
+     mat('Pegamento PVC', 'Lata', 0.02, 45)],
+    [mo('Fontanero', 0.5, 300), mo('Ayudante', 0.5, 150)],
+    [eq('Andamio', 0.067, 8)]
+  ),
+  reng(`${prefix}-49`, '20.02', 'Tubería drenaje pluvial 6"', 'ml', 12,
+    [mat('Tubo PVC 6"', 'ml', 1, 120), mat('Codo PVC 6"', 'u', 0.3, 35), mat('Pegamento PVC', 'Lata', 0.03, 65),
+     mat('Arena', 'm³', 0.05, 120)],
+    [mo('Fontanero', 1, 300), mo('Ayudante', 1, 150)],
+    [eq('Cortatubo', 0.083, 8)]
+  ),
+
+  // ===== 21.xx CIELO FALSO =====
+  reng(`${prefix}-50`, '21.01', 'Cielo faso registrable PVC', 'm²', 20,
+    [mat('Panel PVC 0.60x0.60', 'm²', 1.05, 85), mat('Perfil angular', 'ml', 3.5, 8), mat('Perfil T', 'ml', 2, 12),
+     mat('Alambre galvanizado', 'm', 1.5, 2), mat('Taquete', 'u', 3, 1)],
+    [mo('Cielo faso', 1, 300), mo('Ayudante', 0.5, 150)],
+    [eq('Taladro', 0.05, 15), eq('Nivel', 0.05, 3)]
+  ),
+  reng(`${prefix}-51`, '21.02', 'Cielo faso de tabla yeso', 'm²', 18,
+    [mat('Tabla yeso 1/2"', 'm²', 1.05, 65), mat('Perfil metálico', 'ml', 3, 8), mat('Cinta junta', 'm', 2, 1.5),
+     mat('Compuesto para junta', 'lb', 0.5, 8), mat('Tornillo drywall', 'u', 12, 0.15), mat('Taquete', 'u', 3, 1)],
+    [mo('Tablaroca', 1, 300), mo('Ayudante', 0.5, 150)],
+    [eq('Taladro', 0.056, 15), eq('Nivel', 0.056, 3)]
+  ),
+
+  // ===== 22.xx BARANDALES Y PASAMANOS =====
+  reng(`${prefix}-52`, '22.01', 'Barandal de hierro forjado', 'ml', 5,
+    [mat('Barrote de hierro 1/2"', 'ml', 1.1, 35), mat('Pasamanos 1"', 'ml', 1, 45), mat('Soldadura', 'lb', 0.3, 12),
+     mat('Pintura anticorrosiva', 'Lata', 0.05, 55), mat('Disco de corte', 'u', 0.05, 25), mat('Taquete', 'u', 3, 2)],
+    [mo('Cerrajero', 1, 350), mo('Ayudante', 0.5, 150)],
+    [eq('Soldadora', 0.2, 45), eq('Esmeril', 0.2, 18)]
+  ),
+  reng(`${prefix}-53`, '22.02', 'Pasamanos de acero inoxidable', 'ml', 4,
+    [mat('Tubo inoxidable 1.5"', 'ml', 1.1, 185), mat('Base inoxidable', 'u', 2, 45), mat('Soldadura inox', 'lb', 0.15, 45),
+     mat('Disco inoxidable', 'u', 0.05, 35)],
+    [mo('Cerrajero', 1, 350), mo('Ayudante', 0.5, 150)],
+    [eq('Soldadora TIG', 0.25, 65), eq('Pulidora', 0.25, 25)]
+  ),
+
+  // ===== 23.xx MUROS DIVISORIOS DRYWALL =====
+  reng(`${prefix}-54`, '23.01', 'Muro divisorio drywall 1 cara', 'm²', 14,
+    [mat('Tabla yeso 5/8"', 'm²', 1.05, 75), mat('Perfil canal', 'ml', 1, 10), mat('Perfil montante', 'ml', 2, 12),
+     mat('Cinta junta', 'm', 2.5, 1.5), mat('Compuesto', 'lb', 0.6, 8), mat('Tornillo drywall', 'u', 14, 0.15),
+     mat('Aislante acústico', 'm²', 1, 25)],
+    [mo('Tablaroca', 1, 300), mo('Ayudante', 0.5, 150)],
+    [eq('Taladro', 0.071, 15), eq('Nivel láser', 0.071, 25)]
+  ),
+  reng(`${prefix}-55`, '23.02', 'Muro divisorio drywall 2 caras', 'm²', 10,
+    [mat('Tabla yeso 5/8"', 'm²', 2.1, 75), mat('Perfil canal', 'ml', 1, 10), mat('Perfil montante', 'ml', 2.5, 12),
+     mat('Cinta junta', 'm', 5, 1.5), mat('Compuesto', 'lb', 1.2, 8), mat('Tornillo drywall', 'u', 28, 0.15),
+     mat('Aislante acústico', 'm²', 1, 25)],
+    [mo('Tablaroca', 1, 300), mo('Ayudante', 1, 150)],
+    [eq('Taladro', 0.1, 15), eq('Nivel láser', 0.1, 25)]
+  ),
+
+  // ===== 24.xx PISO DE CONCRETO =====
+  reng(`${prefix}-56`, '24.01', 'Piso de concreto pulido', 'm²', 12,
+    [mat('Cemento UGC', 'bolsa', 0.8, 85), mat('Arena de río', 'm³', 0.06, 120), mat('Grava 1/2"', 'm³', 0.08, 165),
+     mat('Endurecedor', 'lb', 0.15, 18), mat('Malla 6x6', 'm²', 1, 28)],
+    [mo('Albañil', 1, 250), mo('Ayudante', 2, 150)],
+    [eq('Mezcladora', 0.083, 55), eq('Pulidora de concreto', 0.083, 65), eq('Regla vibratoria', 0.083, 20)]
+  ),
+  reng(`${prefix}-57`, '24.02', 'Contrapiso nivelado t=0.05m', 'm²', 25,
+    [mat('Cemento UGC', 'bolsa', 0.3, 85), mat('Arena fina', 'm³', 0.03, 135), mat('Malla 6x6', 'm²', 0.5, 28),
+     mat('Agua', 'L', 12, 0.008)],
+    [mo('Albañil', 0.5, 250), mo('Ayudante', 1, 150)],
+    [eq('Mezcladora', 0.04, 55)]
+  ),
+
+  // ===== 25.xx FACHADA =====
+  reng(`${prefix}-58`, '25.01', 'Fachada de piedra laja', 'm²', 8,
+    [mat('Piedra laja natural', 'm²', 1.1, 185), mat('Pegamento piedra', 'bolsa', 0.5, 55), mat('Boquilla', 'lb', 0.3, 12),
+     mat('Sellador para piedra', 'L', 0.05, 85)],
+    [mo('Albañil', 1, 300), mo('Ayudante', 1, 150)],
+    [eq('Cortadora de cerámico', 0.125, 25), eq('Andamio', 0.125, 8)]
+  ),
+  reng(`${prefix}-59`, '25.02', 'Fachada ventilada aluminio compuesto', 'm²', 6,
+    [mat('Panel ACM aluminio 4mm', 'm²', 1.1, 420), mat('Subestructura aluminio', 'm²', 1, 185),
+     mat('Remache pop', 'u', 12, 0.75), mat('Sellador silicon estructural', 'u', 0.3, 35)],
+    [mo('Instalador fachadas', 1, 400), mo('Ayudante', 2, 150)],
+    [eq('Andamio', 0.167, 8), eq('Taladro', 0.167, 15)]
+  ),
+
+  // ===== 26.xx SISTEMA CONTRA INCENDIOS =====
+  reng(`${prefix}-60`, '26.01', 'Detector de humo iónico', 'u', 8,
+    [mat('Detector de humo', 'u', 1, 185), mat('Cable THW No.14', 'm', 2, 4.5), mat('Tubo conduit 1/2"', 'm', 1, 8),
+     mat('Caja octogonal', 'u', 1, 10), mat('Conector', 'u', 2, 3)],
+    [mo('Electricista', 0.5, 350), mo('Ayudante', 0.5, 150)],
+    [eq('Taladro', 0.125, 15), eq('Multímetro', 0.125, 5)]
+  ),
+  reng(`${prefix}-61`, '26.02', 'Extintor ABC 10lb', 'u', 4,
+    [mat('Extintor ABC 10lb', 'u', 1, 350), mat('Soporte metálico', 'u', 1, 45), mat('Señalización', 'u', 1, 25),
+     mat('Taquete', 'u', 4, 1)],
+    [mo('Técnico seguridad', 0.5, 350)],
+    [eq('Taladro', 0.25, 15)]
+  ),
+
+  // ===== 27.xx CERRADURAS Y HERRAJES =====
+  reng(`${prefix}-62`, '27.01', 'Cerradura de seguridad tipo manija', 'u', 6,
+    [mat('Manija con llave', 'u', 1, 350), mat('Cerradura interna', 'u', 1, 185), mat('Tornillos', 'u', 6, 1.5)],
+    [mo('Carpintero', 0.5, 300)],
+    [eq('Taladro', 0.167, 15), eq('Destornillador', 0.167, 2)]
+  ),
+  reng(`${prefix}-63`, '27.02', 'Cerradura eléctrica de riel', 'u', 3,
+    [mat('Cerradura eléctrica', 'u', 1, 850), mat('Fuente 12V', 'u', 1, 185), mat('Control acceso', 'u', 1, 450),
+     mat('Cable UTP', 'm', 3, 3.5), mat('Tubo conduit', 'm', 1, 8)],
+    [mo('Electricista', 1, 350), mo('Ayudante', 0.5, 150)],
+    [eq('Taladro', 0.333, 15), eq('Multímetro', 0.333, 5)]
+  ),
+
+  // ===== 28.xx CLOSET =====
+  reng(`${prefix}-64`, '28.01', 'Closet de madera 2 puertas 1.20m', 'u', 2,
+    [mat('Puerta closet 0.60m', 'u', 2, 450), mat('Melamina 18mm', 'm²', 3.5, 185), mat('Canto melamina', 'ml', 8, 2),
+     mat('Bisagras', 'u', 6, 12), mat('Correderas metálicas', 'u', 2, 45), mat('Manijas', 'u', 2, 25),
+     mat('Tornillos', 'u', 30, 0.75)],
+    [mo('Carpintero', 2, 300), mo('Ayudante', 1, 150)],
+    [eq('Sierra circular', 0.5, 25), eq('Taladro', 0.5, 15), eq('Lijadora', 0.3, 12)]
+  ),
+  reng(`${prefix}-65`, '28.02', 'Estantería metálica industrial', 'ml', 8,
+    [mat('Perfil estantería', 'ml', 3, 45), mat('Panel metálico 1.20m', 'u', 1, 185), mat('Tornillo estructural', 'u', 12, 2.5),
+     mat('Taquete expansivo', 'u', 6, 3.5)],
+    [mo('Cerrajero', 1, 350), mo('Ayudante', 0.5, 150)],
+    [eq('Taladro percutor', 0.125, 18), eq('Nivel', 0.125, 3)]
+  ),
+
+  // ===== 29.xx MESÓN Y COCINA =====
+  reng(`${prefix}-66`, '29.01', 'Mesón de cocina granito 2.00m', 'u', 2,
+    [mat('Cubierta granito 2.00m', 'u', 1, 2800), mat('Fregadero acero inox', 'u', 1, 850), mat('Llave mezcladora', 'u', 1, 350),
+     mat('Grifería', 'u', 1, 185), mat('Sifón', 'u', 1, 45), mat('Silicon sellador', 'u', 0.5, 25)],
+    [mo('Instalador cocina', 1, 350), mo('Fontanero', 1, 300), mo('Ayudante', 1, 150)],
+    [eq('Taladro', 0.5, 15), eq('Pulidora', 0.5, 25)]
+  ),
+
+  // ===== 30.xx SISTEMA DE BOMBEO =====
+  reng(`${prefix}-67`, '30.01', 'Bomba hidroneumática 1HP', 'u', 1,
+    [mat('Bomba 1HP', 'u', 1, 2850), mat('Tanque hidroneumático 20L', 'u', 1, 850), mat('Válvula check', 'u', 1, 85),
+     mat('Válvula compuerta', 'u', 2, 65), mat('Tubo PVC 1"', 'm', 3, 18), mat('Codo PVC 1"', 'u', 4, 8),
+     mat('Teflón', 'u', 0.5, 5), mat('Unión universal', 'u', 2, 12)],
+    [mo('Fontanero', 1, 300), mo('Electricista', 0.5, 350), mo('Ayudante', 1, 150)],
+    [eq('Llave stilson', 0.5, 5), eq('Taladro', 0.5, 15)]
+  ),
+
+  // ===== 31.xx INSTALACIONES ESPECIALES =====
+  reng(`${prefix}-68`, '31.01', 'Calentador de paso gas LPG 8L', 'u', 2,
+    [mat('Calentador 8L LPG', 'u', 1, 3200), mat('Tubo cobre 1/2"', 'm', 2, 28), mat('Válvula gas', 'u', 1, 85),
+     mat('Manguera gas', 'm', 2, 25), mat('Cinta teflón', 'u', 0.5, 5), mat('Tubo PVC 1/2"', 'm', 1.5, 12)],
+    [mo('Fontanero', 1, 300), mo('Ayudante', 0.5, 150)],
+    [eq('Llave stilson', 0.5, 5), eq('Taladro', 0.3, 15)]
+  ),
+  reng(`${prefix}-69`, '31.02', 'Aire acondicionado mini split 12K BTU', 'u', 1,
+    [mat('Mini split 12K BTU', 'u', 1, 4500), mat('Soporte metálico', 'u', 1, 185), mat('Tubería cobre 1/4"', 'm', 5, 35),
+     mat('Cable eléctrico 12AWG', 'm', 5, 6.5), mat('Aislante térmico', 'm', 5, 8), mat('Breaker 20A', 'u', 1, 55),
+     mat('Taquete expansivo', 'u', 6, 3.5)],
+    [mo('Técnico HVAC', 1, 450), mo('Electricista', 0.5, 350), mo('Ayudante', 1, 150)],
+    [eq('Manifold', 1, 25), eq('Bomba vacío', 1, 35), eq('Taladro percutor', 0.5, 18)]
+  ),
+  reng(`${prefix}-70`, '31.03', 'Sistema CCTV cámara exterior', 'pto', 4,
+    [mat('Cámara IP exterior 2MP', 'u', 1, 850), mat('Cable UTP CAT6', 'm', 20, 2.5), mat('Fuente POE', 'u', 1, 185),
+     mat('Grabador NVR 4 canales', 'u', 0.25, 2800), mat('Disco duro 1TB', 'u', 0.25, 350),
+     mat('Tubo conduit 1/2"', 'm', 5, 8), mat('Conector RJ45', 'u', 2, 8)],
+    [mo('Técnico CCTV', 1, 400), mo('Ayudante', 0.5, 150)],
+    [eq('Taladro', 0.25, 15), eq('Ponchadora', 0.25, 12), eq('Multímetro', 0.25, 5)]
+  ),
+
+  // ===== 32.xx OBRA CIVIL PESADA =====
+  reng(`${prefix}-71`, '32.01', 'Muro de contención concreto ciclópeo', 'm³', 2,
+    [mat('Cemento UGC', 'bolsa', 4, 85), mat('Arena de río', 'm³', 0.45, 120), mat('Piedra bola 8"', 'm³', 0.6, 150),
+     mat('Acero No.4', 'qq', 0.5, 420), mat('Madera encofrado', 'pt', 6, 8), mat('Agua', 'L', 200, 0.008)],
+    [mo('Albañil', 2, 250), mo('Ayudante', 3, 150)],
+    [eq('Mezcladora', 0.5, 55), eq('Vibrador', 0.3, 35)]
+  ),
+  reng(`${prefix}-72`, '32.02', 'Demolición de estructura existente', 'm³', 3,
+    [mat('Disco de corte', 'u', 0.3, 25), mat('Bolsa desechos', 'u', 5, 2)],
+    [mo('Peón', 3, 150)],
+    [eq('Martillo rompedor', 0.333, 55), eq('Carretilla', 0.333, 5)]
+  ),
+  reng(`${prefix}-73`, '32.03', 'Andamio de seguridad perimetral', 'm²', 50,
+    [mat('Marco andamio 1.80m', 'u', 0.5, 350), mat('Cruceta', 'u', 1, 55), mat('Plataforma', 'u', 0.5, 185),
+     mat('Rueda', 'u', 0.2, 45), mat('Baranda seguridad', 'ml', 1, 35)],
+    [mo('Armador andamios', 1, 300), mo('Ayudante', 2, 150)],
+    [eq('Taladro', 0.02, 15)]
+  ),
+
+  // ===== 33.xx SEÑALIZACIÓN =====
+  reng(`${prefix}-74`, '33.01', 'Señalización vial horizontal línea 4"', 'ml', 100,
+    [mat('Pintura tráfico blanca', 'galón', 0.02, 185), mat('Solvente', 'L', 0.01, 25), mat('Cinta masking', 'm', 0.5, 1.5)],
+    [mo('Pintor señalización', 1, 300), mo('Ayudante', 1, 150)],
+    [eq('Máquina líneas', 0.01, 85), eq('Rodillo', 0.01, 5)]
+  ),
+  reng(`${prefix}-75`, '33.02', 'Señal vertical reglamentaria', 'u', 6,
+    [mat('Lámina aluminio reflectiva', 'u', 1, 185), mat('Poste 2.5m', 'u', 1, 120), mat('Tubo cuadrado 2"', 'ml', 2.5, 28),
+     mat('Concreto 3000psi', 'm³', 0.05, 850), mat('Taquete', 'u', 4, 2.5)],
+    [mo('Albañil', 0.5, 250), mo('Ayudante', 0.5, 150)],
+    [eq('Taladro percutor', 0.167, 18), eq('Nivel', 0.167, 3)]
+  ),
+
+  // ===== 34.xx CERCADO PERIMETRAL =====
+  reng(`${prefix}-76`, '34.01', 'Cercado de malla ciclón h=2.00m', 'ml', 15,
+    [mat('Malla ciclón 2.00m', 'ml', 1, 65), mat('Poste tubular 2"', 'u', 0.5, 85), mat('Alambre tenso', 'm', 2, 3),
+     mat('Concreto 3000psi', 'm³', 0.02, 850), mat('Grapas', 'u', 4, 0.5)],
+    [mo('Cerrajero', 0.5, 350), mo('Ayudante', 1, 150)],
+    [eq('Taladro', 0.067, 15), eq('Tensador', 0.067, 8)]
+  ),
+  reng(`${prefix}-77`, '34.02', 'Portón metálico corredizo 3.00m', 'u', 2,
+    [mat('Portón metálico 3x2m', 'u', 1, 4800), mat('Riel corredizo', 'ml', 4, 85), mat('Rueda', 'u', 4, 45),
+     mat('Cerradura pesada', 'u', 2, 185), mat('Soldadura', 'lb', 1, 12), mat('Pintura anticorrosiva', 'Lata', 0.5, 55)],
+    [mo('Cerrajero', 2, 350), mo('Ayudante', 2, 150)],
+    [eq('Soldadora', 0.5, 45), eq('Esmeril', 0.5, 18)]
+  ),
+
+  // ===== 35.xx ACABADOS ESPECIALES =====
+  reng(`${prefix}-78`, '35.01', 'Piso de madera laminada', 'm²', 12,
+    [mat('Lámina madera 8mm', 'm²', 1.08, 145), mat('Underlayment', 'm²', 1, 18), mat('Perfil junta', 'ml', 0.5, 15),
+     mat('Zócalo madera', 'ml', 1, 12), mat('Clips', 'u', 8, 0.5)],
+    [mo('Pisero', 1, 300), mo('Ayudante', 0.5, 150)],
+    [eq('Cortadora', 0.083, 25), eq('Taladro', 0.05, 15)]
+  ),
+  reng(`${prefix}-79`, '35.02', 'Revestimiento vinílico pared', 'm²', 20,
+    [mat('Papel vinílico premium', 'rollo', 0.08, 350), mat('Adhesivo vinílico', 'galón', 0.03, 85),
+     mat('Espátula plástica', 'u', 0.02, 8), mat('Cutter', 'u', 0.02, 5)],
+    [mo('Pintor decorativo', 1, 300), mo('Ayudante', 0.5, 150)],
+    [eq('Nivel', 0.05, 3)]
+  ),
+  reng(`${prefix}-80`, '35.03', 'Lavado y sellado de fachada', 'm²', 30,
+    [mat('Hidrolavadora', 'hora', 0.05, 45), mat('Detergente industrial', 'L', 0.05, 35), mat('Sellador acrílico', 'galón', 0.03, 185),
+     mat('Agua', 'L', 5, 0.008)],
+    [mo('Peón', 2, 150)],
+    [eq('Andamio colgante', 0.033, 45), eq('Hidrolavadora', 0.033, 35)]
+  ),
 ];
 
 const adjustForTypology = (base: Renglon[], factor: number, prefix: string): Renglon[] =>
@@ -305,7 +583,7 @@ const adjustForTypology = (base: Renglon[], factor: number, prefix: string): Ren
     const materiales = sub.materiales.map(m => ({ ...m, costoUnitario: Math.round(m.costoUnitario * factor) }));
     const manoObra = sub.manoObra.map(m => ({ ...m, jornal: Math.round(m.jornal * factor) }));
     const equipos = sub.equipos.map(e => ({ ...e, costoHora: Math.round(e.costoHora * factor) }));
-    const costoMaterial = materiales.reduce((s, m) => s + m.cantidad * m.costoUnitario, 0);
+  const costoMaterial = materiales.reduce((s, m) => s + m.cantidad * (1 + (m.desperdicio ?? 0) / 100) * m.costoUnitario, 0);
     const costoManoObra = manoObra.reduce((s, m) => s + m.cantidadPersonas * m.jornal / r.rendimiento, 0);
     const costoHerramienta = equipos.reduce((s, e) => s + e.cantidad * e.costoHora, 0);
     return {
@@ -335,14 +613,19 @@ export const tipologiaLabels: Record<Tipologia, string> = {
   publica: 'Pública',
 };
 
-export function calcularAPU(linea: Renglon & { cantidad: number }) {
+export function calcularAPU(linea: Renglon & { cantidad: number; baseTotalPersonas?: number }) {
   const sub = linea.subrenglones;
-  const costoMaterial = sub.materiales.reduce((s, m) => s + m.cantidad * m.costoUnitario, 0);
+  const costoMaterial = sub.materiales.reduce((s, m) => s + m.cantidad * (1 + (m.desperdicio ?? 0) / 100) * m.costoUnitario, 0);
   const costoManoObra = sub.manoObra.reduce((s, m) => s + m.cantidadPersonas * m.jornal / linea.rendimiento, 0);
   const costoHerramienta = sub.equipos.reduce((s, e) => s + e.cantidad * e.costoHora, 0);
   const costoUnitario = costoMaterial + costoManoObra + costoHerramienta;
   const subtotal = costoUnitario * linea.cantidad;
-  const dias = linea.rendimiento > 0 ? linea.cantidad / linea.rendimiento : 0;
+  const currentPersonas = sub.manoObra.reduce((s, m) => s + m.cantidadPersonas, 0);
+  const basePersonas = linea.baseTotalPersonas ?? currentPersonas;
+  const adjustedRendimiento = basePersonas > 0 && currentPersonas > 0
+    ? linea.rendimiento * (currentPersonas / basePersonas)
+    : linea.rendimiento;
+  const dias = adjustedRendimiento > 0 ? linea.cantidad / adjustedRendimiento : 0;
   const totalPersonasDia = sub.manoObra.reduce((s, m) => s + m.cantidadPersonas * dias, 0);
   return { costoMaterial, costoManoObra, costoHerramienta, costoUnitario, subtotal, dias, totalPersonasDia };
 }

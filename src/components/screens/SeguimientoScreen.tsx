@@ -2,6 +2,8 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { PlanillaService } from '@/services/seguimiento/PlanillaService';
 import { GanttService } from '@/services/seguimiento/GanttService';
+import type { RenglonCPM } from '@/services/seguimiento/GanttService';
+import type { Renglon } from '@/data/renglones';
 import PageShell from '@/components/shared/PageShell';
 import GanttView from '@/components/shared/GanttView';
 import { BitacoraAvancePanel } from '@/components/shared/BitacoraAvancePanel';
@@ -39,7 +41,9 @@ const SeguimientoScreen: React.FC = () => {
   const rutaCritica = useMemo(() => {
     if (!selectedProyecto) return [];
     const p = presupuestos.find(pr => pr.id === selectedProyecto);
-    return p ? GanttService.calcularRutaCritica(p.lineas, 30) : [];
+    if (!p) return [];
+    const lineas = (p.lineas || []) as (Renglon & { cantidad: number })[];
+    return GanttService.calcularRutaCritica(lineas);
   }, [selectedProyecto, presupuestos]);
 
   const gastosPersonal = useMemo(() => {
@@ -240,7 +244,7 @@ const SeguimientoScreen: React.FC = () => {
               <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-md p-3 flex flex-col overflow-y-auto">
                 <h3 className="font-bold text-xs text-slate-800 mb-2 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-blue-700" />Ruta Crítica</h3>
                 <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
-                  {rutaCritica.length > 0 ? rutaCritica.filter(r => r.esRutaCritica).map((r: any) => (
+                  {rutaCritica.length > 0 ? rutaCritica.filter(r => r.esRutaCritica).map((r: RenglonCPM) => (
                     <div key={r.id} className="flex justify-between p-2 border-b text-[11px]">
                       <span className="font-medium text-red-700">{r.descripcion}</span>
                       <span className="text-red-600 font-bold">{r.duracionDias}d</span>
@@ -251,7 +255,7 @@ const SeguimientoScreen: React.FC = () => {
               <div className="col-span-12 lg:col-span-5 bg-white rounded-xl shadow-md p-3 flex flex-col">
                 <h3 className="font-bold text-xs text-slate-800 mb-2 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-blue-700" />Gantt — {selectedProyecto ? presupuestos.find(p => p.id === selectedProyecto)?.proyecto : 'Seleccione un proyecto'}</h3>
                 <div className="flex-1 min-h-0">
-                  <GanttView presupuestos={selectedProyecto ? presupuestos.filter(p => p.id === selectedProyecto) : []} />
+                  <GanttView proyectoId={selectedProyecto ?? undefined} />
                 </div>
               </div>
               <div className="col-span-12 lg:col-span-3 bg-white rounded-xl shadow-md p-3 flex flex-col overflow-y-auto">

@@ -13,6 +13,7 @@ import type {
 } from '@/types/supabase';
 import { ProveedoresService } from '@/services/compras/ProveedoresService';
 import { OrdenesCompraService } from '@/services/compras/OrdenesCompraService';
+import { BodegaService } from '@/services/proyectos/BodegaService';
 
 type Tab = 'proveedores' | 'ordenes';
 
@@ -207,6 +208,8 @@ const ComprasScreen: React.FC = () => {
         itemsRec.push({ recepcionId: rec.id, ordenCompraItemId: item.id, cantidadRecibida: cant });
         const nuevaRecibida = item.cantidadRecibida + cant;
         await OrdenesCompraService.actualizarCantidadRecibida(item.id, nuevaRecibida);
+        // Automáticamente impactar inventario en Bodega
+        await BodegaService.registrarMovimiento(item.id, 'entrada', cant, `Recepción OC ${selectedOC.folio}`);
       }
       if (itemsRec.length > 0) {
         await OrdenesCompraService.crearItemsRecepcion(itemsRec);
