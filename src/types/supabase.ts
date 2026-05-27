@@ -164,7 +164,21 @@ export interface Transaccion {
   costoTotal: number;
   fecha: string;
   proyectoId: string;
+  empleadoId?: string;
 }
+
+export interface Empleado {
+  id: string;
+  user_id: string;
+  nombre: string;
+  puesto: string;
+  telefono: string;
+  salario_diario: number;
+  activo: boolean;
+  created_at: string;
+}
+
+export type CreateEmpleado = Omit<Empleado, 'id' | 'user_id' | 'created_at'>;
 
 export interface Actividad {
   id: string;

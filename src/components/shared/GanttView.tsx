@@ -83,7 +83,7 @@ const GanttView: React.FC = () => {
           const lineasArr = (p.lineas || []) as (Renglon & { cantidad: number })[];
           const totalDias = lineasArr.reduce((s, l) => s + calcularAPU(l).dias, 0);
           duracionSemanas = Math.max(2, Math.ceil(totalDias / 5));
-          inicioSemana = inicio ? diffSemanas(inicio) : Math.floor(Math.random() * 2);
+          inicioSemana = inicio ? diffSemanas(inicio) : (presupuestos.indexOf(p) % 3);
         }
 
         const actividades: Actividad[] = [];

@@ -38,6 +38,7 @@ DROP TABLE IF EXISTS public.renglon_usage CASCADE;
 DROP TABLE IF EXISTS public.renglones CASCADE;
 DROP TABLE IF EXISTS public.equipo_miembros CASCADE;
 DROP TABLE IF EXISTS public.equipos CASCADE;
+DROP TABLE IF EXISTS public.empleados CASCADE;
 DROP TABLE IF EXISTS public.actividades CASCADE;
 DROP TABLE IF EXISTS public.bitacora_avance CASCADE;
 DROP TABLE IF EXISTS public.audit_log CASCADE;
@@ -55,6 +56,7 @@ FROM pg_tables
 WHERE schemaname = 'public'
   AND tablename IN (
     'clientes','proyectos','presupuestos','transacciones',
+    'empleados',
     'audit_log','bitacora_avance',
     'actividades','equipos','equipo_miembros',
     'renglones','renglon_usage','renglon_precios_historial',
