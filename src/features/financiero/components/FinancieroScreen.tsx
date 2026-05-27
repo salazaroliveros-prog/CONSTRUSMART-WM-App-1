@@ -6,9 +6,10 @@ import PageShell from '@/components/shared/PageShell';
 import TransactionForm from '@/components/shared/TransactionForm';
 import Calendar from '@/components/shared/Calendar';
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
-import { Download, FileText, Trash2, TrendingUp, TrendingDown, Wallet, Filter, FileDown, Scan, DollarSign, BarChart3, PieChartIcon, ArrowLeft, ArrowRight, LineChartIcon } from 'lucide-react';
+import { Download, FileText, Trash2, TrendingUp, TrendingDown, Wallet, Filter, FileDown, Scan, DollarSign, BarChart3, PieChartIcon, ArrowLeft, ArrowRight, LineChartIcon, PiggyBank } from 'lucide-react';
 import OCRFactura from '@/components/shared/OCRFactura';
 import { exportTransacciones } from '@/utils/exportExcel';
+import ProfitReport from './ProfitReport';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, LineChart, Line } from 'recharts';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
@@ -54,7 +55,7 @@ const FinancieroScreen: React.FC = () => {
   const [filterProy, setFilterProy] = useState<string>('todos');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [pagina, setPagina] = useState(0);
-  const totalPaginas = 2;
+  const totalPaginas = 3;
 
   const filtered = transacciones.filter(t => {
     if (filterTipo !== 'todos' && t.tipo !== filterTipo) return false;
@@ -227,6 +228,9 @@ const FinancieroScreen: React.FC = () => {
                 </div>
               </div>
             </div>
+          )}
+          {pagina === 2 && (
+            <ProfitReport transacciones={transacciones} presupuestos={presupuestos} />
           )}
         </div>
       </div>
