@@ -104,6 +104,18 @@ CREATE TABLE IF NOT EXISTS public.transacciones (
   created_at     timestamptz DEFAULT now()
 );
 
+-- 4.4b. empleados (catálogo de personal)
+CREATE TABLE IF NOT EXISTS public.empleados (
+  id             uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id        uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  nombre         text NOT NULL,
+  puesto         text NOT NULL DEFAULT 'Operario',
+  telefono       text,
+  salario_diario numeric(10,2) DEFAULT 0,
+  activo         boolean DEFAULT true,
+  created_at     timestamptz DEFAULT now()
+);
+
 -- 4.5. audit_log (auditoría de cambios)
 CREATE TABLE IF NOT EXISTS public.audit_log (
   id             uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -318,6 +330,7 @@ ALTER TABLE public.clientes               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.proyectos              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.presupuestos           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transacciones          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.empleados              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_log              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bitacora_avance        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.actividades            ENABLE ROW LEVEL SECURITY;
@@ -371,6 +384,13 @@ DROP POLICY IF EXISTS "transacciones_insert"                   ON public.transac
 DROP POLICY IF EXISTS "transacciones_update"                   ON public.transacciones;
 DROP POLICY IF EXISTS "transacciones_delete"                   ON public.transacciones;
 DROP POLICY IF EXISTS "owner_only_transacciones"               ON public.transacciones;
+
+-- empleados
+DROP POLICY IF EXISTS "empleados_owner"  ON public.empleados;
+DROP POLICY IF EXISTS "empleados_select" ON public.empleados;
+DROP POLICY IF EXISTS "empleados_insert" ON public.empleados;
+DROP POLICY IF EXISTS "empleados_update" ON public.empleados;
+DROP POLICY IF EXISTS "empleados_delete" ON public.empleados;
 
 -- audit_log
 DROP POLICY IF EXISTS "audit_log_owner"  ON public.audit_log;
@@ -501,6 +521,12 @@ CREATE POLICY "presupuestos_owner" ON public.presupuestos
 
 -- 7.4. transacciones
 CREATE POLICY "transacciones_owner" ON public.transacciones
+  FOR ALL TO authenticated
+  USING     (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- 7.4b. empleados
+CREATE POLICY "empleados_owner" ON public.empleados
   FOR ALL TO authenticated
   USING     (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
@@ -715,6 +741,8 @@ CREATE INDEX IF NOT EXISTS idx_presupuestos_fase           ON public.presupuesto
 CREATE INDEX IF NOT EXISTS idx_transacciones_user_id       ON public.transacciones(user_id);
 CREATE INDEX IF NOT EXISTS idx_transacciones_fecha         ON public.transacciones(fecha DESC);
 CREATE INDEX IF NOT EXISTS idx_transacciones_proyecto_id   ON public.transacciones(proyecto_id);
+CREATE INDEX IF NOT EXISTS idx_transacciones_empleado_id   ON public.transacciones(empleado_id);
+CREATE INDEX IF NOT EXISTS idx_empleados_user_id           ON public.empleados(user_id);
 CREATE INDEX IF NOT EXISTS idx_actividades_user_id         ON public.actividades(user_id);
 CREATE INDEX IF NOT EXISTS idx_actividades_fecha           ON public.actividades(fecha);
 CREATE INDEX IF NOT EXISTS idx_actividades_presupuesto_id  ON public.actividades(presupuesto_id);
@@ -746,7 +774,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_registro          ON public.audit_log(r
 CREATE INDEX IF NOT EXISTS idx_bitacora_presupuesto_id     ON public.bitacora_avance(presupuesto_id);
 
 -- 9. VERIFICACIÓN FINAL
--- 9a. RLS activo en las 19 tablas
+-- 9a. RLS activo en las 20 tablas
 SELECT
   tablename,
   CASE WHEN rowsecurity THEN '✅ RLS ON' ELSE '❌ RLS OFF' END AS rls
@@ -754,6 +782,7 @@ FROM pg_tables
 WHERE schemaname = 'public'
   AND tablename IN (
     'clientes','proyectos','presupuestos','transacciones',
+    'empleados',
     'audit_log','bitacora_avance',
     'actividades','equipos','equipo_miembros',
     'renglones','renglon_usage','renglon_precios_historial',
@@ -768,7 +797,7 @@ SELECT tablename, policyname, cmd AS operacion
 FROM pg_policies
 WHERE schemaname = 'public'
   AND tablename IN (
-    'clientes','proyectos','presupuestos','transacciones',
+    'clientes','proyectos','presupuestos','transacciones','empleados',
     'audit_log','bitacora_avance',
     'actividades','equipos','equipo_miembros',
     'renglones','renglon_usage','renglon_precios_historial',
