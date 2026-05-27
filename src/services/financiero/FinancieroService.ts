@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 /**
  * Servicio centralizado para operaciones financieras.
  * Encapsula la lógica de cálculo y acceso a datos de transacciones.
+ * FUENTE ÚNICA para proyecciones de cash flow.
  */
 export const FinancieroService = {
   /**
@@ -69,5 +70,17 @@ export const FinancieroService = {
       console.error('Error en FinancieroService.registrarTransaccion:', error);
       throw error;
     }
+  },
+
+  /** Proyecta tendencia financiera 30/60/90 días basado en últimos 30 días */
+  proyectarTendencia(transacciones: Transaccion[]) {
+    const ahora = new Date();
+    const hace30Dias = new Date();
+    hace30Dias.setDate(ahora.getDate() - 30);
+    const recientes = transacciones.filter(t => new Date(t.fecha) >= hace30Dias);
+    const promIngresoDiario = recientes.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0) / 30;
+    const promGastoDiario = recientes.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0) / 30;
+    const netoDiario = promIngresoDiario - promGastoDiario;
+    return { dias30: netoDiario * 30, dias60: netoDiario * 60, dias90: netoDiario * 90, netoDiario };
   }
 };
