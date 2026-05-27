@@ -13,6 +13,7 @@ import CotizacionScreen from '@/components/screens/CotizacionScreen';
 import ComprasScreen from '@/features/compras/components/ComprasScreen';
 import CommandPalette from '@/components/shared/CommandPalette';
 import OfflineBanner from '@/components/shared/OfflineBanner';
+import DevDiagnostics from '@/dev/DevDiagnostics';
 // import { FloatingMenu } from '@/components/shared/FloatingMenu'; // Eliminado ya que ahora está en Header
 import { Loader2 } from 'lucide-react';
 
@@ -60,8 +61,10 @@ const AppLayout: React.FC = () => {
   };
 
   return (
-    <div key={view} className={`animate-${dir === 'right' ? 'slide-right' : 'slide-left'}`}>
+    // Keep a stable root element (avoid remounts when `view` changes which caused inputs to lose focus)
+    <div className={`animate-${dir === 'right' ? 'slide-right' : 'slide-left'}`} data-view={view}>
       <CommandPalette />
+      <DevDiagnostics />
       {/* FloatingMenu eliminado */}
       {renderView()}
       <OfflineBanner />

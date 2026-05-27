@@ -8,6 +8,12 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    hmr: {
+      protocol: "ws",
+      host: "localhost",
+      port: 8080,
+    },
+    allowedHosts: "all",
   },
   plugins: [
     react(),

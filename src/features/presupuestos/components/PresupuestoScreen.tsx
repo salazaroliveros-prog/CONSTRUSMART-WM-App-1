@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import PageShell from '@/components/shared/PageShell';
 import { renglonesPorTipologia, Tipologia, tipologiaLabels, Renglon, SubMaterial, SubManoObra, SubEquipo, calcularAPU } from '@/data/renglones';
@@ -558,6 +558,22 @@ const RenglonCard = React.memo<{
   const subtotal = apu?.subtotal ?? costoUnit * l.cantidad;
   const dias = apu?.dias ?? (l.rendimiento > 0 ? l.cantidad / l.rendimiento : 0);
   const sub = l.subrenglones;
+
+  /**
+   * Handlers memorizados para evitar parpadeo en inputs
+   * Estos callbacks son estables entre renders
+   */
+  const createMaterialHandler = useCallback((idx: number, field: keyof SubMaterial) => {
+    return (value: number) => onUpdateSubMaterial(l.id, idx, field, value);
+  }, [l.id, onUpdateSubMaterial]);
+
+  const createMOHandler = useCallback((idx: number, field: keyof SubManoObra) => {
+    return (value: number) => onUpdateSubMO(l.id, idx, field, value);
+  }, [l.id, onUpdateSubMO]);
+
+  const createEquipoHandler = useCallback((idx: number, field: keyof SubEquipo) => {
+    return (value: number) => onUpdateSubEquipo(l.id, idx, field, value);
+  }, [l.id, onUpdateSubEquipo]);
   const m = l.memoriaCalculo || { veces: 1, largo: 0, ancho: 0, alto: 0, tipo: 'unidades' };
 
   return (
@@ -678,9 +694,9 @@ const RenglonCard = React.memo<{
                       <tr key={i} className="border-b border-dashed border-slate-200">
                         <td className="py-0.5 text-slate-700">{m.nombre}</td>
                         <td className="py-0.5 text-center text-slate-500">{m.unidad}</td>
-                        <td className="py-0.5"><input type="number" value={m.cantidad} onChange={e => onUpdateSubMaterial(l.id, i, 'cantidad', parseFloat(e.target.value) || 0)} className="w-14 px-1 py-0.5 text-xs border rounded text-right" /></td>
-                        <td className="py-0.5"><input type="number" value={m.costoUnitario} onChange={e => onUpdateSubMaterial(l.id, i, 'costoUnitario', parseFloat(e.target.value) || 0)} className="w-16 px-1 py-0.5 text-xs border rounded text-right" /></td>
-                        <td className="py-0.5"><input type="number" value={m.desperdicio ?? 0} onChange={e => onUpdateSubMaterial(l.id, i, 'desperdicio', parseFloat(e.target.value) || 0)} className="w-12 px-1 py-0.5 text-xs border rounded text-right" min={0} max={100} /></td>
+                        <td className="py-0.5"><input type="number" value={m.cantidad} onChange={e => createMaterialHandler(i, 'cantidad')(parseFloat(e.target.value) || 0)} className="w-14 px-1 py-0.5 text-xs border rounded text-right" /></td>
+                        <td className="py-0.5"><input type="number" value={m.costoUnitario} onChange={e => createMaterialHandler(i, 'costoUnitario')(parseFloat(e.target.value) || 0)} className="w-16 px-1 py-0.5 text-xs border rounded text-right" /></td>
+                        <td className="py-0.5"><input type="number" value={m.desperdicio ?? 0} onChange={e => createMaterialHandler(i, 'desperdicio')(parseFloat(e.target.value) || 0)} className="w-12 px-1 py-0.5 text-xs border rounded text-right" min={0} max={100} /></td>
                         <td className="py-0.5 text-right font-semibold text-slate-700">{fmtQ(m.cantidad * (1 + (m.desperdicio ?? 0) / 100) * m.costoUnitario)}</td>
                       </tr>
                     ))}
@@ -704,8 +720,8 @@ const RenglonCard = React.memo<{
                       return (
                         <tr key={i} className="border-b border-dashed border-slate-200">
                           <td className="py-0.5 text-slate-700">{m.descripcion}</td>
-                          <td className="py-0.5"><input type="number" value={m.cantidadPersonas} onChange={e => onUpdateSubMO(l.id, i, 'cantidadPersonas', parseFloat(e.target.value) || 0)} className="w-14 px-1 py-0.5 text-xs border rounded text-center" /></td>
-                          <td className="py-0.5"><input type="number" value={m.jornal} onChange={e => onUpdateSubMO(l.id, i, 'jornal', parseFloat(e.target.value) || 0)} className="w-16 px-1 py-0.5 text-xs border rounded text-right" /></td>
+                          <td className="py-0.5"><input type="number" value={m.cantidadPersonas} onChange={e => createMOHandler(i, 'cantidadPersonas')(parseFloat(e.target.value) || 0)} className="w-14 px-1 py-0.5 text-xs border rounded text-center" /></td>
+                          <td className="py-0.5"><input type="number" value={m.jornal} onChange={e => createMOHandler(i, 'jornal')(parseFloat(e.target.value) || 0)} className="w-16 px-1 py-0.5 text-xs border rounded text-right" /></td>
                           <td className="py-0.5 text-right font-semibold">{fmtQ(costoPorDia)}</td>
                           <td className="py-0.5 text-right font-semibold">{fmtQ(costoPorUnd)}</td>
                         </tr>
@@ -740,8 +756,8 @@ const RenglonCard = React.memo<{
                     {sub.equipos.map((e, i) => (
                       <tr key={i} className="border-b border-dashed border-slate-200">
                         <td className="py-0.5 text-slate-700">{e.descripcion}</td>
-                        <td className="py-0.5"><input type="number" value={e.cantidad} onChange={e => onUpdateSubEquipo(l.id, i, 'cantidad', parseFloat(e.target.value) || 0)} className="w-14 px-1 py-0.5 text-xs border rounded text-right" /></td>
-                        <td className="py-0.5"><input type="number" value={e.costoHora} onChange={e => onUpdateSubEquipo(l.id, i, 'costoHora', parseFloat(e.target.value) || 0)} className="w-16 px-1 py-0.5 text-xs border rounded text-right" /></td>
+                        <td className="py-0.5"><input type="number" value={e.cantidad} onChange={evt => createEquipoHandler(i, 'cantidad')(parseFloat(evt.target.value) || 0)} className="w-14 px-1 py-0.5 text-xs border rounded text-right" /></td>
+                        <td className="py-0.5"><input type="number" value={e.costoHora} onChange={evt => createEquipoHandler(i, 'costoHora')(parseFloat(evt.target.value) || 0)} className="w-16 px-1 py-0.5 text-xs border rounded text-right" /></td>
                         <td className="py-0.5 text-right font-semibold text-slate-700">{fmtQ(e.cantidad * e.costoHora)}</td>
                       </tr>
                     ))}
