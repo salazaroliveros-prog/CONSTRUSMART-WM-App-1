@@ -99,8 +99,10 @@ export const useAppContext = (): AuthContextType & DataContextType => {
   const data = useContext(DataContext);
   if (!auth) throw new Error('useAppContext must be used within AppProvider');
   if (!data) throw new Error('useAppContext must be used within AppProvider');
-  // Combinar ambos contextos en uno devuelto
-  return { ...auth, ...data };
+  // Combinar ambos contextos con useMemo para mantener referencia estable
+  // Esto evita que cada componente que usa useAppContext obtenga un objeto
+  // nuevo en cada render, lo que causaba re-renders en cadena y parpadeo
+  return React.useMemo(() => ({ ...auth, ...data }), [auth, data]);
 };
 
 export const useAuthContext = () => {

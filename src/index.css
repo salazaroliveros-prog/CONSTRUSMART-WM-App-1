@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
@@ -45,6 +44,22 @@
     --sidebar-accent-foreground: 215 25% 27%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 221 83% 53%;
+
+    /* Design Tokens para consistencia visual */
+    --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+    --card-shadow-hover: 0 4px 12px 0 rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.08);
+    --card-border-radius: 0.75rem;
+    --table-header-height: 2.5rem;
+    --input-height: 2.25rem;
+    
+    /* KPI Card Colors */
+    --kpi-emerald: #059669;
+    --kpi-red: #DC2626;
+    --kpi-blue: #2563EB;
+    --kpi-indigo: #4F46E5;
+    --kpi-purple: #9333EA;
+    --kpi-amber: #D97706;
+    --kpi-teal: #0D9488;
   }
 
   .dark {
@@ -93,7 +108,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans dark:bg-background dark:text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
   }
 
   pre, code {
@@ -101,94 +116,206 @@
   }
 }
 
-.markdown-editor {
-  @apply font-mono text-base leading-relaxed;
-}
-
-.markdown-preview {
-  @apply prose max-w-none prose-blue dark:prose-invert;
-}
-
-.markdown-preview pre {
-  @apply bg-secondary p-4 rounded-md overflow-x-auto;
-}
-
-.markdown-preview code {
-  @apply text-sm font-mono text-primary;
-}
-
-.markdown-preview h1,
-.markdown-preview h2,
-.markdown-preview h3,
-.markdown-preview h4,
-.markdown-preview h5,
-.markdown-preview h6 {
-  @apply font-sans font-semibold text-foreground;
-}
-
-.markdown-preview ul,
-.markdown-preview ol {
-
-  @apply my-4 ml-6;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideInRight {
-  from { opacity: 0; transform: translateX(24px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-24px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
-}
-
-@keyframes bounceIn {
-  0% { transform: scale(0.9); opacity: 0; }
-  50% { transform: scale(1.02); }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-@keyframes ripple {
-  to { transform: scale(4); opacity: 0; }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.35s ease-out;
-}
-
-/* Solo animar en montaje inicial, no en cada re-render.
-   La animación se ejecuta exactamente UNA vez gracias a la key en AppLayout.
-   Usamos animation-fill-mode: backwards para evitar el flash inicial de opacity:0 */
-.animate-slide-right {
-  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  animation-fill-mode: backwards;
-}
-
-.animate-slide-left {
-  animation: slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  animation-fill-mode: backwards;
-}
-
-.animate-pulse-glow {
-  animation: pulseGlow 2s infinite;
-}
-
-.animate-bounce-in {
-  animation: bounceIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+/* ============================================
+   RESPONSIVE BODY UTILITIES
+   ============================================ */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.2);
+    border-radius: 999px;
+  }
 }
 
 /* ============================================
-   GLASS & BACKDROP UTILITIES
+   CARD COMPONENT SYSTEM (Estándar)
+   ============================================ */
+@layer components {
+  .card-standard {
+    @apply bg-white dark:bg-card rounded-xl shadow-sm border border-border p-4;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .card-standard:hover {
+    box-shadow: var(--card-shadow-hover);
+    border-color: hsl(var(--border));
+  }
+  
+  .card-header {
+    @apply font-bold text-xs sm:text-sm text-slate-800 dark:text-gray-100 mb-3 flex items-center gap-2;
+  }
+  
+  .card-header svg {
+    @apply w-4 h-4 text-blue-700 dark:text-blue-400 shrink-0;
+  }
+  
+  .card-section {
+    @apply bg-white dark:bg-gray-800/50 rounded-lg border border-border/50 p-3;
+  }
+
+  .card-highlight {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .card-highlight::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.5));
+    border-radius: 3px 3px 0 0;
+  }
+  
+  .card-hover {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px hsl(var(--foreground) / 0.08);
+    border-color: hsl(var(--border));
+  }
+}
+
+/* ============================================
+   TABLE COMPONENT SYSTEM (Estándar)
+   ============================================ */
+@layer components {
+  .table-standard {
+    @apply w-full text-xs;
+  }
+  
+  .table-standard thead {
+    @apply bg-gradient-to-r from-blue-800 to-blue-700 text-white;
+  }
+  
+  .table-standard th {
+    @apply p-2.5 text-left font-semibold;
+  }
+  
+  .table-standard td {
+    @apply p-2.5;
+  }
+  
+  .table-standard tbody tr {
+    @apply border-b border-border/50 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors;
+  }
+  
+  .table-standard tbody tr:last-child {
+    @apply border-b-0;
+  }
+}
+
+/* Responsive table */
+@media (max-width: 639px) {
+  .table-standard {
+    font-size: 9px;
+  }
+  .table-standard th,
+  .table-standard td {
+    padding: 0.375rem 0.5rem;
+    white-space: nowrap;
+  }
+  .table-standard td.text-right,
+  .table-standard th.text-right {
+    padding-right: 0.25rem;
+  }
+}
+
+/* ============================================
+   KPI CARD SYSTEM (Estándar)
+   ============================================ */
+@layer components {
+  .kpi-card {
+    @apply rounded-xl p-3 shadow-md flex flex-col justify-center text-white;
+  }
+  
+  .kpi-card .kpi-icon {
+    @apply p-1.5 rounded-lg bg-white/20;
+  }
+  
+  .kpi-card .kpi-label {
+    @apply text-[10px] uppercase tracking-wider opacity-80 font-semibold;
+  }
+  
+  .kpi-card .kpi-value {
+    @apply text-sm sm:text-base font-bold leading-tight mt-0.5;
+  }
+}
+
+/* ============================================
+   BUTTON SYSTEM (Estándar)
+   ============================================ */
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors btn-press disabled:opacity-40;
+  }
+  
+  .btn-secondary {
+    @apply inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-slate-700 dark:text-gray-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors btn-press;
+  }
+  
+  .btn-success {
+    @apply inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors btn-press;
+  }
+  
+  .btn-danger {
+    @apply inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors btn-press;
+  }
+  
+  .btn-ghost {
+    @apply inline-flex items-center gap-1.5 text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-700 px-2 py-1 rounded-lg text-xs font-semibold transition-colors;
+  }
+}
+
+/* ============================================
+   FORM ELEMENTS (Estándar)
+   ============================================ */
+@layer components {
+  .input-standard {
+    @apply w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-gray-100 outline-none transition-all;
+  }
+  
+  .select-standard {
+    @apply px-3 py-2 text-xs border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none transition-all;
+  }
+  
+  .label-standard {
+    @apply block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1;
+  }
+}
+
+/* ============================================
+   HEADER/TITLE SYSTEM (Estándar)
+   ============================================ */
+@layer components {
+  .page-title {
+    @apply font-bold text-slate-800 dark:text-gray-100;
+  }
+  
+  .section-title {
+    @apply font-bold text-xs text-slate-800 dark:text-gray-100 flex items-center gap-1.5;
+  }
+  
+  .section-title svg {
+    @apply w-3.5 h-3.5 text-blue-700 dark:text-blue-400;
+  }
+}
+
+/* ============================================
+   GLASS EFFECTS (Mejorados)
    ============================================ */
 .glass {
   background: hsl(var(--card) / 0.7);
@@ -226,7 +353,7 @@
 }
 
 /* ============================================
-   SCROLLBAR
+   SCROLLBAR (Mejorado)
    ============================================ */
 ::-webkit-scrollbar {
   width: 8px;
@@ -248,14 +375,44 @@
 }
 
 /* Firefox scrollbar */
-* {
+body {
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
 }
 
 /* ============================================
-   ENHANCED ANIMATIONS
+   ANIMATIONS (Optimizadas)
    ============================================ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.9); opacity: 0; }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes ripple {
+  to { transform: scale(4); opacity: 0; }
+}
+
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
@@ -295,6 +452,31 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Animation utility classes - todas con animation-fill-mode: backwards para evitar flash de opacity:0 */
+.animate-fadeIn {
+  animation: fadeIn 0.35s ease-out;
+  animation-fill-mode: backwards;
+}
+
+.animate-slide-right {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: backwards;
+}
+
+.animate-slide-left {
+  animation: slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: backwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+.animate-bounce-in {
+  animation: bounceIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation-fill-mode: backwards;
+}
+
 .animate-fade-in-up {
   animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -325,7 +507,9 @@
   animation: shimmer 1.5s infinite;
 }
 
-/* Stagger children for lists */
+/* ============================================
+   STAGGER CHILDREN (Mejorado con contenedor estable)
+   ============================================ */
 .stagger-children > * {
   opacity: 0;
   animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -343,59 +527,8 @@
 .stagger-children > *:nth-child(10) { animation-delay: 0.30s; }
 
 /* ============================================
-   RESPONSIVE TABLE HELPERS
+   TEXT EFFECTS
    ============================================ */
-@media (max-width: 639px) {
-  .responsive-table {
-    font-size: 9px;
-  }
-  .responsive-table th,
-  .responsive-table td {
-    padding: 0.375rem 0.5rem;
-    white-space: nowrap;
-  }
-  .responsive-table td.text-right,
-  .responsive-table th.text-right {
-    padding-right: 0.25rem;
-  }
-}
-
-/* Touch target minimum size for mobile */
-@media (max-width: 639px) {
-  .touch-min {
-    min-height: 36px;
-    min-width: 36px;
-  }
-}
-
-/* ============================================
-   CARD & SURFACE EFFECTS
-   ============================================ */
-.card-hover {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px hsl(var(--foreground) / 0.08);
-  border-color: hsl(var(--border));
-}
-
-.card-highlight {
-  position: relative;
-  overflow: hidden;
-}
-.card-highlight::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.5));
-  border-radius: 3px 3px 0 0;
-}
-
-/* Gradient text */
 .text-gradient {
   background: linear-gradient(135deg, hsl(var(--primary)), hsl(221 83% 60%));
   -webkit-background-clip: text;
@@ -447,7 +580,9 @@
   transition: background-size 0.4s, opacity 0.3s;
 }
 
-/* Skeleton */
+/* ============================================
+   SKELETON LOADING
+   ============================================ */
 .skeleton {
   @apply bg-muted/70 rounded;
   position: relative;
@@ -460,4 +595,48 @@
   background: linear-gradient(90deg, transparent, hsl(var(--background) / 0.4), transparent);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+}
+
+/* ============================================
+   RESPONSIVE TOUCH TARGETS
+   ============================================ */
+@media (max-width: 639px) {
+  .touch-min {
+    min-height: 36px;
+    min-width: 36px;
+  }
+  .touch-min-lg {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ============================================
+   RESPONSIVE PAGE LAYOUT
+   ============================================ */
+@media (max-width: 639px) {
+  .page-content {
+    @apply px-2 py-2;
+  }
+  .page-grid {
+    @apply grid grid-cols-1 gap-3;
+  }
+  .kpi-grid {
+    @apply grid grid-cols-2 gap-2;
+  }
+}
+
+@media (min-width: 640px) {
+  .page-content {
+    @apply px-3 sm:px-5 py-3 sm:py-5;
+  }
+  .page-grid {
+    @apply grid grid-cols-12 gap-3;
+  }
+}
+
+@media (min-width: 1024px) {
+  .kpi-grid {
+    @apply grid grid-cols-6 gap-3;
+  }
 }
