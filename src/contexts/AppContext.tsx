@@ -10,13 +10,15 @@ import type { Session, RealtimeChannel } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { 
   Cliente, Proyecto, Transaccion, Actividad, Presupuesto, Equipo, EquipoMiembro,
+  Proveedor, OrdenCompra,
   CreateCliente, CreateProyecto, CreateTransaccion, CreateActividad, CreatePresupuesto, CreateEquipo, CreateEquipoMiembro,
   UpdateCliente, UpdateProyecto, UpdatePresupuesto, UpdateEquipo, UpdateEquipoMiembro,
   CreatePresupuestoInput,
   validateEquipo, validateEquipoMiembro, validateTransaccion,
   dbToCliente, clienteToDb, dbToProyecto, proyectoToDb,
   dbToTransaccion, dbToActividad, dbToPresupuesto, presupuestoToDb,
-  dbToEquipo, equipoToDb, dbToEquipoMiembro, equipoMiembroToDb
+  dbToEquipo, equipoToDb, dbToEquipoMiembro, equipoMiembroToDb,
+  dbToProveedor, dbToOrdenCompra
 } from '@/types/supabase';
 import {
   loadCachedData, saveCachedData, clearUserCache,
@@ -78,6 +80,9 @@ interface AppContextType {
   updateEquipoMiembro: (id: string, em: UpdateEquipoMiembro) => Promise<void>;
   deleteEquipoMiembro: (id: string) => Promise<void>;
 
+  proveedores: Proveedor[];
+  ordenesCompra: OrdenCompra[];
+
   sidebarOpen: boolean;
   toggleSidebar: () => void;
   darkMode: boolean;
@@ -114,6 +119,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    const [actividades, setActividades] = useState<Actividad[]>([]);
     const [equipos, setEquipos] = useState<Equipo[]>([]);
     const [equipoMiembros, setEquipoMiembros] = useState<EquipoMiembro[]>([]);
+    const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+    const [ordenesCompra, setOrdenesCompra] = useState<OrdenCompra[]>([]);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [pendingCount, setPendingCount] = useState(0);
    const realtimeClientes = useRef<RealtimeChannel | null>(null);
@@ -156,6 +163,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         { name: 'actividades', setter: setActividades, mapper: dbToActividad, },
         { name: 'equipos', setter: setEquipos, mapper: dbToEquipo, },
         { name: 'equipo_miembros', setter: setEquipoMiembros, mapper: dbToEquipoMiembro, },
+        { name: 'proveedores', setter: setProveedores, mapper: dbToProveedor, },
+        { name: 'ordenes_compra', setter: setOrdenesCompra, mapper: dbToOrdenCompra, },
       ] as const;
 
       let anyOnline = false;
@@ -1180,13 +1189,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     presupuestos, addPresupuesto, updatePresupuesto, deletePresupuesto, transicionFase,
     equipos, addEquipo, updateEquipo, deleteEquipo,
     equipoMiembros, addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
+    proveedores, ordenesCompra,
     sidebarOpen, toggleSidebar,
     darkMode, toggleDarkMode,
     isOnline, pendingCount,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [
     view, session, loading, authError, user,
-    clientes, proyectos, transacciones, actividades, presupuestos, equipos, equipoMiembros,
+    clientes, proyectos, transacciones, actividades, presupuestos, equipos, equipoMiembros, proveedores, ordenesCompra,
     sidebarOpen, darkMode, isOnline, pendingCount,
   ]);
   return (

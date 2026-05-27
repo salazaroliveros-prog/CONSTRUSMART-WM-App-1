@@ -10,12 +10,13 @@ import SeguimientoScreen from '@/components/screens/SeguimientoScreen';
 import TeamsScreen from '@/components/screens/TeamsScreen';
 import BodegaScreen from '@/components/screens/BodegaScreen';
 import CotizacionScreen from '@/components/screens/CotizacionScreen';
+import ComprasScreen from '@/features/compras/components/ComprasScreen';
 import CommandPalette from '@/components/shared/CommandPalette';
 import OfflineBanner from '@/components/shared/OfflineBanner';
 // import { FloatingMenu } from '@/components/shared/FloatingMenu'; // Eliminado ya que ahora está en Header
 import { Loader2 } from 'lucide-react';
 
-const viewOrder = ['login', 'dashboard', 'clientes', 'presupuesto', 'proyectos', 'seguimiento', 'financiero', 'equipos', 'bodega', 'cotizacion'];
+const viewOrder = ['login', 'dashboard', 'clientes', 'presupuesto', 'proyectos', 'seguimiento', 'financiero', 'equipos', 'bodega', 'cotizacion', 'compras'];
 
 const AppLayout: React.FC = () => {
   const { view, session, loading } = useAppContext();
@@ -53,6 +54,7 @@ const AppLayout: React.FC = () => {
       case 'equipos': return <TeamsScreen />;
       case 'bodega': return <BodegaScreen />;
       case 'cotizacion': return <CotizacionScreen />;
+      case 'compras': return <ComprasScreen />;
       default: return <Dashboard />;
     }
   };

@@ -325,6 +325,72 @@ CREATE TABLE IF NOT EXISTS public.notificaciones (
   created_at timestamptz DEFAULT now()
 );
 
+-- 4.21. proveedores (catálogo de proveedores)
+CREATE TABLE IF NOT EXISTS public.proveedores (
+  id         uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id    uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  nombre     text NOT NULL,
+  contacto   text,
+  telefono   text,
+  email      text,
+  direccion  text,
+  rfc        text,
+  notas      text,
+  activo     boolean DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- 4.22. ordenes_compra (órdenes de compra)
+CREATE TABLE IF NOT EXISTS public.ordenes_compra (
+  id            uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id       uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  folio         text NOT NULL,
+  proveedor_id  uuid REFERENCES public.proveedores(id) ON DELETE SET NULL,
+  proyecto_id   uuid REFERENCES public.proyectos(id) ON DELETE SET NULL,
+  fecha_emision date DEFAULT CURRENT_DATE,
+  fecha_entrega date,
+  estatus       text DEFAULT 'pendiente' CHECK (estatus IN ('pendiente','aprobada','recibida_parcial','recibida','cancelada')),
+  subtotal      numeric(12,2) DEFAULT 0,
+  iva           numeric(12,2) DEFAULT 0,
+  total         numeric(12,2) DEFAULT 0,
+  notas         text,
+  created_at    timestamptz DEFAULT now(),
+  updated_at    timestamptz DEFAULT now()
+);
+
+-- 4.23. orden_compra_items (partidas de cada orden de compra)
+CREATE TABLE IF NOT EXISTS public.orden_compra_items (
+  id               uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  orden_compra_id  uuid REFERENCES public.ordenes_compra(id) ON DELETE CASCADE NOT NULL,
+  descripcion      text NOT NULL,
+  cantidad         numeric(12,2) NOT NULL,
+  unidad           text DEFAULT 'pza',
+  precio_unitario  numeric(12,2) DEFAULT 0,
+  importe          numeric(12,2) DEFAULT 0,
+  cantidad_recibida numeric(12,2) DEFAULT 0,
+  created_at       timestamptz DEFAULT now()
+);
+
+-- 4.24. recepcion_oc (registro de recepciones parciales/totales)
+CREATE TABLE IF NOT EXISTS public.recepcion_oc (
+  id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  orden_compra_id uuid REFERENCES public.ordenes_compra(id) ON DELETE CASCADE NOT NULL,
+  user_id         uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  fecha_recepcion date DEFAULT CURRENT_DATE,
+  observaciones   text,
+  created_at      timestamptz DEFAULT now()
+);
+
+-- 4.25. recepcion_oc_items (detalle de cantidades recibidas por partida)
+CREATE TABLE IF NOT EXISTS public.recepcion_oc_items (
+  id                uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  recepcion_id      uuid REFERENCES public.recepcion_oc(id) ON DELETE CASCADE NOT NULL,
+  orden_compra_item_id uuid REFERENCES public.orden_compra_items(id) ON DELETE CASCADE NOT NULL,
+  cantidad_recibida numeric(12,2) NOT NULL,
+  created_at        timestamptz DEFAULT now()
+);
+
 -- 5. HABILITAR ROW LEVEL SECURITY EN TODAS LAS TABLAS
 ALTER TABLE public.clientes               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.proyectos              ENABLE ROW LEVEL SECURITY;
@@ -346,6 +412,11 @@ ALTER TABLE public.conciliaciones         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.partidas_conciliacion  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.checklist_items        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notificaciones         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.proveedores            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ordenes_compra         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orden_compra_items     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.recepcion_oc           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.recepcion_oc_items     ENABLE ROW LEVEL SECURITY;
 
 -- 6. ELIMINAR POLÍTICAS EXISTENTES (para reinicio idempotente)
 -- clientes
@@ -498,6 +569,41 @@ DROP POLICY IF EXISTS "notif_select" ON public.notificaciones;
 DROP POLICY IF EXISTS "notif_insert" ON public.notificaciones;
 DROP POLICY IF EXISTS "notif_update" ON public.notificaciones;
 DROP POLICY IF EXISTS "notif_delete" ON public.notificaciones;
+
+-- proveedores
+DROP POLICY IF EXISTS "proveedores_owner"  ON public.proveedores;
+DROP POLICY IF EXISTS "proveedores_select" ON public.proveedores;
+DROP POLICY IF EXISTS "proveedores_insert" ON public.proveedores;
+DROP POLICY IF EXISTS "proveedores_update" ON public.proveedores;
+DROP POLICY IF EXISTS "proveedores_delete" ON public.proveedores;
+
+-- ordenes_compra
+DROP POLICY IF EXISTS "oc_owner"  ON public.ordenes_compra;
+DROP POLICY IF EXISTS "oc_select" ON public.ordenes_compra;
+DROP POLICY IF EXISTS "oc_insert" ON public.ordenes_compra;
+DROP POLICY IF EXISTS "oc_update" ON public.ordenes_compra;
+DROP POLICY IF EXISTS "oc_delete" ON public.ordenes_compra;
+
+-- orden_compra_items
+DROP POLICY IF EXISTS "oci_owner"  ON public.orden_compra_items;
+DROP POLICY IF EXISTS "oci_select" ON public.orden_compra_items;
+DROP POLICY IF EXISTS "oci_insert" ON public.orden_compra_items;
+DROP POLICY IF EXISTS "oci_update" ON public.orden_compra_items;
+DROP POLICY IF EXISTS "oci_delete" ON public.orden_compra_items;
+
+-- recepcion_oc
+DROP POLICY IF EXISTS "rec_owner"  ON public.recepcion_oc;
+DROP POLICY IF EXISTS "rec_select" ON public.recepcion_oc;
+DROP POLICY IF EXISTS "rec_insert" ON public.recepcion_oc;
+DROP POLICY IF EXISTS "rec_update" ON public.recepcion_oc;
+DROP POLICY IF EXISTS "rec_delete" ON public.recepcion_oc;
+
+-- recepcion_oc_items
+DROP POLICY IF EXISTS "reci_owner"  ON public.recepcion_oc_items;
+DROP POLICY IF EXISTS "reci_select" ON public.recepcion_oc_items;
+DROP POLICY IF EXISTS "reci_insert" ON public.recepcion_oc_items;
+DROP POLICY IF EXISTS "reci_update" ON public.recepcion_oc_items;
+DROP POLICY IF EXISTS "reci_delete" ON public.recepcion_oc_items;
 
 -- 7. POLÍTICAS RLS
 
@@ -733,6 +839,36 @@ CREATE POLICY "notif_delete" ON public.notificaciones
   FOR DELETE TO authenticated
   USING (user_id = auth.uid());
 
+-- 7.20. proveedores
+CREATE POLICY "proveedores_owner" ON public.proveedores
+  FOR ALL TO authenticated
+  USING     (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- 7.21. ordenes_compra
+CREATE POLICY "oc_owner" ON public.ordenes_compra
+  FOR ALL TO authenticated
+  USING     (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- 7.22. orden_compra_items
+CREATE POLICY "oci_owner" ON public.orden_compra_items
+  FOR ALL TO authenticated
+  USING     (EXISTS (SELECT 1 FROM public.ordenes_compra oc WHERE oc.id = orden_compra_id AND oc.user_id = auth.uid()))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.ordenes_compra oc WHERE oc.id = orden_compra_id AND oc.user_id = auth.uid()));
+
+-- 7.23. recepcion_oc
+CREATE POLICY "rec_owner" ON public.recepcion_oc
+  FOR ALL TO authenticated
+  USING     (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- 7.24. recepcion_oc_items
+CREATE POLICY "reci_owner" ON public.recepcion_oc_items
+  FOR ALL TO authenticated
+  USING     (EXISTS (SELECT 1 FROM public.recepcion_oc r WHERE r.id = recepcion_id AND r.user_id = auth.uid()))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.recepcion_oc r WHERE r.id = recepcion_id AND r.user_id = auth.uid()));
+
 -- 8. ÍNDICES DE PERFORMANCE
 CREATE INDEX IF NOT EXISTS idx_clientes_user_id            ON public.clientes(user_id);
 CREATE INDEX IF NOT EXISTS idx_proyectos_user_id           ON public.proyectos(user_id);
@@ -743,6 +879,13 @@ CREATE INDEX IF NOT EXISTS idx_transacciones_fecha         ON public.transaccion
 CREATE INDEX IF NOT EXISTS idx_transacciones_proyecto_id   ON public.transacciones(proyecto_id);
 CREATE INDEX IF NOT EXISTS idx_transacciones_empleado_id   ON public.transacciones(empleado_id);
 CREATE INDEX IF NOT EXISTS idx_empleados_user_id           ON public.empleados(user_id);
+CREATE INDEX IF NOT EXISTS idx_proveedores_user_id          ON public.proveedores(user_id);
+CREATE INDEX IF NOT EXISTS idx_ordenes_compra_user_id       ON public.ordenes_compra(user_id);
+CREATE INDEX IF NOT EXISTS idx_ordenes_compra_proveedor     ON public.ordenes_compra(proveedor_id);
+CREATE INDEX IF NOT EXISTS idx_ordenes_compra_estatus       ON public.ordenes_compra(estatus);
+CREATE INDEX IF NOT EXISTS idx_oci_orden_compra_id          ON public.orden_compra_items(orden_compra_id);
+CREATE INDEX IF NOT EXISTS idx_recepcion_oc_orden_compra_id ON public.recepcion_oc(orden_compra_id);
+CREATE INDEX IF NOT EXISTS idx_recepcion_oc_user_id         ON public.recepcion_oc(user_id);
 CREATE INDEX IF NOT EXISTS idx_actividades_user_id         ON public.actividades(user_id);
 CREATE INDEX IF NOT EXISTS idx_actividades_fecha           ON public.actividades(fecha);
 CREATE INDEX IF NOT EXISTS idx_actividades_presupuesto_id  ON public.actividades(presupuesto_id);
@@ -788,7 +931,8 @@ WHERE schemaname = 'public'
     'renglones','renglon_usage','renglon_precios_historial',
     'cambios_presupuesto','materiales_proyecto','movimientos_materiales',
     'conciliaciones','partidas_conciliacion','checklist_items',
-    'notificaciones'
+    'notificaciones',
+    'proveedores','ordenes_compra','orden_compra_items','recepcion_oc','recepcion_oc_items'
   )
 ORDER BY tablename;
 
@@ -803,7 +947,8 @@ WHERE schemaname = 'public'
     'renglones','renglon_usage','renglon_precios_historial',
     'cambios_presupuesto','materiales_proyecto','movimientos_materiales',
     'conciliaciones','partidas_conciliacion','checklist_items',
-    'notificaciones'
+    'notificaciones',
+    'proveedores','ordenes_compra','orden_compra_items','recepcion_oc','recepcion_oc_items'
   )
 ORDER BY tablename, policyname;
 

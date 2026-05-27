@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutGrid, Users, Calculator, Folder, LineChart, Wallet, Shield, X, Menu } from 'lucide-react';
+import { LayoutGrid, Users, Calculator, Folder, LineChart, Wallet, Shield, ShoppingCart, X, Menu } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { ViewType } from '@/types/supabase';
 
@@ -15,6 +15,7 @@ export const FloatingMenu: React.FC = () => {
     { id: 'seguimiento', label: 'Seguimiento', icon: LineChart },
     { id: 'financiero', label: 'Financiero', icon: Wallet },
     { id: 'equipos', label: 'Equipos', icon: Shield },
+    { id: 'compras', label: 'Compras', icon: ShoppingCart },
   ];
 
   return (
