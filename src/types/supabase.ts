@@ -296,7 +296,7 @@ export interface EquipoMiembro {
   created_at?: string;
 }
 
-export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos';
+export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos' | 'bodega' | 'cotizacion';
 
 export interface User {
   nombre: string;

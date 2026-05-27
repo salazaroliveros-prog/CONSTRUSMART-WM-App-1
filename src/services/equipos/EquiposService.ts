@@ -1,5 +1,4 @@
 import { supabase } from '@/lib/supabase';
-import { Equipo, EquipoMiembro } from '@/types/supabase';
 
 export const EquiposService = {
   async getEquipos(userId: string) {
@@ -11,31 +10,56 @@ export const EquiposService = {
     return data;
   },
 
-  async addEquipo(nombre: string, userId: string) {
+  async addEquipo(payload: Record<string, unknown>) {
     const { data, error } = await supabase
       .from('equipos')
-      .insert({ nombre, user_id: userId })
+      .insert(payload)
       .select()
       .single();
     if (error) throw error;
     return data;
   },
 
-  async addMiembro(equipoId: string, userEmail: string, rol: 'admin' | 'miembro' | 'visor') {
+  async updateEquipo(id: string, payload: Record<string, unknown>, userId?: string) {
+    let query = supabase.from('equipos').update(payload).eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+    const { data, error } = await query.select().single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteEquipo(id: string, userId?: string) {
+    let query = supabase.from('equipos').delete().eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+    const { error } = await query;
+    if (error) throw error;
+  },
+
+  async addMiembro(payload: Record<string, unknown>) {
     const { data, error } = await supabase
       .from('equipo_miembros')
-      .insert({ equipo_id: equipoId, user_id: userEmail, rol })
+      .insert(payload)
       .select()
       .single();
     if (error) throw error;
     return data;
   },
 
-  async deleteMiembro(miembroId: string) {
-    const { error } = await supabase
+  async updateMiembro(id: string, payload: Record<string, unknown>) {
+    const { data, error } = await supabase
       .from('equipo_miembros')
-      .delete()
-      .eq('id', miembroId);
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteMiembro(id: string, userId?: string) {
+    let query = supabase.from('equipo_miembros').delete().eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+    const { error } = await query;
     if (error) throw error;
   }
 };

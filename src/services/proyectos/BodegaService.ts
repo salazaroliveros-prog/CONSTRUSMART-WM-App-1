@@ -54,4 +54,5 @@ export const BodegaService = {
       .eq('id', materialId);
     if (updErr) throw updErr;
   },
+};
 

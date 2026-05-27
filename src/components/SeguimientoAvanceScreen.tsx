@@ -12,7 +12,7 @@
  * @version 1.0.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BarChart3,
   GitCommit,
@@ -24,6 +24,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAppContext } from '@/contexts/AppContext';
+import { FinancieroService } from '@/services/financiero/FinancieroService';
 import { DashboardFinanciero } from './DashboardFinanciero';
 import { ChangeOrdersPanel } from './ChangeOrdersPanel';
 import { TrazabilidadMaterialesPanel } from './TrazabilidadMaterialesPanel';
@@ -37,16 +38,22 @@ interface SeguimientoAvanceScreenProps {
 }
 
 export const SeguimientoAvanceScreen: React.FC<SeguimientoAvanceScreenProps> = ({ presupuestoId }) => {
-  const { presupuestos } = useAppContext();
+  const { presupuestos, user } = useAppContext();
   const [tabActiva, setTabActiva] = useState('dashboard');
+  const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
 
   // Presupuesto actual (si presupuestoId está definido) o el primero
   const presupuestoActual = presupuestoId
     ? presupuestos.find((p) => p.id === presupuestoId) || presupuestos[0]
     : presupuestos[0];
 
-  // Datos simulados de transacciones (en producción vendrían de Supabase)
-  const transacciones: Transaccion[] = [];
+  useEffect(() => {
+    if (presupuestoActual?.id) {
+      FinancieroService.getTransacciones(user?.id, presupuestoActual.id)
+        .then(setTransacciones)
+        .catch(() => setTransacciones([]));
+    }
+  }, [presupuestoActual?.id, user?.id]);
 
   if (!presupuestoActual) {
     return (
