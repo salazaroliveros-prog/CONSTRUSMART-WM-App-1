@@ -612,14 +612,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // ---------- Auth ----------
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     setAuthError(null);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) { setAuthError(error.message); return false; }
     return true;
-  };
+  }, []);
 
-  const signUp = async (email: string, password: string, nombre: string) => {
+  const signUp = useCallback(async (email: string, password: string, nombre: string) => {
     setAuthError(null);
     const { error } = await supabase.auth.signUp({
       email, password,
@@ -627,20 +627,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     if (error) { setAuthError(error.message); return false; }
     return true;
-  };
+  }, []);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
     await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     if (session?.user.id) {
       clearUserCache(session.user.id);
       clearPendingMutations(session.user.id);
     }
     await supabase.auth.signOut();
     setView('login');
-  };
+  }, [session?.user.id]);
 
   // ---------- CRUD Clientes ----------
   const addCliente = async (c: CreateCliente) => {
@@ -1159,6 +1159,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ===== AUTH CONTEXT VALUE (ESTABLE) =====
   // Solo cambia cuando view, session o loading cambian
   // NO incluye los arrays de datos CRUD
+   
   const authContextValue = useMemo(() => ({
     view, setView, session, loading, authError, signIn, signUp, signInWithGoogle, signOut, user,
     sidebarOpen, toggleSidebar,
@@ -1166,11 +1167,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isOnline, pendingCount,
   }), [
     view, session, loading, authError, user,
-    sidebarOpen, darkMode, isOnline, pendingCount,
+    sidebarOpen, toggleSidebar, darkMode, toggleDarkMode, isOnline, pendingCount,
+    signIn, signUp, signInWithGoogle, signOut,
   ]);
 
   // ===== DATA CONTEXT VALUE (DINÁMICO) =====
-  // Cambia cuando los arrays de datos cambian (por Realtime o CRUD)
+  // Las funciones CRUD dependen de session/isOnline del closure y no están
+  // envueltas en useCallback. Excluirlas de deps es intencional porque:
+  // 1. Se recrean en cada render (cambian siempre)
+  // 2. Incluirlas forzaría re-render en cada keystroke
+  // 3. Los arrays de datos (clientes, etc.) ya capturan el estado actual
   const dataContextValue = useMemo(() => ({
     clientes, addCliente, updateCliente, deleteCliente,
     proyectos, addProyecto, updateProyecto,
@@ -1180,8 +1186,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     equipos, addEquipo, updateEquipo, deleteEquipo,
     equipoMiembros, addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
     proveedores, ordenesCompra,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [
-    clientes, proyectos, transacciones, actividades, presupuestos, equipos, equipoMiembros, proveedores, ordenesCompra,
+    clientes, proyectos, transacciones, actividades, presupuestos,
+    equipos, equipoMiembros, proveedores, ordenesCompra,
   ]);
 
   return (
