@@ -1,15 +1,15 @@
 import { CashFlowService } from '@/services/financiero/CashFlowService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import PageShell from '@/components/shared/PageShell';
 import TransactionForm from '@/components/shared/TransactionForm';
 import Calendar from '@/components/shared/Calendar';
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
-import { Download, FileText, Trash2, TrendingUp, TrendingDown, Wallet, Filter, FileDown, Scan } from 'lucide-react';
+import { Download, FileText, Trash2, TrendingUp, TrendingDown, Wallet, Filter, FileDown, Scan, DollarSign, BarChart3, PieChartIcon, ArrowLeft, ArrowRight, LineChartIcon } from 'lucide-react';
 import OCRFactura from '@/components/shared/OCRFactura';
 import { exportTransacciones } from '@/utils/exportExcel';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, LineChart, Line } from 'recharts';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
 const categoriaLabels: Record<string, string> = {
@@ -26,6 +26,26 @@ const categoriaLabels: Record<string, string> = {
   'trabajos-extra': 'Trabajos Extra',
 };
 
+const PIE_COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#84CC16', '#F97316', '#6366F1', '#14B8A6'];
+const KPIColorMap: Record<string, string> = {
+  emerald: 'from-emerald-500/90 to-emerald-600/90',
+  blue: 'from-blue-600/90 to-blue-700/90',
+  red: 'from-red-500/90 to-red-600/90',
+  purple: 'from-purple-600/90 to-purple-700/90',
+  pink: 'from-pink-600/90 to-pink-700/90',
+  teal: 'from-teal-500/90 to-teal-600/90',
+};
+
+const KPI: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: string; value: string; color: string }> = ({ icon: Icon, label, value, color }) => (
+  <div className={`bg-gradient-to-br ${KPIColorMap[color]} text-white rounded-xl p-3 shadow-md flex flex-col justify-center`}>
+    <div className="flex items-center justify-between mb-1">
+      <div className="p-1.5 rounded-lg bg-white/20"><Icon className="w-3.5 h-3.5" /></div>
+    </div>
+    <div className="text-[10px] uppercase tracking-wider opacity-80 font-semibold">{label}</div>
+    <div className="text-sm sm:text-base font-bold leading-tight mt-0.5">{value}</div>
+  </div>
+);
+
 const FinancieroScreen: React.FC = () => {
   const { transacciones, presupuestos, deleteTransaccion } = useAppContext();
   const proyeccion = useMemo(() => CashFlowService.proyectarTendencia(transacciones), [transacciones]);
@@ -33,6 +53,8 @@ const FinancieroScreen: React.FC = () => {
   const [filterCat, setFilterCat] = useState<string>('todos');
   const [filterProy, setFilterProy] = useState<string>('todos');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [pagina, setPagina] = useState(0);
+  const totalPaginas = 2;
 
   const filtered = transacciones.filter(t => {
     if (filterTipo !== 'todos' && t.tipo !== filterTipo) return false;
@@ -58,13 +80,26 @@ const FinancieroScreen: React.FC = () => {
     return Object.entries(data).map(([k, v]) => ({ name: categoriaLabels[k] || k, value: v }));
   }, [transacciones]);
 
-  const COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#84CC16', '#F97316', '#6366F1', '#14B8A6'];
+  const flujoMensual = useMemo(() => {
+    const map: Record<string, { ingresos: number; gastos: number }> = {};
+    transacciones.forEach(t => {
+      const mes = t.fecha?.slice(0, 7);
+      if (!mes) return;
+      if (!map[mes]) map[mes] = { ingresos: 0, gastos: 0 };
+      if (t.tipo === 'ingreso') map[mes].ingresos += t.costoTotal;
+      else map[mes].gastos += t.costoTotal;
+    });
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b)).map(([mes, v]) => ({ mes, ...v }));
+  }, [transacciones]);
 
   const getProyectoNombre = (id: string) => {
     if (id === 'admin') return 'Administrativo';
     if (id === 'personal') return 'Personal';
     return presupuestos.find(p => p.id === id)?.proyecto || '—';
   };
+
+  const nextPage = useCallback(() => setPagina(p => (p + 1) % totalPaginas), []);
+  const prevPage = useCallback(() => setPagina(p => (p - 1 + totalPaginas) % totalPaginas), []);
 
   const handleExportCSV = () => {
     const rows: (string | number)[][] = [
@@ -99,79 +134,110 @@ const FinancieroScreen: React.FC = () => {
 
   return (
     <PageShell showHome={false} title="Control de Planilla, Gastos Operativos y Personales">
-      <div className="p-3 sm:p-5 max-w-[1600px] mx-auto space-y-4">
-        {/* Proyecciones */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-none shadow-sm">
-            <CardHeader className="py-3"><CardTitle className="text-[10px] font-bold uppercase text-slate-500">Proyección 30 Días</CardTitle></CardHeader>
-            <CardContent className="py-2 text-xl font-bold text-blue-900">{fmtQ(proyeccion.dias30)}</CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-none shadow-sm">
-            <CardHeader className="py-3"><CardTitle className="text-[10px] font-bold uppercase text-slate-500">Proyección 60 Días</CardTitle></CardHeader>
-            <CardContent className="py-2 text-xl font-bold text-blue-900">{fmtQ(proyeccion.dias60)}</CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-none shadow-sm">
-            <CardHeader className="py-3"><CardTitle className="text-[10px] font-bold uppercase text-slate-500">Proyección 90 Días</CardTitle></CardHeader>
-            <CardContent className="py-2 text-xl font-bold text-blue-900">{fmtQ(proyeccion.dias90)}</CardContent>
-          </Card>
-        </div>
-
-        {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <KPICard icon={TrendingUp} label="Ingresos" value={fmtQ(stats.ingresos)} color="from-emerald-500 to-emerald-600" />
-          <KPICard icon={TrendingDown} label="Operativos" value={fmtQ(stats.operativos)} color="from-blue-600 to-blue-700" />
-          <KPICard icon={Wallet} label="Administrativos" value={fmtQ(stats.administrativos)} color="from-purple-600 to-purple-700" />
-          <KPICard icon={Wallet} label="Personales" value={fmtQ(stats.personales)} color="from-pink-600 to-pink-700" />
-          <KPICard icon={TrendingUp} label="Balance" value={fmtQ(stats.balance)} color={stats.balance >= 0 ? 'from-emerald-600 to-teal-700' : 'from-red-600 to-red-700'} />
-        </div>
-
-        {/* Charts and Calendar Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-          {/* Calendario a la izquierda (cambiado de lugar) */}
-          <div className="bg-white rounded-xl shadow-md p-4 xl:col-span-1">
-            <h3 className="font-bold text-sm text-slate-800 mb-2">Calendario de Actividades</h3>
-            <div className="h-[500px]">
-                <Calendar />
+      <div className="min-h-dvh flex flex-col p-2 sm:p-3">
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Página {pagina + 1} / {totalPaginas}</span>
+            <button onClick={prevPage} className="p-1 rounded hover:bg-slate-100 text-slate-500"><ArrowLeft className="w-4 h-4" /></button>
+            <div className="flex gap-1">
+              {Array.from({ length: totalPaginas }).map((_, i) => (
+                <button key={i} onClick={() => setPagina(i)} className={`w-2 h-2 rounded-full transition ${i === pagina ? 'bg-blue-700' : 'bg-slate-300'}`} />
+              ))}
             </div>
-          </div>
-          
-          {/* Gráficas a la derecha (cambiado de lugar y tamaño) */}
-          <div className="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl shadow-md p-4">
-              <h3 className="font-bold text-sm text-slate-800 mb-2">Gastos por Categoría</h3>
-              <ResponsiveContainer width="100%" height={400}>
-                <PieChart>
-                  <Pie data={porCategoria} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={120} innerRadius={60} label={(e: { value: number }) => `${((e.value / stats.gastos) * 100).toFixed(0)}%`} labelLine={false}>
-                    {porCategoria.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => fmtQ(v)} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="bg-white rounded-xl shadow-md p-4">
-              <h3 className="font-bold text-sm text-slate-800 mb-2">Comparativa por Categoría</h3>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={porCategoria} margin={{ bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
-                  <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `Q${(v/1000).toFixed(0)}K`} />
-                  <Tooltip formatter={(v: number) => fmtQ(v)} />
-                  <Bar dataKey="value" fill="#1E3A8A" name="Total" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <button onClick={nextPage} className="p-1 rounded hover:bg-slate-100 text-slate-500"><ArrowRight className="w-4 h-4" /></button>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <div className="flex-1"><TransactionForm /></div>
-            <OcrToggle />
-          </div>
+        <div className="flex-1 min-h-0">
+          {pagina === 0 && (
+            <div className="grid grid-cols-12 gap-3 h-full">
+              <div className="col-span-12 grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-2">
+                <KPI icon={TrendingUp} label="Ingresos" value={fmtQ(stats.ingresos)} color="emerald" />
+                <KPI icon={TrendingDown} label="Operativos" value={fmtQ(stats.operativos)} color="blue" />
+                <KPI icon={Wallet} label="Administrativos" value={fmtQ(stats.administrativos)} color="purple" />
+                <KPI icon={Wallet} label="Personales" value={fmtQ(stats.personales)} color="pink" />
+                <KPI icon={TrendingUp} label="Balance" value={fmtQ(stats.balance)} color={stats.balance >= 0 ? 'teal' : 'red'} />
+              </div>
+              <div className="col-span-12 lg:col-span-5 bg-white rounded-xl shadow-md p-3 flex flex-col">
+                <h3 className="font-bold text-xs text-slate-800 mb-1 flex items-center gap-1.5"><PieChartIcon className="w-3.5 h-3.5 text-blue-700" />Gastos por Categoría</h3>
+                <div className="flex-1 min-h-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={porCategoria} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={120} innerRadius={60} label={(e: { value: number }) => `${((e.value / stats.gastos) * 100).toFixed(0)}%`} labelLine={false}>
+                        {porCategoria.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => fmtQ(v)} />
+                      <Legend wrapperStyle={{ fontSize: 10 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className="col-span-12 lg:col-span-7 bg-white rounded-xl shadow-md p-3 flex flex-col">
+                <h3 className="font-bold text-xs text-slate-800 mb-1 flex items-center gap-1.5"><BarChart3 className="w-3.5 h-3.5 text-blue-700" />Comparativa por Categoría</h3>
+                <div className="flex-1 min-h-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={porCategoria} margin={{ bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
+                      <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `Q${(v/1000).toFixed(0)}K`} />
+                      <Tooltip formatter={(v: number) => fmtQ(v)} />
+                      <Bar dataKey="value" fill="#1E3A8A" name="Total" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {pagina === 1 && (
+            <div className="grid grid-cols-12 gap-3 h-full">
+              <div className="col-span-12 md:col-span-4 flex flex-col gap-3">
+                <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-none shadow-sm flex-1">
+                  <CardHeader className="py-3"><CardTitle className="text-[10px] font-bold uppercase text-slate-500">Proyección 30 Días</CardTitle></CardHeader>
+                  <CardContent className="py-2 text-xl font-bold text-blue-900">{fmtQ(proyeccion.dias30)}</CardContent>
+                </Card>
+                <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-none shadow-sm flex-1">
+                  <CardHeader className="py-3"><CardTitle className="text-[10px] font-bold uppercase text-slate-500">Proyección 60 Días</CardTitle></CardHeader>
+                  <CardContent className="py-2 text-xl font-bold text-blue-900">{fmtQ(proyeccion.dias60)}</CardContent>
+                </Card>
+                <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-none shadow-sm flex-1">
+                  <CardHeader className="py-3"><CardTitle className="text-[10px] font-bold uppercase text-slate-500">Proyección 90 Días</CardTitle></CardHeader>
+                  <CardContent className="py-2 text-xl font-bold text-blue-900">{fmtQ(proyeccion.dias90)}</CardContent>
+                </Card>
+              </div>
+              <div className="col-span-12 md:col-span-8 bg-white rounded-xl shadow-md p-3 flex flex-col">
+                <h3 className="font-bold text-xs text-slate-800 mb-1 flex items-center gap-1.5"><LineChartIcon className="w-3.5 h-3.5 text-blue-700" />Flujo de Caja Mensual</h3>
+                <div className="flex-1 min-h-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={flujoMensual} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis dataKey="mes" tick={{ fontSize: 9 }} />
+                      <YAxis tick={{ fontSize: 9 }} tickFormatter={v => `Q${(v/1000).toFixed(0)}K`} />
+                      <Tooltip contentStyle={{ fontSize: 10 }} formatter={(v: number) => fmtQ(v)} />
+                      <Line type="monotone" dataKey="ingresos" stroke="#10B981" strokeWidth={2} name="Ingresos" />
+                      <Line type="monotone" dataKey="gastos" stroke="#EF4444" strokeWidth={2} name="Gastos" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className="col-span-12 bg-white rounded-xl shadow-md p-3">
+                <h3 className="font-bold text-xs text-slate-800 mb-1 flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-blue-700" />Calendario de Actividades</h3>
+                <div className="h-32">
+                  <Calendar />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Transaction form + OCR + table section */}
+      <div className="p-2 sm:p-3 space-y-4">
+        <div className="flex gap-2">
+          <div className="flex-1"><TransactionForm /></div>
+          <OcrToggle />
         </div>
 
-        {/* Filtros */}
         <div className="bg-white rounded-xl shadow-md p-3 flex flex-wrap items-center gap-2">
           <Filter className="w-4 h-4 text-slate-500" />
           <select value={filterTipo} onChange={e => setFilterTipo(e.target.value as 'todos' | 'ingreso' | 'gasto')} className="px-2 py-1.5 text-xs border rounded">
@@ -195,7 +261,6 @@ const FinancieroScreen: React.FC = () => {
           <button onClick={handleExportPDF} className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-semibold"><FileText className="w-3 h-3" />PDF</button>
         </div>
 
-        {/* Tabla */}
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -238,6 +303,7 @@ const FinancieroScreen: React.FC = () => {
           </div>
         </div>
       </div>
+
       <ConfirmDialog
         open={confirmDelete !== null}
         onOpenChange={o => { if (!o) setConfirmDelete(null); }}
@@ -264,15 +330,5 @@ const OcrToggle: React.FC = () => {
     </div>
   );
 };
-
-const KPICard: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: string; value: string; color: string }> = ({ icon: Icon, label, value, color }) => (
-  <div className={`bg-gradient-to-br ${color} text-white p-3 rounded-xl shadow-md`}>
-    <div className="flex items-center justify-between mb-1">
-      <Icon className="w-4 h-4 opacity-80" />
-    </div>
-    <div className="text-[10px] uppercase tracking-wider opacity-90 font-semibold">{label}</div>
-    <div className="text-sm sm:text-base font-bold mt-0.5">{value}</div>
-  </div>
-);
 
 export default FinancieroScreen;
