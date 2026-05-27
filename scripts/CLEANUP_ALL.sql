@@ -4,14 +4,7 @@
 -- Ejecutar ANTES de ERP_SCHEMA_FINAL.sql para tener una base limpia
 -- =====================================================================
 
--- 1. ELIMINAR TRIGGERS
-DROP TRIGGER IF EXISTS trg_presupuestos_updated_at ON public.presupuestos;
-
--- 2. ELIMINAR FUNCIONES
-DROP FUNCTION IF EXISTS public.fn_set_updated_at();
-DROP FUNCTION IF EXISTS public.user_owns_equipo(uuid);
-
--- 3. ELIMINAR POLÍTICAS RLS (barrido completo por si hay nombres residuales)
+-- 1. ELIMINAR POLÍTICAS RLS (barrido completo - despeja dependencias)
 DO $$
 DECLARE
   pol record;
@@ -24,6 +17,13 @@ BEGIN
     EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I;', pol.policyname, pol.tablename);
   END LOOP;
 END $$;
+
+-- 2. ELIMINAR TRIGGERS
+DROP TRIGGER IF EXISTS trg_presupuestos_updated_at ON public.presupuestos;
+
+-- 3. ELIMINAR FUNCIONES (CASCADE por si quedan dependencias)
+DROP FUNCTION IF EXISTS public.fn_set_updated_at() CASCADE;
+DROP FUNCTION IF EXISTS public.user_owns_equipo(uuid) CASCADE;
 
 -- 4. ELIMINAR TABLAS (orden inverso al de creación para respetar FKs)
 DROP TABLE IF EXISTS public.notificaciones CASCADE;

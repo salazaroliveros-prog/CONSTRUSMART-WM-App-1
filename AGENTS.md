@@ -30,6 +30,7 @@ npm run test         # vitest (add --run for single-run)
 - **RLS**: Recursion in `equipos`/`equipo_miembros` solved via `SECURITY DEFINER` function `user_owns_equipo`. Helper: `fn_set_updated_at` trigger on presupuestos.
 - **Realtime**: ~17 `RealtimeChannel` subscriptions for live updates across major tables. Expect live sync behavior.
 - **Client**: Created in `src/lib/supabase.ts` from `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`.
+- **Auth**: Google OAuth configured in Supabase. Admin user: salazaroliveros@gmail.com.
 
 ## APU Engine (Presupuesto Module)
 - **Data**: `src/data/renglones.ts` — 40 construction renglones with subrenglones (materiales, manoObra, equipos) with quantities and unit costs. Each `Renglon` has `subrenglones: { materiales: SubMaterial[], manoObra: SubManoObra[], equipos: SubEquipo[] }`.
