@@ -26,8 +26,7 @@ import {
   type PendingMutation,
 } from '@/services/offline';
 import { crearNotificacion } from '@/utils/notificaciones';
-
-export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos' | 'bodega' | 'cotizacion';
+import type { ViewType } from '@/types/supabase';
 
 export interface User {
   nombre: string;

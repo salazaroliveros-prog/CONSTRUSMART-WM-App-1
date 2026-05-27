@@ -7,6 +7,7 @@ import type { Renglon } from '@/data/renglones';
 import PageShell from '@/components/shared/PageShell';
 import GanttView from '@/components/shared/GanttView';
 import { BitacoraAvancePanel } from '@/components/shared/BitacoraAvancePanel';
+import { SeguimientoAvanceScreen } from '@/components/SeguimientoAvanceScreen';
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
 import { Download, FileText, Play, Users, Clock, Filter, TrendingUp, TrendingDown, BarChart3, PieChartIcon, Wallet, FolderKanban, Percent, ArrowLeft, ArrowRight, Eye, DollarSign, Calendar } from 'lucide-react';
 import type { Presupuesto } from '@/types/supabase';
@@ -103,14 +104,14 @@ const SeguimientoScreen: React.FC = () => {
   const prevPage = useCallback(() => setPagina(p => (p - 1 + totalPaginas) % totalPaginas), []);
 
   const handleExportCSV = () => {
-    const rows: (string | number)[] = [
-      'Seguimiento de Proyectos - CONSTRUCTORA WM/M&S',
-      `Fecha: ${new Date().toLocaleDateString('es-GT')}`,
-      '',
-      'Proyecto,Cliente,Tipo,Fase,Presupuesto,Avance Físico %,Avance Financiero %,Ingresos,Gastos,Pendiente',
-      ...presupuestos.map(p => [p.proyecto, p.cliente, p.tipologia, p.fase, p.total, p.avanceFisico, p.avanceFinanciero, p.ingresos, p.gastos, p.pendienteAportar].join(',')),
+    const rows: (string | number)[][] = [
+      ['Seguimiento de Proyectos - CONSTRUCTORA WM/M&S'],
+      [`Fecha: ${new Date().toLocaleDateString('es-GT')}`],
+      [],
+      ['Proyecto', 'Cliente', 'Tipo', 'Fase', 'Presupuesto', 'Avance Físico %', 'Avance Financiero %', 'Ingresos', 'Gastos', 'Pendiente'],
+      ...presupuestos.map(p => [p.proyecto, p.cliente || '', p.tipologia || '', p.fase, p.total || 0, p.avanceFisico ?? 0, p.avanceFinanciero ?? 0, p.ingresos ?? 0, p.gastos ?? 0, p.pendienteAportar ?? 0]),
     ];
-    downloadCSV(`seguimiento_proyectos_${new Date().toISOString().split('T')[0]}.csv`, rows.map(r => Array.isArray(r) ? r : [r]));
+    downloadCSV(`seguimiento_proyectos_${new Date().toISOString().split('T')[0]}.csv`, rows);
   };
 
   const handleExportPDF = () => {

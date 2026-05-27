@@ -8,6 +8,17 @@ export const PlanillaService = {
     fecha: string,
     notas: string
   ) {
+    // Validar existencia de empleado
+    const { data: empleado, error: eError } = await supabase
+      .from('empleados')
+      .select('id')
+      .eq('id', empleadoId)
+      .single();
+
+    if (eError || !empleado) {
+      throw new Error('El empleado seleccionado no existe o no es válido');
+    }
+
     const { data, error } = await supabase
       .from('transacciones')
       .insert({

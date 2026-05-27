@@ -1,33 +1,41 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { ConciliacionService, type Conciliacion } from '@/services/financiero/ConciliacionService';
 import { useAppContext } from '@/contexts/AppContext';
 import { Banknote, Plus, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface Conciliacion {
-  id: string; banco: string; periodo: string; saldo_libros: number; saldo_banco: number; diferencia: number; conciliado: boolean;
-}
 
 const ConciliacionPanel: React.FC = () => {
   const [data, setData] = useState<Conciliacion[]>([]);
   const { session } = useAppContext();
 
   const load = useCallback(async () => {
-    if (!session) return;
-    const { data: d } = await supabase.from('conciliaciones').select('*').eq('user_id', session.user.id).order('periodo', { ascending: false }).limit(10);
-    if (d) setData(d as Conciliacion[]);
+    if (!session?.user?.id) return;
+    try {
+      const d = await ConciliacionService.getConciliaciones(session.user.id);
+      setData(d);
+    } catch (error) {
+      console.error('Error al cargar conciliaciones:', error);
+    }
   }, [session]);
 
   useEffect(() => { load(); }, [load]);
 
   const nuevaConciliacion = async () => {
-    if (!session) return;
+    if (!session?.user?.id) return;
     const mes = new Date().toISOString().slice(0, 7) + '-01';
-    const { error } = await supabase.from('conciliaciones').insert({
-      user_id: session.user.id, banco: 'Banco Industrial', periodo: mes, saldo_libros: 0, saldo_banco: 0,
-    });
-    if (error) toast.error('Error al crear conciliación');
-    else await load();
+    try {
+      await ConciliacionService.crearConciliacion({
+        user_id: session.user.id,
+        banco: 'Banco Industrial',
+        periodo: mes,
+        saldo_libros: 0,
+        saldo_banco: 0,
+      });
+      await load();
+    } catch (error) {
+      toast.error('Error al crear conciliación');
+      console.error(error);
+    }
   };
 
   return (

@@ -3,12 +3,10 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { MaterialesService } from '@/services/presupuestos/MaterialesService';
+import { BodegaService } from '@/services/proyectos/BodegaService';
 import { useAppContext } from '@/contexts/AppContext';
 import {
-  inicializarMaterialRenglon,
-  registrarCompra,
-  registrarConsumo,
   generarResumenTrazabilidad,
   type MaterialesRenglon,
 } from '@/utils/trazabilidadMateriales';
@@ -16,114 +14,79 @@ import {
 export function useTrazabilidadMateriales(presupuestoId?: string) {
   const { session } = useAppContext();
   const [materiales, setMateriales] = useState<MaterialesRenglon[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const cargar = useCallback(async () => {
     if (!presupuestoId) return;
-    const cargar = async () => {
-      const { data } = await supabase
-        .from('materiales_proyecto')
-        .select('*, movimientos_materiales(*)')
-        .eq('presupuesto_id', presupuestoId);
-      if (data) {
-        setMateriales(data.map((m: any) => ({
+    setLoading(true);
+    try {
+      const items = await MaterialesService.getMateriales(presupuestoId);
+      const movs = await BodegaService.getMovimientos(presupuestoId);
+
+      const movMap: Record<string, { comprado: number; consumido: number; ultimoPrecio: number }> = {};
+      (movs || []).forEach((m: any) => {
+        const mid = m.material_id as string;
+        if (!movMap[mid]) movMap[mid] = { comprado: 0, consumido: 0, ultimoPrecio: 0 };
+        if (m.tipo === 'entrada') {
+          movMap[mid].comprado += Number(m.cantidad);
+        } else if (m.tipo === 'salida') {
+          movMap[mid].consumido += Number(m.cantidad);
+        }
+      });
+
+      setMateriales(items.map((m: any) => {
+        const mov = movMap[m.id] || { comprado: 0, consumido: 0, ultimoPrecio: Number(m.costo_unitario) };
+        const cantEst = Number(m.cantidad_estimada) || 0;
+        const costoEst = Number(m.costo_unitario) || 0;
+        
+        return {
           id: m.id,
           renglon_codigo: m.codigo || m.nombre,
           presupuesto_id: m.presupuesto_id,
-          cantidad_presupuestada: Number(m.cantidad_estimada),
+          cantidad_presupuestada: cantEst,
           unidad: m.unidad,
-          costo_unitario_presupuestado: Number(m.costo_unitario),
-          costo_total_presupuestado: Number(m.cantidad_estimada) * Number(m.costo_unitario),
-          cantidad_comprada: Number(m.cantidad_utilizada),
-          costo_unitario_real: Number(m.costo_unitario),
-          costo_total_comprado: Number(m.cantidad_utilizada) * Number(m.costo_unitario),
+          costo_unitario_presupuestado: costoEst,
+          costo_total_presupuestado: cantEst * costoEst,
+          cantidad_comprada: mov.comprado,
+          costo_unitario_real: costoEst,
+          costo_total_comprado: mov.comprado * costoEst,
           proveedor: m.proveedor,
-          cantidad_consumida: 0,
-          costo_unitario_consumo: 0,
-          costo_total_consumida: 0,
-          desperdicio_porcentaje: 0,
+          cantidad_consumida: mov.consumido,
+          costo_unitario_consumo: costoEst,
+          costo_total_consumida: mov.consumido * costoEst,
+          desperdicio_porcentaje: cantEst > 0 ? (Math.max(0, mov.consumido - cantEst) / cantEst) * 100 : 0,
           variacion_costo_porcentaje: 0,
-          estado: 'planeado',
-        })));
-      }
-    };
-    cargar();
+          estado: mov.consumido >= cantEst ? 'completado' : mov.comprado > 0 ? 'en_progreso' : 'planeado',
+        };
+      }));
+    } catch (error) {
+      console.error('Error al cargar trazabilidad:', error);
+    } finally {
+      setLoading(false);
+    }
   }, [presupuestoId]);
 
-  const agregarMaterial = useCallback(
-    async (renglon_codigo: string, presupuesto_id: string, cantidad: number, unidad: string, costo: number) => {
-      const material = inicializarMaterialRenglon(
-        renglon_codigo,
-        presupuesto_id,
-        cantidad,
-        unidad,
-        costo
-      );
-      setMateriales(prev => [...prev, material]);
-
-      await supabase.from('materiales_proyecto').insert({
-        presupuesto_id,
-        nombre: renglon_codigo,
-        codigo: renglon_codigo,
-        unidad,
-        cantidad_estimada: cantidad,
-        costo_unitario: costo,
-      });
-
-      return material;
-    },
-    []
-  );
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
 
   const registrarCompraItem = useCallback(
     async (material_id: string, cantidad: number, costo_unitario: number, proveedor?: string) => {
-      setMateriales(prev =>
-        prev.map(m =>
-          m.id === material_id
-            ? registrarCompra(m, cantidad, costo_unitario, proveedor)
-            : m
-        )
-      );
-      await supabase.from('movimientos_materiales').insert({
-        material_id,
-        tipo: 'entrada',
-        cantidad,
-        referencia: proveedor,
-        user_id: session?.user?.id,
-      });
+      await BodegaService.registrarCompra(material_id, cantidad, proveedor || 'Compra Directa', session?.user?.id);
+      await cargar();
     },
-    [session]
+    [session, cargar]
   );
 
   const registrarConsumoItem = useCallback(
     async (material_id: string, cantidad: number) => {
-      setMateriales(prev =>
-        prev.map(m =>
-          m.id === material_id ? registrarConsumo(m, cantidad) : m
-        )
-      );
-      await supabase.from('movimientos_materiales').insert({
-        material_id,
-        tipo: 'salida',
-        cantidad,
-        user_id: session?.user?.id,
-      });
-
-      const m = materiales.find(x => x.id === material_id);
-      if (m) {
-        const utilizada = Number(m.cantidad_comprada) + cantidad;
-        await supabase.from('materiales_proyecto').update({ cantidad_utilizada: utilizada }).eq('id', material_id);
-      }
+      await BodegaService.registrarUso(material_id, cantidad, 'Uso en obra', session?.user?.id);
+      await cargar();
     },
-    [materiales, session]
+    [session, cargar]
   );
 
   const resumen = generarResumenTrazabilidad(materiales);
 
-  return {
-    materiales,
-    agregarMaterial,
-    registrarCompra: registrarCompraItem,
-    registrarConsumo: registrarConsumoItem,
-    resumen,
-  };
+  return { materiales, registrarCompraItem, registrarConsumoItem, resumen, loading, recargar: cargar };
 }

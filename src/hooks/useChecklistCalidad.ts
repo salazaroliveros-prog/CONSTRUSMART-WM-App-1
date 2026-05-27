@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { ChecklistService } from '@/services/presupuestos/ChecklistService';
 import { useAppContext } from '@/contexts/AppContext';
 import {
   crearChecklistFase,
@@ -23,39 +23,39 @@ export function useChecklistCalidad(presupuesto_id: string, tipologia: string) {
   useEffect(() => {
     if (!presupuesto_id) return;
     const cargar = async () => {
-      const { data } = await supabase
-        .from('checklist_items')
-        .select('*')
-        .eq('presupuesto_id', presupuesto_id)
-        .order('created_at');
-      if (data && data.length > 0) {
-        const agrupados: Record<string, ChecklistFase> = {};
-        for (const item of data) {
-          const fase = item.fase;
-          if (!agrupados[fase]) {
-            agrupados[fase] = {
-              id: `${presupuesto_id}-${fase}`,
-              presupuesto_id,
-              fase,
-              tipologia,
-              items: [],
-              fecha_creacion: new Date(item.created_at),
-              bloqueado: false,
-              intento_avance_sin_completar: 0,
-            };
+      try {
+        const data = await ChecklistService.getChecklist(presupuesto_id);
+        if (data && data.length > 0) {
+          const agrupados: Record<string, ChecklistFase> = {};
+          for (const item of data) {
+            const fase = item.fase;
+            if (!agrupados[fase]) {
+              agrupados[fase] = {
+                id: `${presupuesto_id}-${fase}`,
+                presupuesto_id,
+                fase,
+                tipologia,
+                items: [],
+                fecha_creacion: new Date(item.created_at),
+                bloqueado: false,
+                intento_avance_sin_completar: 0,
+              };
+            }
+            agrupados[fase].items.push({
+              id: item.id,
+              titulo: item.item,
+              descripcion: '',
+              requerido: true,
+              completado: item.completado,
+              completado_por: item.completado_por,
+              fecha_completado: item.completado_en ? new Date(item.completado_en) : undefined,
+              notas: undefined,
+            } as ChecklistItem);
           }
-          agrupados[fase].items.push({
-            id: item.id,
-            titulo: item.item,
-            descripcion: '',
-            requerido: true,
-            completado: item.completado,
-            completado_por: item.completado_por,
-            fecha_completado: item.completado_en ? new Date(item.completado_en) : undefined,
-            notas: undefined,
-          } as ChecklistItem);
+          setChecklists(Object.values(agrupados));
         }
-        setChecklists(Object.values(agrupados));
+      } catch (error) {
+        console.error('Error al cargar checklists:', error);
       }
     };
     cargar();
@@ -66,14 +66,14 @@ export function useChecklistCalidad(presupuesto_id: string, tipologia: string) {
       const checklist = crearChecklistFase(presupuesto_id, fase, tipologia);
       setChecklists(prev => [...prev, checklist]);
 
-      for (const item of checklist.items) {
-        await supabase.from('checklist_items').insert({
-          presupuesto_id,
-          fase,
-          item: item.titulo,
-          completado: false,
-        });
-      }
+      const itemsToInsert = checklist.items.map(item => ({
+        presupuesto_id,
+        fase,
+        item: item.titulo,
+        completado: false,
+      }));
+
+      await ChecklistService.addItems(itemsToInsert);
 
       return checklist;
     },
@@ -88,11 +88,8 @@ export function useChecklistCalidad(presupuesto_id: string, tipologia: string) {
           : c
       );
       setChecklists(updated);
-      await supabase.from('checklist_items').update({
-        completado: true,
-        completado_por: session?.user?.id,
-        completado_en: new Date().toISOString(),
-      }).eq('id', item_id);
+      
+      await ChecklistService.toggleItem(item_id, true, session?.user?.id || null);
 
       const checklistActualizado = updated.find(c => c.id === checklist_id);
       if (checklistActualizado && session?.user.id) {
@@ -111,11 +108,7 @@ export function useChecklistCalidad(presupuesto_id: string, tipologia: string) {
         c.id === checklist_id ? descompleterItem(c, item_id) : c
       );
       setChecklists(updated);
-      await supabase.from('checklist_items').update({
-        completado: false,
-        completado_por: null,
-        completado_en: null,
-      }).eq('id', item_id);
+      await ChecklistService.toggleItem(item_id, false, null);
     },
     [checklists]
   );

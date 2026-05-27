@@ -12,48 +12,38 @@
  * @version 1.0.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   BarChart3,
-  GitCommit,
-  Package,
-  DollarSign,
-  CheckSquare,
-  FileText,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAppContext } from '@/contexts/AppContext';
-import { FinancieroService } from '@/services/financiero/FinancieroService';
 import { DashboardFinanciero } from './DashboardFinanciero';
 import { ChangeOrdersPanel } from './ChangeOrdersPanel';
 import { TrazabilidadMaterialesPanel } from './TrazabilidadMaterialesPanel';
 import { ConciliacionBancariaPanel } from './ConciliacionBancariaPanel';
 import { ChecklistCalidadPanel } from './ChecklistCalidadPanel';
 import { ReportesAutomaticosPanel } from './ReportesAutomaticosPanel';
-import type { Transaccion } from '@/types/supabase';
+import { fmtQ } from '@/lib/exporters';
 
 interface SeguimientoAvanceScreenProps {
   presupuestoId?: string;
 }
 
 export const SeguimientoAvanceScreen: React.FC<SeguimientoAvanceScreenProps> = ({ presupuestoId }) => {
-  const { presupuestos, user } = useAppContext();
+  const { presupuestos, transacciones: allTransacciones } = useAppContext();
   const [tabActiva, setTabActiva] = useState('dashboard');
-  const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
 
-  // Presupuesto actual (si presupuestoId está definido) o el primero
+  // Presupuesto actual
   const presupuestoActual = presupuestoId
     ? presupuestos.find((p) => p.id === presupuestoId) || presupuestos[0]
     : presupuestos[0];
 
-  useEffect(() => {
-    if (presupuestoActual?.id) {
-      FinancieroService.getTransacciones(user?.id, presupuestoActual.id)
-        .then(setTransacciones)
-        .catch(() => setTransacciones([]));
-    }
-  }, [presupuestoActual?.id, user?.id]);
+  const transacciones = useMemo(() => {
+    if (!presupuestoActual?.id) return [];
+    return allTransacciones.filter(t => t.proyectoId === presupuestoActual.id);
+  }, [allTransacciones, presupuestoActual?.id]);
 
   if (!presupuestoActual) {
     return (
@@ -69,26 +59,24 @@ export const SeguimientoAvanceScreen: React.FC<SeguimientoAvanceScreenProps> = (
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
-      <div className="border-b bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
-                <BarChart3 className="w-8 h-8 text-blue-600" />
-                Control y Seguimiento
-              </h1>
-              <p className="text-sm text-slate-500 mt-1">
-                Proyecto: <span className="font-medium">{presupuestoActual.proyecto}</span>
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-green-600">
-                Q{(presupuestoActual.total || 0).toLocaleString('es-GT', { maximumFractionDigits: 0 })}
-              </p>
-              <p className="text-sm text-slate-600 capitalize">{presupuestoActual.fase}</p>
-            </div>
+    <div className="flex flex-col bg-transparent">
+      {/* Resumen del Proyecto */}
+      <div className="bg-white rounded-xl shadow-sm border p-4 mb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-blue-600" />
+              {presupuestoActual.proyecto}
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5 capitalize">
+              Fase: <span className="font-medium text-blue-600">{presupuestoActual.fase}</span> · Tipología: {presupuestoActual.tipologia || 'General'}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-bold text-emerald-600">
+              {fmtQ(presupuestoActual.total || 0)}
+            </p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-tighter">Presupuesto Total</p>
           </div>
         </div>
       </div>
@@ -97,67 +85,62 @@ export const SeguimientoAvanceScreen: React.FC<SeguimientoAvanceScreenProps> = (
       <Tabs
         value={tabActiva}
         onValueChange={setTabActiva}
-        className="flex-1 flex flex-col overflow-hidden"
+        className="flex-1 flex flex-col"
       >
-        <div className="border-b bg-white px-6">
-          <TabsList className="grid w-full grid-cols-6 gap-2 bg-transparent border-b-0 rounded-none p-0 h-auto">
+        <div className="bg-white rounded-t-xl border-x border-t px-4">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 gap-2 bg-transparent border-b-0 rounded-none p-0 h-auto">
             <TabsTrigger
               value="dashboard"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-4"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-3 text-xs"
             >
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Dashboard Financiero
+              Financiero
             </TabsTrigger>
 
             <TabsTrigger
               value="cambios"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-4"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-3 text-xs"
             >
-              <GitCommit className="w-4 h-4 mr-2" />
-              Órdenes de Cambio
+              Cambios
             </TabsTrigger>
 
             <TabsTrigger
               value="materiales"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-4"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-3 text-xs"
             >
-              <Package className="w-4 h-4 mr-2" />
-              Trazabilidad
+              Materiales
             </TabsTrigger>
 
             <TabsTrigger
               value="caja"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-4"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-3 text-xs"
             >
-              <DollarSign className="w-4 h-4 mr-2" />
-              Conciliación
+              Caja/Concil.
             </TabsTrigger>
 
             <TabsTrigger
               value="calidad"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-4"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-3 text-xs"
             >
-              <CheckSquare className="w-4 h-4 mr-2" />
-              Checklists
+              Calidad
             </TabsTrigger>
 
             <TabsTrigger
               value="reportes"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-4"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-3 text-xs"
             >
-              <FileText className="w-4 h-4 mr-2" />
               Reportes
             </TabsTrigger>
           </TabsList>
         </div>
 
         {/* Contenido de Tabs */}
-        <div className="flex-1 overflow-auto bg-slate-50">
-          <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="flex-1 bg-white border-x border-b rounded-b-xl overflow-hidden">
+          <div className="p-4 md:p-6">
             {/* Dashboard Financiero */}
             <TabsContent value="dashboard" className="mt-0">
               <DashboardFinanciero
                 presupuesto={presupuestoActual}
+                transacciones={transacciones}
               />
             </TabsContent>
 

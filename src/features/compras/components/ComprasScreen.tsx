@@ -85,12 +85,15 @@ const ComprasScreen: React.FC = () => {
         setMaterialOptions([]);
         return;
       }
-      const presupuesto = presupuestos.find(p => p.proyectoId === ocForm.proyectoId);
-      if (!presupuesto) {
+      // Buscar presupuestos asociados al proyecto (varios presupuestos pueden pertenecer a un proyecto)
+      const presupuestosDelProyecto = presupuestos.filter(p => p.proyectoId === ocForm.proyectoId);
+      if (presupuestosDelProyecto.length === 0) {
         setMaterialOptions([]);
         return;
       }
       try {
+        // Tomar el primer presupuesto asociado (o el más reciente)
+        const presupuesto = presupuestosDelProyecto[0];
         const materials = await MaterialesService.getMateriales(presupuesto.id);
         setMaterialOptions(materials.map(m => ({ id: m.id, nombre: m.nombre, unidad: m.unidad })));
       } catch (err) {

@@ -3,6 +3,7 @@ import type { Transaccion, Presupuesto } from '@/types/supabase';
 import { TrendingUp, TrendingDown, DollarSign, PiggyBank, Building2, Users, AlertCircle, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, Legend } from 'recharts';
 import { fmtQ } from '@/lib/exporters';
+import { CoreEngineService } from '@/services/CoreEngineService';
 
 const COLORS = {
   ingreso: '#10B981',
@@ -60,34 +61,32 @@ const ProfitReport: React.FC<{
     Margen: p.margen,
   })), [proyectos]);
 
-  const margenBrutoProyectos = totals.ingresos - totals.gastoOperativo - totals.gastoAdmin;
-  const personalLimit = margenBrutoProyectos * 0.8;
-  const ratioGastoPersonal = margenBrutoProyectos > 0 ? (totals.gastoPersonal / margenBrutoProyectos) * 100 : 0;
+  const salud = useMemo(() => CoreEngineService.analizarSaludFinanciera(transacciones), [transacciones]);
 
   return (
     <div className="space-y-5">
       {/* Alertas Proactivas de Control de Gastos Personales */}
-      {margenBrutoProyectos > 0 && totals.gastoPersonal > personalLimit && (
+      {salud.estado === 'critica' && (
         <div className="bg-red-50 border-l-4 border-red-500 text-red-800 p-4 rounded-xl flex items-start gap-3 shadow-sm">
           <AlertCircle className="w-5 h-5 mt-0.5 shrink-0 text-red-600 animate-bounce" />
           <div>
             <h4 className="font-bold text-xs uppercase tracking-wider text-red-900">🚨 Límite de Gasto Personal Excedido (Crítico)</h4>
             <p className="text-[11px] mt-1 text-red-700 leading-relaxed">
-              Sus gastos personales acumulados (<strong>{fmtQ(totals.gastoPersonal)}</strong>) representan el <strong>{ratioGastoPersonal.toFixed(1)}%</strong> de la utilidad bruta real de sus obras (<strong>{fmtQ(margenBrutoProyectos)}</strong>). 
-              Ha excedido el umbral prudencial ejecutivo del <strong>80%</strong>. Se recomienda encarecidamente suspender los retiros personales para proteger el capital de trabajo de los proyectos activos.
+              Sus gastos personales acumulados (<strong>{fmtQ(salud.gastoPersonal)}</strong>) representan el <strong>{salud.ratioGastoPersonal.toFixed(1)}%</strong> de la utilidad bruta real de sus obras (<strong>{fmtQ(salud.utilidadBruta)}</strong>). 
+              {salud.alertas[0]} Se recomienda encarecidamente suspender los retiros personales para proteger el capital de trabajo de los proyectos activos.
             </p>
           </div>
         </div>
       )}
 
-      {margenBrutoProyectos > 0 && totals.gastoPersonal <= personalLimit && totals.gastoPersonal > margenBrutoProyectos * 0.5 && (
+      {salud.estado === 'advertencia' && (
         <div className="bg-yellow-50 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-xl flex items-start gap-3 shadow-sm">
           <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0 text-yellow-600" />
           <div>
             <h4 className="font-bold text-xs uppercase tracking-wider text-yellow-900">⚠️ Advertencia de Gasto Personal Alto</h4>
             <p className="text-[11px] mt-1 text-yellow-700 leading-relaxed">
-              Sus retiros personales representan el <strong>{ratioGastoPersonal.toFixed(1)}%</strong> de la utilidad real de sus proyectos. 
-              Se encuentra en zona de advertencia (superior al <strong>50%</strong>), aproximándose al límite de riesgo del <strong>80%</strong>. Controle el flujo personal.
+              Sus retiros personales representan el <strong>{salud.ratioGastoPersonal.toFixed(1)}%</strong> de la utilidad real de sus proyectos. 
+              {salud.alertas[0]} Se encuentra en zona de advertencia (superior al 50%), aproximándose al límite de riesgo del 80%. Controle el flujo personal.
             </p>
           </div>
         </div>
@@ -118,7 +117,7 @@ const ProfitReport: React.FC<{
         <div className="bg-gradient-to-br from-purple-600/90 to-purple-700/90 text-white rounded-xl p-3 shadow-md">
           <PiggyBank className="w-4 h-4 mb-1 opacity-80" />
           <div className="text-[10px] uppercase tracking-wider opacity-80">Margen Bruto</div>
-          <div className="text-sm sm:text-base font-bold">{fmtQ(margenBrutoProyectos)}</div>
+          <div className="text-sm sm:text-base font-bold">{fmtQ(salud.utilidadBruta)}</div>
         </div>
         <div className={`bg-gradient-to-br ${totals.neto >= 0 ? 'from-emerald-600/90 to-emerald-700/90' : 'from-red-600/90 to-red-700/90'} text-white rounded-xl p-3 shadow-md`}>
           <TrendingDown className="w-4 h-4 mb-1 opacity-80" />
@@ -216,7 +215,7 @@ const ProfitReport: React.FC<{
           <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg col-span-2">
             <div className="text-gray-500 dark:text-gray-400 mb-1">Margen Bruto (Ingresos - Gastos Op. - Gastos Adm.)</div>
             <div className="text-sm font-bold text-purple-600 dark:text-purple-400">
-              {fmtQ(margenBrutoProyectos)}
+              {fmtQ(salud.utilidadBruta)}
             </div>
           </div>
           <div className={`p-3 rounded-lg col-span-2 ${totals.neto >= 0 ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>

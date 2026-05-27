@@ -6,7 +6,7 @@ import PageShell from '@/components/shared/PageShell';
 import TransactionForm from '@/components/shared/TransactionForm';
 import Calendar from '@/components/shared/Calendar';
 import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
-import { Download, FileText, Trash2, TrendingUp, TrendingDown, Wallet, Filter, FileDown, Scan, DollarSign, BarChart3, PieChartIcon, ArrowLeft, ArrowRight, LineChartIcon, PiggyBank } from 'lucide-react';
+import { Download, FileText, Trash2, TrendingUp, TrendingDown, Wallet, Filter, FileDown, Scan, DollarSign, BarChart3, PieChartIcon, ArrowLeft, ArrowRight, LineChartIcon, PiggyBank, AlertTriangle } from 'lucide-react';
 import OCRFactura from '@/components/shared/OCRFactura';
 import { exportTransacciones } from '@/utils/exportExcel';
 import ProfitReport from './ProfitReport';
@@ -48,7 +48,7 @@ const KPI: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: 
 );
 
 const FinancieroScreen: React.FC = () => {
-  const { transacciones, presupuestos, deleteTransaccion } = useAppContext();
+  const { transacciones, presupuestos, proyectos, deleteTransaccion } = useAppContext();
   const proyeccion = useMemo(() => CoreEngineService.proyectarTendencia(transacciones), [transacciones]);
   const [filterTipo, setFilterTipo] = useState<'todos' | 'ingreso' | 'gasto'>('todos');
   const [filterCat, setFilterCat] = useState<string>('todos');
@@ -94,13 +94,15 @@ const FinancieroScreen: React.FC = () => {
   }, [transacciones]);
 
   const getProyectoNombre = (id: string) => {
-    if (id === 'admin') return 'Administrativo';
+    if (id === 'admin' || !id) return 'Administrativo';
     if (id === 'personal') return 'Personal';
-    return presupuestos.find(p => p.id === id)?.proyecto || '—';
+    return proyectos.find(p => p.id === id)?.nombre || presupuestos.find(p => p.id === id)?.proyecto || '—';
   };
 
   const nextPage = useCallback(() => setPagina(p => (p + 1) % totalPaginas), []);
   const prevPage = useCallback(() => setPagina(p => (p - 1 + totalPaginas) % totalPaginas), []);
+
+  const saludFinanciera = useMemo(() => CoreEngineService.analizarSaludFinanciera(transacciones), [transacciones]);
 
   const handleExportCSV = () => {
     const rows: (string | number)[][] = [
@@ -152,6 +154,19 @@ const FinancieroScreen: React.FC = () => {
         <div className="flex-1 min-h-0">
           {pagina === 0 && (
             <div className="grid grid-cols-12 gap-3 h-full">
+              {/* Alertas de Salud Financiera */}
+              {saludFinanciera.alertas.length > 0 && (
+                <div className="col-span-12 space-y-1">
+                  {saludFinanciera.alertas.map((a, i) => (
+                    <div key={i} className={`flex items-start gap-1.5 text-xs p-2 rounded ${
+                      saludFinanciera.estado === 'critica' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                    }`}>
+                      <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                      <span>{a}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="col-span-12 grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-2">
                 <KPI icon={TrendingUp} label="Ingresos" value={fmtQ(stats.ingresos)} color="emerald" />
                 <KPI icon={TrendingDown} label="Operativos" value={fmtQ(stats.operativos)} color="blue" />

@@ -16,28 +16,7 @@ interface TrazabilidadMaterialesPanelProps {
 }
 
 export const TrazabilidadMaterialesPanel: React.FC<TrazabilidadMaterialesPanelProps> = ({ presupuesto }) => {
-  const { materiales, agregarMaterial, resumen } = useTrazabilidadMateriales();
-
-  type LineaPresupuesto = {
-    codigo?: string;
-    cantidad?: number;
-    unidad?: string;
-    costoMaterial?: number;
-  };
-
-  // Inicializar materiales al cargar presupuesto
-  React.useEffect(() => {
-    const lineas = Array.isArray(presupuesto.lineas) ? (presupuesto.lineas as LineaPresupuesto[]) : [];
-    lineas.forEach((linea) => {
-      agregarMaterial(
-        linea.codigo || '',
-        presupuesto.id,
-        linea.cantidad ?? 0,
-        linea.unidad || 'und',
-        linea.costoMaterial ?? 0
-      );
-    });
-  }, [presupuesto.id, presupuesto.lineas, agregarMaterial]);
+  const { materiales, registrarCompraItem, registrarConsumoItem, resumen, loading, recargar } = useTrazabilidadMateriales(presupuesto.id);
 
   const datosComposicion = [
     { name: 'Presupuestado', value: resumen.total_presupuestado },
