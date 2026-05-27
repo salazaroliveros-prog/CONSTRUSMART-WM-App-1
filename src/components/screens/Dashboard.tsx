@@ -100,7 +100,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <PageShell title="Panel de Control">
-      <div className="h-[calc(100vh-56px)] flex flex-col p-2 sm:p-3">
+      <div className="min-h-dvh flex flex-col p-2 sm:p-3">
         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Página {pagina + 1} / {totalPaginas}</span>
@@ -123,7 +123,7 @@ const Dashboard: React.FC = () => {
         <div className="h-[calc(100%-2.5rem)] overflow-y-auto">
           {pagina === 0 && (
             <div className="grid grid-cols-12 gap-3 h-full">
-              <div className="col-span-12 grid grid-cols-5 gap-2">
+              <div className="col-span-12 grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-2">
                 <KPI icon={TrendingUp} label="Ingresos" value={fmtQ(stats.ingresos)} color="emerald" />
                 <KPI icon={TrendingDown} label="Gastos" value={fmtQ(stats.gastos)} color="red" />
                 <KPI icon={Wallet} label="Balance" value={fmtQ(stats.balance)} color={stats.balance >= 0 ? 'blue' : 'red'} />

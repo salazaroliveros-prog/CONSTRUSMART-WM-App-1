@@ -233,12 +233,12 @@ const BodegaScreen: React.FC = () => {
                     <tr>
                       <th className="p-2.5 text-left">Material</th>
                       <th className="p-2.5 text-left">Unidad</th>
-                      <th className="p-2.5 text-right">Presup.</th>
+                      <th className="p-2.5 text-right hidden sm:table-cell">Presup.</th>
                       <th className="p-2.5 text-right">Comprado</th>
                       <th className="p-2.5 text-right">Consumido</th>
                       <th className="p-2.5 text-right">Stock</th>
-                      <th className="p-2.5 text-right">$/Unidad</th>
-                      <th className="p-2.5 text-left">Proveedor</th>
+                      <th className="p-2.5 text-right hidden lg:table-cell">$/Unidad</th>
+                      <th className="p-2.5 text-left hidden md:table-cell">Proveedor</th>
                       <th className="p-2.5 text-center">Acciones</th>
                     </tr>
                   </thead>
@@ -262,7 +262,7 @@ const BodegaScreen: React.FC = () => {
                         >
                           <td className="p-2.5 font-medium">{m.nombre}</td>
                           <td className="p-2.5 text-slate-500">{m.unidad}</td>
-                          <td className="p-2.5 text-right">
+                          <td className="p-2.5 text-right hidden sm:table-cell">
                             {m.cantidad_estimada.toFixed(1)}
                           </td>
                           <td className="p-2.5 text-right">
@@ -274,10 +274,10 @@ const BodegaScreen: React.FC = () => {
                           <td className={`p-2.5 text-right ${stockColor}`}>
                             {m.stock.toFixed(1)}
                           </td>
-                          <td className="p-2.5 text-right text-slate-600">
+                          <td className="p-2.5 text-right text-slate-600 hidden lg:table-cell">
                             ${m.costo_unitario.toFixed(2)}
                           </td>
-                          <td className="p-2.5 text-slate-500">
+                          <td className="p-2.5 text-slate-500 hidden md:table-cell">
                             {m.proveedor || '—'}
                           </td>
                           <td className="p-2.5 text-center">
