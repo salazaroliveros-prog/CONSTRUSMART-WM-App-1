@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { useAppContext } from '@/contexts/AppContext';
+import React, { useRef, useMemo } from 'react';
+import { useAuthContext } from '@/contexts/AppContext';
 import LoginScreen from '@/components/screens/LoginScreen';
 import Dashboard from '@/components/screens/Dashboard';
 import ClientesScreen from '@/features/clientes/components/ClientesScreen';
@@ -14,17 +14,24 @@ import ComprasScreen from '@/features/compras/components/ComprasScreen';
 import CommandPalette from '@/components/shared/CommandPalette';
 import OfflineBanner from '@/components/shared/OfflineBanner';
 import DevDiagnostics from '@/dev/DevDiagnostics';
-// import { FloatingMenu } from '@/components/shared/FloatingMenu'; // Eliminado ya que ahora está en Header
 import { Loader2 } from 'lucide-react';
 
 const viewOrder = ['login', 'dashboard', 'clientes', 'presupuesto', 'proyectos', 'seguimiento', 'financiero', 'equipos', 'bodega', 'cotizacion', 'compras'];
 
 const AppLayout: React.FC = () => {
-  const { view, session, loading } = useAppContext();
-  const prevView = useRef(view);
-
-  const dir = viewOrder.indexOf(prevView.current) <= viewOrder.indexOf(view) ? 'right' : 'left';
-  prevView.current = view;
+  const { view, session, loading } = useAuthContext();
+  const animKeyRef = useRef(view);
+  
+  // SOLO cambiar animKey cuando view realmente cambia (NO en cada re-render)
+  // Esto evita que la animación CSS de opacidad se re-ejecute en cada render
+  const animKey = useMemo(() => {
+    if (animKeyRef.current !== view) {
+      const prev = animKeyRef.current;
+      animKeyRef.current = view;
+      return { key: view, dir: viewOrder.indexOf(prev) <= viewOrder.indexOf(view) ? 'right' : 'left' };
+    }
+    return { key: animKeyRef.current, dir: 'none' };
+  }, [view]);
 
   if (loading) {
     return (
@@ -60,12 +67,16 @@ const AppLayout: React.FC = () => {
     }
   };
 
+  // Determinar clase de animación SOLO cuando cambia la vista
+  // El key único basado en animKey.key fuerza que la animación ocurra
+  // exactamente una vez por navegación, no en cada re-render
+  const animClass = animKey.dir === 'none' ? '' : `animate-${animKey.dir === 'right' ? 'slide-right' : 'slide-left'}`;
+
   return (
-    // Keep a stable root element (avoid remounts when `view` changes which caused inputs to lose focus)
-    <div className={`animate-${dir === 'right' ? 'slide-right' : 'slide-left'}`} data-view={view}>
+    // Stable root div - la animación solo se activa en cambio REAL de vista
+    <div key={animKey.key} className={animClass} data-view={view}>
       <CommandPalette />
       <DevDiagnostics />
-      {/* FloatingMenu eliminado */}
       {renderView()}
       <OfflineBanner />
     </div>
