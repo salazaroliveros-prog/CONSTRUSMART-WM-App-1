@@ -56,20 +56,20 @@ const TransactionForm: React.FC<{ compact?: boolean }> = ({ compact = false }) =
       </div>
 
       <form onSubmit={handleSubmit} className={`grid gap-2 ${compact ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'}`}>
-        <select value={form.proyectoId} onChange={e => setForm({ ...form, proyectoId: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg bg-muted border-border focus:ring-2 focus:ring-blue-500" required>
-          <option value="">-- Seleccionar proyecto activo --</option>
-          <option value="admin">— Administrativo / Operativo —</option>
-          <option value="personal">— Gasto Personal —</option>
-          {presupuestos.filter(p => p.fase !== 'finalizado').map(p => <option key={p.id} value={p.id}>{p.proyecto}</option>)}
-        </select>
-         <input placeholder="Descripción de la transacción" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg" required />
-         <input type="number" placeholder="Ingrese la cantidad" value={form.cantidad} onChange={e => setForm({ ...form, cantidad: parseFloat(e.target.value) || 0 })} className="px-2 py-1.5 text-xs border rounded-lg" />
-         <input placeholder="Ingrese la unidad (ej: m², kg, unidad)" value={form.unidad} onChange={e => setForm({ ...form, unidad: e.target.value })} className="px-2 py-1.5 text-xs border rounded-lg" />
-        <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value as Transaccion['categoria'] })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg bg-muted">
-          {categorias.map(c => <option key={c.v} value={c.v}>{c.label}</option>)}
-        </select>
-         <input type="number" placeholder="Ingrese el costo unitario" value={form.costoUnitario} onChange={e => setForm({ ...form, costoUnitario: parseFloat(e.target.value) || 0 })} className="px-2 py-1.5 text-xs border rounded-lg" />
-        <input type="date" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} className="px-2 py-1.5 text-xs border rounded-lg" />
+<select value={form.proyectoId} onChange={e => setForm({ ...form, proyectoId: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg bg-muted border-border focus:ring-2 focus:ring-blue-500" required>
+           <option value="">-- Seleccionar proyecto --</option>
+           <option value="admin">— Administrativo —</option>
+           <option value="personal">— Gasto Personal —</option>
+           {presupuestos.filter(p => p.fase !== 'finalizado').map(p => <option key={p.id} value={p.id}>{p.proyecto}</option>)}
+         </select>
+         <input placeholder="Descripción" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg" required />
+         <input type="number" placeholder="Cantidad" value={form.cantidad} onChange={e => setForm({ ...form, cantidad: parseFloat(e.target.value) || 0 })} className="px-2 py-1.5 text-xs border rounded-lg" />
+         <input placeholder="Unidad (ej: m², kg)" value={form.unidad} onChange={e => setForm({ ...form, unidad: e.target.value })} className="px-2 py-1.5 text-xs border rounded-lg" />
+         <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value as Transaccion['categoria'] })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg bg-muted">
+           {categorias.map(c => <option key={c.v} value={c.v}>{c.label}</option>)}
+         </select>
+         <input type="number" placeholder="Costo unitario" value={form.costoUnitario} onChange={e => setForm({ ...form, costoUnitario: parseFloat(e.target.value) || 0 })} className="px-2 py-1.5 text-xs border rounded-lg" />
+         <input type="date" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} className="px-2 py-1.5 text-xs border rounded-lg" />
         <div className="col-span-2 bg-blue-50 dark:bg-blue-950/30 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-900 dark:text-blue-300 text-right">
           Total: Q {total.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
         </div>
