@@ -142,7 +142,7 @@ export function exportPresupuestoPDF(params: {
         { header: 'C.Unit.', dataKey: '4' },
         { header: 'Subtotal', dataKey: '5' },
       ],
-      body: renglonesBody.map(r => r.map(v => ({ content: v, styles: { halign: v === r[3] || v === r[4] || v === r[5] ? 'right' : 'left' as const } }))),
+      body: renglonesBody.map(r => r.map(v => ({ content: v, styles: { align: v === r[3] || v === r[4] || v === r[5] ? 'right' : 'left' as const } }))),
       foot: [[{ content: 'COSTO DIRECTO TOTAL', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fillColor: [219, 234, 254] } },
         { content: fmtQ(totales.costoDirecto), styles: { halign: 'right', fontStyle: 'bold', fillColor: [219, 234, 254] } }]],
       theme: 'grid',
