@@ -11,6 +11,7 @@ import TeamsScreen from '@/components/screens/TeamsScreen';
 import BodegaScreen from '@/components/screens/BodegaScreen';
 import CotizacionScreen from '@/components/screens/CotizacionScreen';
 import ComprasScreen from '@/features/compras/components/ComprasScreen';
+import AprobacionScreen from '@/components/screens/AprobacionScreen';
 import CommandPalette from '@/components/shared/CommandPalette';
 import OfflineBanner from '@/components/shared/OfflineBanner';
 import DevDiagnostics from '@/dev/DevDiagnostics';
