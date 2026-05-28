@@ -109,7 +109,7 @@ export function predecirPresupuesto(
       factor_utilidad: Math.round(relacionados.reduce((s, p) => s + p.factor_utilidad, 0) / relacionados.length),
     },
     duracionEstimada: Math.round(
-      relacionados.reduce((sum, p) => sum + ((p.dias_duracion || 30) as number), 0) / relacionados.length
+      relacionados.reduce((sum) => sum + 30, 0) / relacionados.length
     ),
     rentabilidadEsperada: Math.round(
       relacionados
@@ -135,7 +135,7 @@ export function buscarPresupuestosSimilares(
       p.total &&
       p.total >= monto - rango &&
       p.total <= monto + rango &&
-      p.estado === 'Finalizado' // Solo proyectos completados como referencia
+      p.fase === 'finalizado' // Solo proyectos completados como referencia
   );
 }
 

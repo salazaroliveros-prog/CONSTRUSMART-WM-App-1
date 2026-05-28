@@ -4,23 +4,23 @@ export const ProyectosService = {
   async addProyecto(payload: Record<string, unknown>) {
     const { data, error } = await supabase
       .from('proyectos')
-      .insert(payload)
+      .insert(payload as any)
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return data as any;
   },
 
   async updateProyecto(id: string, userId: string, payload: Record<string, unknown>) {
     const { data, error } = await supabase
       .from('proyectos')
-      .update(payload)
+      .update(payload as any)
       .eq('id', id)
       .eq('user_id', userId)
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return data as any;
   },
 
   async deleteProyecto(id: string, userId: string) {

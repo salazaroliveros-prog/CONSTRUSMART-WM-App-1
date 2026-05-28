@@ -291,26 +291,32 @@ export async function crearRenglon(renglon: Omit<Renglon, 'id'>, userId: string)
     };
     const { data, error } = await supabase
       .from('renglones')
-      .insert(payload)
+      .insert(payload as any)
       .select('id')
       .single();
 
     if (error) throw error;
 
+    const d = data as any;
+
     // Registrar precio inicial en historial
-    if (data?.id) {
+    if (d?.id) {
       const costoTotal = (renglon.costoMaterial ?? 0) + (renglon.costoManoObra ?? 0) + (renglon.costoHerramienta ?? 0);
       if (costoTotal > 0) {
-        await supabase.from('renglon_precios_historial').insert({
-          renglon_id: data.id,
-          costo: costoTotal,
-          fecha: new Date().toISOString(),
-          user_id: userId,
-        }).catch(e => console.warn('Error registrando precio inicial:', e));
+        try {
+          await supabase.from('renglon_precios_historial').insert({
+            renglon_id: d.id,
+            costo: costoTotal,
+            fecha: new Date().toISOString(),
+            user_id: userId,
+          } as any);
+        } catch (e) {
+          console.warn('Error registrando precio inicial:', e);
+        }
       }
     }
 
-    return data?.id || null;
+    return d?.id || null;
   } catch (error) {
     console.error('Error creando renglon:', error);
     return null;
@@ -332,7 +338,7 @@ export async function actualizarRenglon(
     };
     const { error } = await supabase
       .from('renglones')
-      .update(payload)
+      .update(payload as any)
       .eq('id', id)
       .eq('user_id', userId);
 
@@ -349,12 +355,16 @@ export async function actualizarRenglon(
         (cambios.costoManoObra ?? 0) +
         (cambios.costoHerramienta ?? 0);
       if (costoTotal > 0) {
-        await supabase.from('renglon_precios_historial').insert({
-          renglon_id: id,
-          costo: costoTotal,
-          fecha: new Date().toISOString(),
-          user_id: userId,
-        }).catch(e => console.warn('Error registrando historial de precio:', e));
+        try {
+          await supabase.from('renglon_precios_historial').insert({
+            renglon_id: id,
+            costo: costoTotal,
+            fecha: new Date().toISOString(),
+            user_id: userId,
+          } as any);
+        } catch (e) {
+          console.warn('Error registrando historial de precio:', e);
+        }
       }
     }
 
@@ -372,7 +382,7 @@ export async function eliminarRenglon(id: string, userId: string): Promise<boole
   try {
     const { error } = await supabase
       .from('renglones')
-      .update({ activo: false, updated_at: new Date().toISOString() })
+      .update({ activo: false, updated_at: new Date().toISOString() } as any)
       .eq('id', id)
       .eq('user_id', userId);
 
@@ -499,7 +509,7 @@ export async function registrarUsoRenglon(
       presupuesto_id: presupuestoId,
       user_id: userId,
       created_at: new Date().toISOString(),
-    });
+    } as any);
 
     if (error) throw error;
     return true;
@@ -613,7 +623,7 @@ export async function toggleFavorito(id: string, userId: string): Promise<boolea
       .update({
         favorito: !renglon.favorito,
         updated_at: new Date().toISOString(),
-      })
+      } as any)
       .eq('id', id)
       .eq('user_id', userId);
 

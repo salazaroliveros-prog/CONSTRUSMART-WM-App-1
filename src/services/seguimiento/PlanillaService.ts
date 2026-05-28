@@ -29,11 +29,11 @@ export const PlanillaService = {
         fecha: fecha,
         proyecto_id: presupuestoId,
         empleado_id: empleadoId,
-      })
+      } as any)
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return data as any;
   },
 
   async getPagosPorProyecto(presupuestoId: string) {
@@ -43,7 +43,7 @@ export const PlanillaService = {
       .eq('proyecto_id', presupuestoId)
       .eq('categoria', 'mano-obra');
     if (error) throw error;
-    return data;
+    return data as any;
   },
 
   async getPagosPorEmpleado(empleadoId: string) {
@@ -54,6 +54,6 @@ export const PlanillaService = {
       .eq('categoria', 'mano-obra')
       .order('fecha', { ascending: false });
     if (error) throw error;
-    return data;
+    return data as any;
   },
 };

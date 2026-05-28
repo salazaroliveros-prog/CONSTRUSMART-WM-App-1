@@ -4,7 +4,7 @@ export const ActividadesService = {
   async addActividad(payload: Record<string, unknown>) {
     const { data, error } = await supabase
       .from('actividades')
-      .insert(payload)
+      .insert(payload as any)
       .select()
       .single();
     if (error) throw error;
