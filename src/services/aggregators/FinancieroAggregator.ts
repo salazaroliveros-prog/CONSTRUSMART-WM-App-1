@@ -35,7 +35,7 @@ export const FinancieroAggregator = {
     // Profitability by project
     const { data: proyectos, error: proyError } = await supabase
       .from('proyectos')
-      .select('id, nombre, presupuesto_total, avances_financieros') // Assuming avances_financieros needs to be fetched or calculated
+      .select('id, nombre, presupuesto_total, avance_financiero') // Correct column name
       .limit(20); // Limit projects fetched
 
     if (proyError) console.error("Error fetching projects for profitability:", proyError);
