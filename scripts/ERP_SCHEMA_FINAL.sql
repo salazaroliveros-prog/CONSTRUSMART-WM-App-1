@@ -486,21 +486,22 @@ CREATE TABLE IF NOT EXISTS public.recepcion_oc_items (
   created_at        timestamptz DEFAULT now()
 );
 
--- 4.26. ocr_documentos
+-- 4.26. device_tokens
+CREATE TABLE IF NOT EXISTS public.device_tokens (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  token text NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+-- 4.27. ocr_documentos
 CREATE TABLE IF NOT EXISTS public.ocr_documentos (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   file_url text NOT NULL,
   ocr_data jsonb,
   status text DEFAULT 'pending',
-  created_at timestamptz DEFAULT now()
-);
-
--- 4.27. device_tokens
-CREATE TABLE IF NOT EXISTS public.device_tokens (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  token text NOT NULL,
+  revisado_por uuid REFERENCES auth.users(id),
   created_at timestamptz DEFAULT now()
 );
 
@@ -516,7 +517,7 @@ CREATE TABLE IF NOT EXISTS public.caja_proyecto (
   updated_at timestamptz DEFAULT now()
 );
 
--- 4.29. movimientos_caja (movimientos de caja chica)
+-- 4.28. movimientos_caja (movimientos de caja chica)
 CREATE TABLE IF NOT EXISTS public.movimientos_caja (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   caja_id uuid NOT NULL REFERENCES public.caja_proyecto(id) ON DELETE CASCADE,
@@ -536,7 +537,7 @@ CREATE TABLE IF NOT EXISTS public.movimientos_caja (
   updated_at timestamptz DEFAULT now()
 );
 
--- 4.30. transacciones_recurrentes (transacciones recurrentes automáticas)
+-- 4.29. transacciones_recurrentes (transacciones recurrentes automáticas)
 CREATE TABLE IF NOT EXISTS public.transacciones_recurrentes (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   presupuesto_id uuid NOT NULL REFERENCES public.presupuestos(id) ON DELETE CASCADE,
@@ -552,19 +553,17 @@ CREATE TABLE IF NOT EXISTS public.transacciones_recurrentes (
   updated_at timestamptz DEFAULT now()
 );
 
--- 4.30. trigger updated_at para caja_proyecto
+-- 4.33. triggers updated_at para las nuevas tablas
 DROP TRIGGER IF EXISTS trg_caja_proyecto_updated_at ON public.caja_proyecto;
 CREATE TRIGGER trg_caja_proyecto_updated_at
   BEFORE UPDATE ON public.caja_proyecto
   FOR EACH ROW EXECUTE FUNCTION public.fn_set_updated_at();
 
--- 4.31. trigger updated_at para movimientos_caja
 DROP TRIGGER IF EXISTS trg_movimientos_caja_updated_at ON public.movimientos_caja;
 CREATE TRIGGER trg_movimientos_caja_updated_at
   BEFORE UPDATE ON public.movimientos_caja
   FOR EACH ROW EXECUTE FUNCTION public.fn_set_updated_at();
 
--- 4.32. trigger updated_at para transacciones_recurrentes
 DROP TRIGGER IF EXISTS trg_transacciones_recurrentes_updated_at ON public.transacciones_recurrentes;
 CREATE TRIGGER trg_transacciones_recurrentes_updated_at
   BEFORE UPDATE ON public.transacciones_recurrentes
@@ -1217,6 +1216,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_user              ON public.audit_log(u
 CREATE INDEX IF NOT EXISTS idx_audit_log_registro          ON public.audit_log(registro_id);
 CREATE INDEX IF NOT EXISTS idx_bitacora_presupuesto_id     ON public.bitacora_avance(presupuesto_id);
 CREATE INDEX IF NOT EXISTS idx_ocr_user                    ON public.ocr_documentos(user_id);
+CREATE INDEX IF NOT EXISTS idx_ocr_revisado_por           ON public.ocr_documentos(revisado_por);
 CREATE INDEX IF NOT EXISTS idx_tokens_user                 ON public.device_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_caja_proyecto_user_id       ON public.caja_proyecto(user_id);
 CREATE INDEX IF NOT EXISTS idx_caja_proyecto_proyecto_id   ON public.caja_proyecto(proyecto_id);
