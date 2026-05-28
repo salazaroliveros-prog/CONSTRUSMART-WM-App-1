@@ -11,6 +11,44 @@ export const MaterialesService = {
     return data as any as Material[];
   },
 
+  // Nueva función: desglosar materiales desde renglones del presupuesto
+  async getDesglosado(presupuestoId: string) {
+    const { data: presupuesto, error } = await supabase
+      .from('presupuestos')
+      .select('lineas')
+      .eq('id', presupuestoId)
+      .single();
+    if (error) throw error;
+    
+    const lineas = presupuesto.lineas || [];
+    const materialesDesglosados: Record<string, { cantidad: number; unidad: string; costoUnitario: number; nombre: string }> = {};
+    
+    lineas.forEach((linea: any) => {
+      (linea?.subrenglones?.materiales || []).forEach((mat: any) => {
+        const key = mat.nombre?.toLowerCase() || 'material sin nombre';
+        if (!materialesDesglosados[key]) {
+          materialesDesglosados[key] = {
+            cantidad: 0,
+            unidad: mat.unidad || 'u',
+            costoUnitario: mat.costoUnitario || 0,
+            nombre: mat.nombre || key,
+          };
+        }
+        materialesDesglosados[key].cantidad += (mat.cantidad || 0) * (linea.cantidad || 1);
+      });
+    });
+    
+    return Object.entries(materialesDesglosados).map(([_, m]) => ({
+      id: crypto.randomUUID(),
+      nombre: m.nombre,
+      unidad: m.unidad,
+      cantidad_estimada: m.cantidad,
+      cantidad_utilizada: 0,
+      costo_unitario: m.costoUnitario,
+      proveedor: null,
+    }));
+  },
+
   async addMaterial(material: any) {
     const { data, error } = await supabase
       .from('materiales_proyecto')
