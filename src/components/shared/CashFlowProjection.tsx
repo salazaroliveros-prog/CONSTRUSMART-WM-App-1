@@ -45,19 +45,19 @@ const CashFlowProjection: React.FC = () => {
   const maxVal = Math.max(...periods.map(p => Math.abs(p.value)), 1);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-2.5 space-y-2.5">
+    <div className="bg-card dark:bg-card rounded-xl shadow-sm border border-border p-2.5 space-y-2.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <TrendingUp className="w-4 h-4 text-blue-600" />
-          <h3 className="text-xs font-bold text-slate-700">Proyección Flujo de Caja</h3>
+          <h3 className="text-xs font-bold text-card-foreground">Proyección Flujo de Caja</h3>
         </div>
-        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+        <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
       </div>
 
       <div className="grid grid-cols-4 gap-1.5">
         {periods.map(p => (
           <div key={p.label} className="text-center">
-            <p className="text-[9px] text-slate-500 font-semibold">{p.label}</p>
+            <p className="text-[9px] text-muted-foreground font-semibold">{p.label}</p>
             <p className={`text-[11px] font-mono font-bold ${p.value >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
               Q{p.value.toLocaleString()}
             </p>
@@ -77,7 +77,7 @@ const CashFlowProjection: React.FC = () => {
         })}
       </div>
 
-      <div className="flex items-center gap-3 text-[9px] text-slate-400">
+      <div className="flex items-center gap-3 text-[9px] text-muted-foreground">
         <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3 text-emerald-500" /> Q{projection.izqIngreso.toLocaleString()} ingresos</span>
         <span className="flex items-center gap-1"><TrendingDown className="w-3 h-3 text-red-500" /> Q{projection.izqEgreso.toLocaleString()} egresos</span>
       </div>

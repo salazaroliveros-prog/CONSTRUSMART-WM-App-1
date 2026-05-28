@@ -91,8 +91,8 @@ export const ChangeOrdersPanel: React.FC<ChangeOrdersPanelProps> = ({ presupuest
         <CardContent className="space-y-4">
           {/* Resumen */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-3 bg-slate-50 rounded-lg">
-              <p className="text-xs text-slate-600">Total Órdenes</p>
+            <div className="p-3 bg-muted/50 rounded-lg">
+              <p className="text-xs text-muted-foreground">Total Órdenes</p>
               <p className="text-2xl font-bold">{changeOrders.length}</p>
             </div>
             <div className="p-3 bg-blue-50 rounded-lg">
@@ -126,19 +126,19 @@ export const ChangeOrdersPanel: React.FC<ChangeOrdersPanelProps> = ({ presupuest
           {/* Listado de órdenes */}
           {changeOrders.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-slate-500">No hay órdenes de cambio registradas</p>
+              <p className="text-muted-foreground">No hay órdenes de cambio registradas</p>
             </div>
           ) : (
             <div className="space-y-3">
               {changeOrders.map((orden) => (
                 <div
                   key={orden.id}
-                  className="border rounded-lg p-4 hover:bg-slate-50 transition"
+                  className="border rounded-lg p-4 hover:bg-accent transition"
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <p className="font-medium">Versión {orden.version}</p>
-                      <p className="text-sm text-slate-600">{orden.descripcion}</p>
+                      <p className="text-sm text-muted-foreground">{orden.descripcion}</p>
                     </div>
                     <Badge
                       variant={
@@ -157,17 +157,17 @@ export const ChangeOrdersPanel: React.FC<ChangeOrdersPanelProps> = ({ presupuest
 
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     <div className="text-sm">
-                      <p className="text-slate-600">Cambios</p>
+                      <p className="text-muted-foreground">Cambios</p>
                       <p className="font-semibold">{orden.cambios.length}</p>
                     </div>
                     <div className="text-sm">
-                      <p className="text-slate-600">Impacto</p>
+                      <p className="text-muted-foreground">Impacto</p>
                       <p className={`font-semibold ${calcularImpacto(orden.cambios) > 0 ? 'text-red-600' : 'text-green-600'}`}>
                         Q{calcularImpacto(orden.cambios).toLocaleString()}
                       </p>
                     </div>
                     <div className="text-sm">
-                      <p className="text-slate-600">Fecha</p>
+                      <p className="text-muted-foreground">Fecha</p>
                       <p className="font-semibold">{orden.solicitado_fecha.toLocaleDateString('es-GT')}</p>
                     </div>
                   </div>

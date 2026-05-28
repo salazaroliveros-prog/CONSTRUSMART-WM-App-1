@@ -47,11 +47,11 @@ export const SeguimientoAvanceScreen: React.FC<SeguimientoAvanceScreenProps> = (
 
   if (!presupuestoActual) {
     return (
-      <div className="h-screen flex items-center justify-center bg-slate-50">
+      <div className="h-screen flex items-center justify-center bg-background">
         <Card className="w-96">
           <CardContent className="pt-6 text-center">
-            <p className="text-slate-600 mb-4">No hay presupuestos disponibles</p>
-            <p className="text-sm text-slate-500">Crea un presupuesto para ver el seguimiento</p>
+            <p className="text-card-foreground mb-4">No hay presupuestos disponibles</p>
+            <p className="text-sm text-muted-foreground">Crea un presupuesto para ver el seguimiento</p>
           </CardContent>
         </Card>
       </div>
@@ -59,24 +59,24 @@ export const SeguimientoAvanceScreen: React.FC<SeguimientoAvanceScreenProps> = (
   }
 
   return (
-    <div className="flex flex-col bg-transparent">
+    <div className="flex flex-col bg-transparent animate-fadeIn">
       {/* Resumen del Proyecto */}
-      <div className="bg-white rounded-xl shadow-sm border p-4 mb-4">
+      <div className="bg-card dark:bg-card rounded-xl shadow-sm border border-border p-4 mb-4 animate-fade-in-up">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-blue-600" />
+            <h2 className="text-xl font-bold text-card-foreground flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
               {presupuestoActual.proyecto}
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5 capitalize">
-              Fase: <span className="font-medium text-blue-600">{presupuestoActual.fase}</span> · Tipología: {presupuestoActual.tipologia || 'General'}
+            <p className="text-xs text-muted-foreground mt-0.5 capitalize">
+              Fase: <span className="font-medium text-primary">{presupuestoActual.fase}</span> · Tipología: {presupuestoActual.tipologia || 'General'}
             </p>
           </div>
           <div className="text-right">
             <p className="text-lg font-bold text-emerald-600">
               {fmtQ(presupuestoActual.total || 0)}
             </p>
-            <p className="text-[10px] text-slate-400 uppercase tracking-tighter">Presupuesto Total</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-tighter">Presupuesto Total</p>
           </div>
         </div>
       </div>
@@ -87,46 +87,46 @@ export const SeguimientoAvanceScreen: React.FC<SeguimientoAvanceScreenProps> = (
         onValueChange={setTabActiva}
         className="flex-1 flex flex-col"
       >
-        <div className="bg-white rounded-t-xl border-x border-t px-4">
+        <div className="bg-card dark:bg-card rounded-t-xl border-x border-t border-border px-4">
           <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 gap-2 bg-transparent border-b-0 rounded-none p-0 h-auto">
             <TabsTrigger
               value="dashboard"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-3 text-xs"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-3 text-xs"
             >
               Financiero
             </TabsTrigger>
 
             <TabsTrigger
               value="cambios"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-3 text-xs"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-3 text-xs"
             >
               Cambios
             </TabsTrigger>
 
             <TabsTrigger
               value="materiales"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-3 text-xs"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-3 text-xs"
             >
               Materiales
             </TabsTrigger>
 
             <TabsTrigger
               value="caja"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-3 text-xs"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-3 text-xs"
             >
               Caja/Concil.
             </TabsTrigger>
 
             <TabsTrigger
               value="calidad"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-3 text-xs"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-3 text-xs"
             >
               Calidad
             </TabsTrigger>
 
             <TabsTrigger
               value="reportes"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 pb-3 text-xs"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-3 text-xs"
             >
               Reportes
             </TabsTrigger>
@@ -134,7 +134,7 @@ export const SeguimientoAvanceScreen: React.FC<SeguimientoAvanceScreenProps> = (
         </div>
 
         {/* Contenido de Tabs */}
-        <div className="flex-1 bg-white border-x border-b rounded-b-xl overflow-hidden">
+        <div className="flex-1 bg-card dark:bg-card border-x border-b border-border rounded-b-xl overflow-hidden">
           <div className="p-4 md:p-6">
             {/* Dashboard Financiero */}
             <TabsContent value="dashboard" className="mt-0">

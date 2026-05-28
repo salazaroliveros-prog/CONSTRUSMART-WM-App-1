@@ -93,7 +93,7 @@ export const ReportesAutomaticosPanel: React.FC<ReportesAutomaticosPanelProps> =
             <CardDescription>Documento final del proyecto</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
               Genera un PDF con resumen financiero, avances y resultados finales.
             </p>
             <Button
@@ -122,7 +122,7 @@ export const ReportesAutomaticosPanel: React.FC<ReportesAutomaticosPanelProps> =
             <CardDescription>Resumen de la semana actual</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
               Dashboard en Excel con proyectos activos, transacciones y avances.
             </p>
             <Button onClick={generarReporteSemanal} disabled={loading} className="w-full">
@@ -145,7 +145,7 @@ export const ReportesAutomaticosPanel: React.FC<ReportesAutomaticosPanelProps> =
             <CardDescription>Múltiples presupuestos</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
               Exporta múltiples presupuestos en un solo archivo consolidado.
             </p>
             <Button
@@ -175,7 +175,7 @@ export const ReportesAutomaticosPanel: React.FC<ReportesAutomaticosPanelProps> =
             {presupuestos.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center gap-3 p-3 border rounded-lg hover:bg-slate-50 cursor-pointer transition"
+                className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent cursor-pointer transition"
                 onClick={() => toggleSeleccion(p.id)}
               >
                 <input
@@ -189,7 +189,7 @@ export const ReportesAutomaticosPanel: React.FC<ReportesAutomaticosPanelProps> =
                 />
                 <div className="flex-1">
                   <p className="font-medium">{p.proyecto}</p>
-                  <p className="text-sm text-slate-600">Q{(p.total || 0).toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">Q{(p.total || 0).toLocaleString()}</p>
                 </div>
                 <Badge variant="outline" className="text-xs capitalize">
                   {p.fase}
@@ -199,7 +199,7 @@ export const ReportesAutomaticosPanel: React.FC<ReportesAutomaticosPanelProps> =
           </div>
 
           {presupuestos.length === 0 && (
-            <p className="text-center text-slate-500 py-8">No hay presupuestos disponibles</p>
+            <p className="text-center text-muted-foreground py-8">No hay presupuestos disponibles</p>
           )}
         </CardContent>
       </Card>

@@ -110,18 +110,18 @@ export const TrazabilidadMaterialesPanel: React.FC<TrazabilidadMaterialesPanelPr
           <div className="space-y-3">
             <h4 className="font-semibold">Detalle por Renglón</h4>
             {materiales.length === 0 ? (
-              <p className="text-slate-500 text-sm">Sin materiales registrados</p>
+              <p className="text-muted-foreground text-sm">Sin materiales registrados</p>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {materiales.map((material) => (
                   <div
                     key={material.id}
-                    className="p-3 border rounded-lg hover:bg-slate-50 transition"
+                    className="p-3 border rounded-lg hover:bg-accent transition"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <p className="font-medium text-sm">{material.renglon_codigo}</p>
-                        <p className="text-xs text-slate-600">{material.unidad}</p>
+                        <p className="text-xs text-muted-foreground">{material.unidad}</p>
                       </div>
                       <Badge
                         variant={
@@ -138,19 +138,19 @@ export const TrazabilidadMaterialesPanel: React.FC<TrazabilidadMaterialesPanelPr
 
                     <div className="grid grid-cols-4 gap-2 text-xs">
                       <div>
-                        <p className="text-slate-600">Presupuestado</p>
+                        <p className="text-muted-foreground">Presupuestado</p>
                         <p className="font-semibold">{material.cantidad_presupuestada}</p>
                       </div>
                       <div>
-                        <p className="text-slate-600">Comprado</p>
+                        <p className="text-muted-foreground">Comprado</p>
                         <p className="font-semibold">{material.cantidad_comprada}</p>
                       </div>
                       <div>
-                        <p className="text-slate-600">Consumido</p>
+                        <p className="text-muted-foreground">Consumido</p>
                         <p className="font-semibold">{material.cantidad_consumida}</p>
                       </div>
                       <div>
-                        <p className="text-slate-600">Desperdicio</p>
+                        <p className="text-muted-foreground">Desperdicio</p>
                         <p className={`font-semibold ${material.desperdicio_porcentaje > 10 ? 'text-red-600' : 'text-green-600'}`}>
                           {material.desperdicio_porcentaje.toFixed(0)}%
                         </p>

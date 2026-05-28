@@ -1,6 +1,4 @@
-import { supabase } from '@/lib/supabase';
-
-type TipoNotificacion = 'info' | 'alerta' | 'exito' | 'warning';
+import { NotificacionesService, type TipoNotificacion } from '@/services/NotificacionesService';
 
 export async function crearNotificacion(
   userId: string,
@@ -8,15 +6,5 @@ export async function crearNotificacion(
   titulo: string,
   mensaje?: string,
 ): Promise<void> {
-  try {
-    await supabase.from('notificaciones').insert({
-      user_id: userId,
-      tipo,
-      titulo,
-      mensaje: mensaje || null,
-      leido: false,
-    } as any);
-  } catch (e) {
-    console.warn('Error creando notificación:', e);
-  }
+  return NotificacionesService.crear(userId, tipo, titulo, mensaje);
 }

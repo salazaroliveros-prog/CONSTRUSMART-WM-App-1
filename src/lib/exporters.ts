@@ -28,6 +28,7 @@ const EMPRESA = {
  */
 export function exportPresupuestoPDF(params: {
   proyecto: string; cliente: string; ubicacion: string; tipologia: string;
+  areaConstruccion?: number; nivelCalidad?: string;
   factorIndirectos: number; factorAdministrativos: number; factorImprevistos: number; factorUtilidad: number;
   lineas: LineaPresupuesto[];
   totales: {
@@ -37,7 +38,7 @@ export function exportPresupuestoPDF(params: {
   };
   tipo?: 'admin' | 'cliente';
 }) {
-  const { proyecto, cliente, ubicacion, tipologia, factorIndirectos, factorAdministrativos, factorImprevistos, factorUtilidad, lineas, totales, tipo = 'admin' } = params;
+  const { proyecto, cliente, ubicacion, tipologia, areaConstruccion, nivelCalidad, factorIndirectos, factorAdministrativos, factorImprevistos, factorUtilidad, lineas, totales, tipo = 'admin' } = params;
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = 190;
   const margin = 10;
@@ -110,6 +111,8 @@ export function exportPresupuestoPDF(params: {
       ['Cliente', cliente || 'N/A'],
       ['Ubicación', ubicacion || 'N/A'],
       ['Tipología', tipologia],
+      ['Área Construcción', `${params.areaConstruccion || 0} m²`],
+      ['Nivel de Calidad', params.nivelCalidad],
     ],
     theme: 'grid',
   });

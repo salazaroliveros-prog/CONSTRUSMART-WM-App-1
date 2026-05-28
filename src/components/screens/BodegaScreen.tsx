@@ -4,7 +4,7 @@ import PageShell from '@/components/shared/PageShell';
 import { MaterialesService } from '@/services/presupuestos/MaterialesService';
 import { BodegaService } from '@/services/proyectos/BodegaService';
 import { toast } from 'sonner';
-import { Package, Plus, Minus, AlertTriangle, Search, RefreshCw } from 'lucide-react';
+import { Package, Plus, Minus, AlertTriangle, Search } from 'lucide-react';
 
 interface MaterialRow {
   id: string;
@@ -30,13 +30,13 @@ const BodegaScreen: React.FC = () => {
   const { presupuestos } = useAppContext();
   const [selectedId, setSelectedId] = useState('');
   const [materiales, setMateriales] = useState<MaterialRow[]>([]);
-  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [showCompra, setShowCompra] = useState<MaterialRow | null>(null);
   const [compraCantidad, setCompraCantidad] = useState(0);
   const [compraRef, setCompraRef] = useState('');
   const [showUso, setShowUso] = useState<MaterialRow | null>(null);
   const [usoCantidad, setUsoCantidad] = useState(0);
+  const [saving, setSaving] = useState(false);
 
   const proyectos = useMemo<ProyectoSimple[]>(() => {
     return presupuestos.map((p) => ({
@@ -48,14 +48,13 @@ const BodegaScreen: React.FC = () => {
 
   const loadMateriales = useCallback(async () => {
     if (!selectedId) return;
-    setLoading(true);
     try {
       const items = await MaterialesService.getMateriales(selectedId);
       // Reemplazo de supabase.from directo por BodegaService
       const movs = await BodegaService.getMovimientos(selectedId);
 
       const movMap: Record<string, { comprado: number; consumido: number }> = {};
-      (movs || []).forEach((m: any) => {
+      (movs || []).forEach((m: Record<string, unknown>) => {
         const mid = m.material_id as string;
         if (!movMap[mid]) movMap[mid] = { comprado: 0, consumido: 0 };
         if (m.tipo === 'entrada') movMap[mid].comprado += Number(m.cantidad);
@@ -80,11 +79,8 @@ const BodegaScreen: React.FC = () => {
           };
         })
       );
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error('Error al cargar materiales');
-    } finally {
-      setLoading(false);
     }
   }, [selectedId]);
 
@@ -92,6 +88,7 @@ const BodegaScreen: React.FC = () => {
 
   const registrarCompra = async () => {
     if (!showCompra || compraCantidad <= 0) return;
+    setSaving(true);
     try {
       await BodegaService.registrarCompra(showCompra.id, compraCantidad, compraRef);
       toast.success('Compra registrada');
@@ -101,11 +98,14 @@ const BodegaScreen: React.FC = () => {
       loadMateriales();
     } catch (err) {
       toast.error('Error al registrar compra');
+    } finally {
+      setSaving(false);
     }
   };
 
   const registrarUso = async () => {
     if (!showUso || usoCantidad <= 0) return;
+    setSaving(true);
     try {
       await BodegaService.registrarUso(showUso.id, usoCantidad, `Uso manual`, undefined);
       toast.success('Uso registrado');
@@ -114,6 +114,8 @@ const BodegaScreen: React.FC = () => {
       loadMateriales();
     } catch (err) {
       toast.error('Error al registrar uso');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -121,101 +123,55 @@ const BodegaScreen: React.FC = () => {
     m.nombre.toLowerCase().includes(search.toLowerCase())
   );
 
-  const stats = {
-    total: materiales.length,
-    presupuestado: materiales.reduce((s, m) => s + m.cantidad_estimada, 0),
-    comprado: materiales.reduce((s, m) => s + m.comprado, 0),
-    consumido: materiales.reduce((s, m) => s + m.consumido, 0),
-    alertas: materiales.filter(
-      (m) => m.cantidad_estimada > 0 && (m.stock < 0 || m.comprado === 0)
-    ).length,
-  };
-
   return (
-    <PageShell showHome={false} title="Gestión de Bodega">
-      <div className="p-3 sm:p-5 max-w-[1400px] mx-auto space-y-4">
-        {/* Project Selector */}
-        <div className="bg-white rounded-xl shadow-md p-4">
-          <h3 className="font-bold text-sm text-slate-800 mb-3 flex items-center gap-2">
-            <Package className="w-4 h-4 text-blue-700" /> Seleccionar Proyecto
-          </h3>
-          <div className="flex gap-3 items-center">
-            <select
-              value={selectedId}
-              onChange={(e) => setSelectedId(e.target.value)}
-              className="flex-1 max-w-md px-3 py-2 border rounded-lg text-sm"
-            >
-              <option value="">-- Seleccione un proyecto --</option>
-              {proyectos.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nombre}
-                  {p.cliente ? ` — ${p.cliente}` : ''}
-                </option>
-              ))}
-            </select>
-            {selectedId && (
-              <button
-                onClick={loadMateriales}
-                className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm transition"
+    <PageShell title="Gestión de Bodega e Inventario">
+      <div className="flex flex-col p-3 sm:p-5 max-w-7xl mx-auto space-y-4 animate-fadeIn">
+        <div className="bg-card rounded-xl shadow-md p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Seleccionar Proyecto</label>
+              <select 
+                value={selectedId} 
+                onChange={(e) => setSelectedId(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm bg-background dark:bg-muted dark:border-border"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                Actualizar
-              </button>
-            )}
+                <option value="">Seleccione un proyecto...</option>
+                {proyectos.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre}
+                    {p.cliente ? ` — ${p.cliente}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Buscar Material</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                <input 
+                  type="text" 
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Nombre o código..."
+                  className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm bg-background dark:bg-muted dark:border-border"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        {selectedId && (
-          <>
-            {/* Summary Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-gradient-to-br from-blue-800 to-blue-700 text-white p-4 rounded-xl shadow-md">
-                <p className="text-xs opacity-80">Materiales</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-              <div className="bg-gradient-to-br from-emerald-800 to-emerald-700 text-white p-4 rounded-xl shadow-md">
-                <p className="text-xs opacity-80">Presupuestado</p>
-                <p className="text-2xl font-bold">{stats.presupuestado.toFixed(1)}</p>
-              </div>
-              <div className="bg-gradient-to-br from-amber-800 to-amber-700 text-white p-4 rounded-xl shadow-md">
-                <p className="text-xs opacity-80">Comprado</p>
-                <p className="text-2xl font-bold">{stats.comprado.toFixed(1)}</p>
-              </div>
-              <div
-                className={`bg-gradient-to-br ${stats.alertas > 0 ? 'from-red-800 to-red-700' : 'from-slate-800 to-slate-700'} text-white p-4 rounded-xl shadow-md`}
-              >
-                <p className="text-xs opacity-80">Alertas</p>
-                <p className="text-2xl font-bold">{stats.alertas}</p>
-              </div>
-            </div>
-
-            {/* Search */}
-            <div className="bg-white rounded-xl shadow-md p-3">
-              <div className="flex items-center gap-2">
-                <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Buscar material..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full text-sm border-b pb-1 outline-none focus:border-blue-500"
-                />
-                {search && (
-                  <button
-                    onClick={() => setSearch('')}
-                    className="text-xs text-blue-600 hover:underline"
-                  >
-                    Limpiar
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Material Table */}
-            <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        {!selectedId ? (
+          <div className="bg-card rounded-xl shadow-md p-12 text-center">
+            <Package className="w-16 h-12 mx-auto mb-4 text-muted-foreground opacity-20" />
+            <h3 className="text-lg font-semibold text-card-foreground">No se ha seleccionado proyecto</h3>
+            <p className="text-sm text-muted-foreground">Elija un proyecto arriba para ver el inventario de materiales.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4">
+            <div className="bg-card rounded-xl shadow-md overflow-hidden border dark:border-border">
               <div className="overflow-x-auto">
-                <table className="w-full text-xs responsive-table">
-                  <thead className="bg-gradient-to-r from-blue-800 to-blue-700 text-white">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-muted/50 dark:bg-muted/50 text-muted-foreground text-[10px] uppercase font-bold border-b dark:border-border">
                     <tr>
                       <th className="p-2.5 text-left">Material</th>
                       <th className="p-2.5 text-left">Unidad</th>
@@ -247,7 +203,7 @@ const BodegaScreen: React.FC = () => {
                           className="border-b hover:bg-blue-50/30 transition-colors"
                         >
                           <td className="p-2.5 font-medium">{m.nombre}</td>
-                          <td className="p-2.5 text-slate-500">{m.unidad}</td>
+                          <td className="p-2.5 text-muted-foreground">{m.unidad}</td>
                           <td className="p-2.5 text-right hidden sm:table-cell">
                             {m.cantidad_estimada.toFixed(1)}
                           </td>
@@ -260,14 +216,14 @@ const BodegaScreen: React.FC = () => {
                           <td className={`p-2.5 text-right ${stockColor}`}>
                             {m.stock.toFixed(1)}
                           </td>
-                          <td className="p-2.5 text-right text-slate-600 hidden lg:table-cell">
+                          <td className="p-2.5 text-right text-muted-foreground hidden lg:table-cell">
                             ${m.costo_unitario.toFixed(2)}
                           </td>
-                          <td className="p-2.5 text-slate-500 hidden md:table-cell">
+                          <td className="p-2.5 text-muted-foreground hidden md:table-cell">
                             {m.proveedor || '—'}
                           </td>
                           <td className="p-2.5 text-center">
-                            <div className="flex gap-1 justify-center">
+                            <div className="flex gap-1 justify-center animate-fade-in-up">
                               <button
                                 onClick={() => {
                                   setShowCompra(m);
@@ -296,7 +252,7 @@ const BodegaScreen: React.FC = () => {
                     })}
                     {filtered.length === 0 && (
                       <tr>
-                        <td colSpan={9} className="p-8 text-center text-slate-400">
+                        <td colSpan={9} className="p-8 text-center text-muted-foreground">
                           <Package className="w-8 h-8 mx-auto mb-2 opacity-30" />
                           {search
                             ? 'Sin resultados de búsqueda'
@@ -308,7 +264,7 @@ const BodegaScreen: React.FC = () => {
                 </table>
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
 
@@ -319,41 +275,40 @@ const BodegaScreen: React.FC = () => {
           onClick={() => setShowCompra(null)}
         >
           <div
-            className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-sm mx-3"
+            className="bg-card rounded-xl shadow-2xl p-5 w-full max-w-sm mx-3 border dark:border-border"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="font-bold text-sm mb-1">Registrar Compra</h3>
-            <p className="text-xs text-slate-500 mb-4">{showCompra.nombre}</p>
+            <h3 className="font-bold text-sm mb-1 text-card-foreground">Registrar Entrada / Compra</h3>
+            <p className="text-xs text-muted-foreground mb-4">{showCompra.nombre}</p>
             <input
               type="number"
               value={compraCantidad}
               onChange={(e) => setCompraCantidad(Number(e.target.value))}
               placeholder="Cantidad"
-              className="w-full px-3 py-2 border rounded-lg text-sm mb-2"
+              className="w-full px-3 py-2 border rounded-lg text-sm mb-2 bg-background dark:bg-muted dark:border-border"
               min={0}
-              step={0.01}
               autoFocus
             />
             <input
               type="text"
               value={compraRef}
               onChange={(e) => setCompraRef(e.target.value)}
-              placeholder="Referencia / factura"
-              className="w-full px-3 py-2 border rounded-lg text-sm mb-4"
+              placeholder="Referencia (ej. Factura #, OC)"
+              className="w-full px-3 py-2 border rounded-lg text-sm mb-4 bg-background dark:bg-muted dark:border-border"
             />
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setShowCompra(null)}
-                className="px-4 py-2 text-xs rounded-lg border text-slate-600 hover:bg-slate-50 transition"
+                className="px-4 py-2 text-xs rounded-lg border text-muted-foreground hover:bg-accent transition"
               >
                 Cancelar
               </button>
               <button
                 onClick={registrarCompra}
-                disabled={compraCantidad <= 0}
+                disabled={compraCantidad <= 0 || saving}
                 className="px-4 py-2 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 transition"
               >
-                Registrar Entrada
+                {saving ? 'Guardando...' : 'Registrar Entrada'}
               </button>
             </div>
           </div>
@@ -367,11 +322,11 @@ const BodegaScreen: React.FC = () => {
           onClick={() => setShowUso(null)}
         >
           <div
-            className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-sm mx-3"
+            className="bg-card rounded-xl shadow-2xl p-5 w-full max-w-sm mx-3 border dark:border-border"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="font-bold text-sm mb-1">Registrar Uso / Salida</h3>
-            <p className="text-xs text-slate-500 mb-4">{showUso.nombre}</p>
+            <h3 className="font-bold text-sm mb-1 text-card-foreground">Registrar Uso / Salida</h3>
+            <p className="text-xs text-muted-foreground mb-4">{showUso.nombre}</p>
             {showUso.stock <= 0 && (
               <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs p-2 rounded mb-3">
                 <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
@@ -383,7 +338,7 @@ const BodegaScreen: React.FC = () => {
               value={usoCantidad}
               onChange={(e) => setUsoCantidad(Number(e.target.value))}
               placeholder="Cantidad"
-              className="w-full px-3 py-2 border rounded-lg text-sm mb-4"
+              className="w-full px-3 py-2 border rounded-lg text-sm mb-4 bg-background dark:bg-muted dark:border-border"
               min={0}
               step={0.01}
               autoFocus
@@ -391,16 +346,16 @@ const BodegaScreen: React.FC = () => {
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setShowUso(null)}
-                className="px-4 py-2 text-xs rounded-lg border text-slate-600 hover:bg-slate-50 transition"
+                className="px-4 py-2 text-xs rounded-lg border text-muted-foreground hover:bg-accent transition"
               >
                 Cancelar
               </button>
               <button
                 onClick={registrarUso}
-                disabled={usoCantidad <= 0}
+                disabled={usoCantidad <= 0 || saving}
                 className="px-4 py-2 text-xs rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-40 transition"
               >
-                Registrar Salida
+                {saving ? 'Guardando...' : 'Registrar Salida'}
               </button>
             </div>
           </div>
@@ -410,4 +365,4 @@ const BodegaScreen: React.FC = () => {
   );
 };
 
-export default BodegaScreen;
+export default React.memo(BodegaScreen);

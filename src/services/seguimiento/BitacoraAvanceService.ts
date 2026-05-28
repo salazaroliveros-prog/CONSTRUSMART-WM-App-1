@@ -19,9 +19,10 @@ export const BitacoraAvanceService = {
     notas: string;
     fecha: string;
   }) {
+    const { data: { user } } = await supabase.auth.getUser();
     const { data, error } = await supabase
       .from('bitacora_avance')
-      .insert(payload)
+      .insert({ ...payload, user_id: user?.id })
       .select()
       .single();
 

@@ -16,7 +16,7 @@ import OfflineBanner from '@/components/shared/OfflineBanner';
 import DevDiagnostics from '@/dev/DevDiagnostics';
 import { Loader2 } from 'lucide-react';
 
-const viewOrder = ['login', 'dashboard', 'clientes', 'presupuesto', 'proyectos', 'seguimiento', 'financiero', 'equipos', 'bodega', 'cotizacion', 'compras'];
+const viewOrder = ['login', 'dashboard', 'clientes', 'presupuesto', 'proyectos', 'seguimiento', 'financiero', 'equipos', 'bodega', 'cotizacion', 'compras', 'aprobacion'];
 
 const AppLayout: React.FC = () => {
   const { view, session, loading } = useAuthContext();
@@ -63,7 +63,7 @@ const AppLayout: React.FC = () => {
       case 'bodega': return <BodegaScreen />;
       case 'cotizacion': return <CotizacionScreen />;
       case 'compras': return <ComprasScreen />;
-      default: return <Dashboard />;
+      case 'aprobacion': return <AprobacionScreen />;
     }
   };
 

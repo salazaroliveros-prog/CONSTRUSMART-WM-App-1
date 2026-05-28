@@ -7,17 +7,17 @@ import { toast } from 'sonner';
 
 type Fase = Presupuesto['fase'];
 const nextFase: Record<Fase, { label: string; icon: React.ComponentType<{ className?: string }>; color: string; fase: Fase } | null> = {
-  'planeación': { label: 'Iniciar Ejecución', icon: Play, color: 'bg-blue-600 hover:bg-blue-700', fase: 'ejecución' },
+  'planeación': { label: 'Iniciar Ejecución', icon: Play, color: 'bg-primary hover:bg-primary/90', fase: 'ejecución' },
   'ejecución': { label: 'Pausar', icon: PauseCircle, color: 'bg-amber-500 hover:bg-amber-600', fase: 'pausa' },
-  'pausa': { label: 'Reanudar', icon: Play, color: 'bg-blue-600 hover:bg-blue-700', fase: 'ejecución' },
+  'pausa': { label: 'Reanudar', icon: Play, color: 'bg-primary hover:bg-primary/90', fase: 'ejecución' },
   'finalizado': null,
 };
 const faseLabels: Record<Fase, string> = { 'planeación': 'Planeación', 'ejecución': 'Ejecución', 'pausa': 'Pausa', 'finalizado': 'Finalizado' };
 const faseColors: Record<Fase, string> = {
-  'planeación': 'bg-purple-100 text-purple-800 border-purple-300',
-  'ejecución': 'bg-blue-100 text-blue-800 border-blue-300',
-  'pausa': 'bg-amber-100 text-amber-800 border-amber-300',
-  'finalizado': 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  'planeación': 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800',
+  'ejecución': 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
+  'pausa': 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800',
+  'finalizado': 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800',
 };
 const faseBadgeColors: Record<Fase, string> = {
   'planeación': 'from-purple-500 to-purple-600',
@@ -59,6 +59,7 @@ const ProyectosScreen: React.FC = () => {
     ingresos: 0, gastos: 0, pendienteAportar: 0, avanceFisico: 0, avanceFinanciero: 0,
   });
   const [renglonAvances, setRenglonAvances] = useState<Record<string, number>>({});
+  const [saving, setSaving] = useState(false);
 
   const filtrados = useMemo(() => {
     let r = presupuestos;
@@ -84,21 +85,27 @@ const ProyectosScreen: React.FC = () => {
   };
 
   const saveEditing = async (id: string) => {
+    setSaving(true);
     try {
       await updatePresupuesto(id, editForm);
       setEditingId(null);
       toast.success('Datos financieros actualizados');
     } catch {
       toast.error('Error al actualizar');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: string, proyecto: string) => {
     if (!window.confirm(`¿Eliminar el proyecto "${proyecto}"? Esta acción no se puede deshacer.`)) return;
+    setSaving(true);
     try {
       await deletePresupuesto(id);
     } catch {
       toast.error('Error al eliminar proyecto');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -132,25 +139,27 @@ const ProyectosScreen: React.FC = () => {
     const updated = current.map(r => ({ ...r, avance: Number((renglonAvances[r.id] ?? r.avance) || 0) }));
     const total = current.reduce((s, r) => s + CalcularSubtotal(r), 0);
     const ponderado = total === 0 ? 0 : current.reduce((s, r) => s + (Number((renglonAvances[r.id] ?? r.avance) || 0)) * CalcularSubtotal(r), 0) / total;
+    setSaving(true);
     try {
       await updatePresupuesto(presupuestoId, { lineas: updated, avanceFisico: Math.round(ponderado) });
       toast.success(`Avances guardados — Progreso general: ${Math.round(ponderado)}%`);
       setRenglonAvances({});
     } catch { toast.error('Error al guardar avances'); }
+    finally { setSaving(false); }
   }, [renglonAvances, updatePresupuesto]);
 
   return (
     <PageShell showHome={false} title="Proyectos por Fase">
       <div className="p-3 sm:p-5 max-w-[1600px] mx-auto space-y-4">
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <button onClick={() => setFiltroFase('todas')}
-            className={`p-3 rounded-xl shadow-sm border text-left transition ${filtroFase === 'todas' ? 'bg-blue-900 text-white border-blue-800' : 'bg-white hover:bg-slate-50'}`}>
+            className={`p-3 rounded-xl shadow-sm border text-left transition ${filtroFase === 'todas' ? 'bg-primary text-primary-foreground border-primary' : 'bg-card hover:bg-muted dark:hover:bg-accent dark:border-border'}`}>
             <div className="text-lg font-bold">{stats.total}</div>
             <div className="text-[10px] uppercase tracking-wider opacity-70">Todos</div>
           </button>
           {FASES.map(f => (
             <button key={f} onClick={() => setFiltroFase(f)}
-              className={`p-3 rounded-xl shadow-sm border text-left transition ${filtroFase === f ? `${faseBadgeColors[f]} text-white` : 'bg-white hover:bg-slate-50'}`}>
+              className={`p-3 rounded-xl shadow-sm border text-left transition ${filtroFase === f ? `${faseBadgeColors[f]} text-white` : 'bg-card hover:bg-muted dark:hover:bg-accent dark:border-border'}`}>
               <div className="text-lg font-bold">{stats.porFase[f]}</div>
               <div className="text-[10px] uppercase tracking-wider opacity-70">{faseLabels[f]}</div>
             </button>
@@ -158,14 +167,14 @@ const ProyectosScreen: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <input placeholder="Buscar proyecto..." value={search} onChange={e => setSearch(e.target.value)}
-            className="flex-1 px-3 py-2 text-sm border rounded-lg" />
-          <Filter className="w-4 h-4 text-slate-400" />
+            <input placeholder="Buscar proyecto..." value={search} onChange={e => setSearch(e.target.value)}
+            className="input-standard" />
+          <Filter className="w-4 h-4 text-muted-foreground" />
         </div>
 
         <div className="space-y-2">
           {filtrados.length === 0 && (
-            <div className="bg-white rounded-xl p-10 text-center text-slate-400 text-sm">
+            <div className="card-standard p-10 text-center text-muted-foreground text-sm">
               <Folder className="w-12 h-12 mx-auto mb-2 opacity-30" />
               No hay proyectos en esta categoría
             </div>
@@ -181,62 +190,62 @@ const ProyectosScreen: React.FC = () => {
               const renglones = parseLineas(p.lineas);
               const totalRenglones = renglones.reduce((s, r) => s + CalcularSubtotal(r), 0);
               return (
-                <div key={p.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition">
+                <div key={p.id} className="bg-card dark:bg-card rounded-xl shadow-sm border border-border overflow-hidden hover:shadow-md transition">
                   {/* Cabecera */}
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-bold text-slate-900 text-sm">{p.proyecto}</h3>
+                          <h3 className="font-bold text-card-foreground text-sm">{p.proyecto}</h3>
                           <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${faseColors[p.fase]}`}>{faseLabels[p.fase]}</span>
                         </div>
-                        <div className="text-xs text-slate-500 mt-1">{p.cliente || 'Sin cliente'} · {p.tipologia || 'General'}</div>
+                        <div className="text-xs text-muted-foreground mt-1">{p.cliente || 'Sin cliente'} · {p.tipologia || 'General'}</div>
 
                         {isEditing ? (
                           <div className="mt-2 grid grid-cols-2 md:grid-cols-5 gap-2">
                             <div>
-                              <label className="text-[9px] font-semibold text-slate-500">Ingresos (Q)</label>
+                              <label className="text-[9px] font-semibold text-muted-foreground">Ingresos (Q)</label>
                               <input type="number" value={editForm.ingresos}
                                 onChange={e => setEditForm(f => ({ ...f, ingresos: parseFloat(e.target.value) || 0 }))}
-                                className="w-full px-2 py-1 text-xs border rounded" />
+                                className="input-standard" />
                             </div>
                             <div>
-                              <label className="text-[9px] font-semibold text-slate-500">Gastos (Q)</label>
+                              <label className="text-[9px] font-semibold text-muted-foreground">Gastos (Q)</label>
                               <input type="number" value={editForm.gastos}
                                 onChange={e => setEditForm(f => ({ ...f, gastos: parseFloat(e.target.value) || 0 }))}
-                                className="w-full px-2 py-1 text-xs border rounded" />
+                                className="input-standard" />
                             </div>
                             <div>
-                              <label className="text-[9px] font-semibold text-slate-500">Pendiente (Q)</label>
+                              <label className="text-[9px] font-semibold text-muted-foreground">Pendiente (Q)</label>
                               <input type="number" value={editForm.pendienteAportar}
                                 onChange={e => setEditForm(f => ({ ...f, pendienteAportar: parseFloat(e.target.value) || 0 }))}
-                                className="w-full px-2 py-1 text-xs border rounded" />
+                                className="input-standard" />
                             </div>
                             <div>
-                              <label className="text-[9px] font-semibold text-slate-500">Avance Físico %</label>
+                              <label className="text-[9px] font-semibold text-muted-foreground">Avance Físico %</label>
                               <input type="number" min={0} max={100} value={editForm.avanceFisico}
                                 onChange={e => setEditForm(f => ({ ...f, avanceFisico: parseFloat(e.target.value) || 0 }))}
-                                className="w-full px-2 py-1 text-xs border rounded" />
+                                className="input-standard" />
                             </div>
                             <div>
-                              <label className="text-[9px] font-semibold text-slate-500">Avance Financiero %</label>
+                              <label className="text-[9px] font-semibold text-muted-foreground">Avance Financiero %</label>
                               <input type="number" min={0} max={100} value={editForm.avanceFinanciero}
                                 onChange={e => setEditForm(f => ({ ...f, avanceFinanciero: parseFloat(e.target.value) || 0 }))}
-                                className="w-full px-2 py-1 text-xs border rounded" />
+                                className="input-standard" />
                             </div>
                           </div>
                         ) : (
-                          <div className="flex gap-4 mt-2 text-xs text-slate-600 flex-wrap">
-                            <span>Total: <strong className="text-blue-900">Q {(p.total || 0).toLocaleString()}</strong></span>
+                          <div className="flex gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
+                            <span>Total: <strong className="text-blue-900 dark:text-blue-400">Q {(p.total || 0).toLocaleString()}</strong></span>
                             <span>Avance: <strong>{p.avanceFisico || 0}%</strong></span>
-                            <span>Ingresos: <strong className="text-emerald-700">Q {(p.ingresos || 0).toLocaleString()}</strong></span>
-                            <span>Gastos: <strong className="text-red-700">Q {(p.gastos || 0).toLocaleString()}</strong></span>
-                            <span>Pendiente: <strong className="text-amber-700">Q {(p.pendienteAportar || 0).toLocaleString()}</strong></span>
+                            <span>Ingresos: <strong className="text-emerald-700 dark:text-emerald-400">Q {(p.ingresos || 0).toLocaleString()}</strong></span>
+                            <span>Gastos: <strong className="text-red-700 dark:text-red-400">Q {(p.gastos || 0).toLocaleString()}</strong></span>
+                            <span>Pendiente: <strong className="text-amber-700 dark:text-amber-400">Q {(p.pendienteAportar || 0).toLocaleString()}</strong></span>
                             {renglones.length > 0 && <span>Renglones: <strong>{renglones.length}</strong></span>}
                           </div>
                         )}
                         {p.fase === 'ejecución' && !isEditing && (
-                          <div className="mt-2 bg-slate-100 rounded-full h-1.5 max-w-[200px] overflow-hidden">
+                          <div className="mt-2 bg-muted rounded-full h-1.5 max-w-[200px] overflow-hidden">
                             <div className="bg-blue-600 h-full rounded-full" style={{ width: `${p.avanceFisico || 0}%` }} />
                           </div>
                         )}
@@ -245,42 +254,42 @@ const ProyectosScreen: React.FC = () => {
                         {/* Expandir / Detalle */}
                         {renglones.length > 0 && (
                           <button onClick={() => setExpandedId(isExpanded ? null : p.id)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+                            className="btn-secondary">
                             {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                             {isExpanded ? 'Cerrar' : 'Renglones'}
                           </button>
                         )}
                         {isEditing ? (
                           <>
-                            <button onClick={() => saveEditing(p.id)}
-                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition">
-                              <Save className="w-3.5 h-3.5" /> Guardar
+                            <button onClick={() => saveEditing(p.id)} disabled={saving}
+                              className="btn-success">
+                              <Save className="w-3.5 h-3.5" /> {saving ? 'Guardando...' : 'Guardar'}
                             </button>
                             <button onClick={() => setEditingId(null)}
-                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-300 hover:bg-slate-400 text-slate-700 transition">
+                              className="btn-secondary">
                               <X className="w-3.5 h-3.5" /> Cancelar
                             </button>
                           </>
                         ) : (
                           <>
                             <button onClick={() => startEditing(p)}
-                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+                              className="btn-secondary">
                               <Edit3 className="w-3.5 h-3.5" /> Editar
                             </button>
                             {accion && (
-                              <button onClick={() => transicionFase(p.id, accion.fase)}
-                                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white ${accion.color} transition`}>
-                                <accion.icon className="w-3.5 h-3.5" /> {accion.label}
-                              </button>
+                            <button onClick={() => transicionFase(p.id, accion.fase)} disabled={saving}
+                              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white ${accion.color} transition disabled:opacity-50`}>
+                              <accion.icon className="w-3.5 h-3.5" /> {accion.label}
+                            </button>
                             )}
                             {p.fase !== 'finalizado' && (
-                              <button onClick={() => transicionFase(p.id, 'finalizado')}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition">
+                              <button onClick={() => transicionFase(p.id, 'finalizado')} disabled={saving}
+                                className="btn-success disabled:opacity-50">
                                 <CheckCircle className="w-3.5 h-3.5" /> Finalizar
                               </button>
                             )}
-                            <button onClick={() => handleDelete(p.id, p.proyecto)}
-                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 hover:bg-red-200 text-red-600 transition">
+                            <button onClick={() => handleDelete(p.id, p.proyecto)} disabled={saving}
+                              className="btn-ghost text-red-600 hover:bg-red-100 dark:hover:bg-red-950/30 disabled:opacity-50">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </>
@@ -291,56 +300,56 @@ const ProyectosScreen: React.FC = () => {
 
                   {/* Panel expandible: Renglones + Financiero */}
                   {isExpanded && renglones.length > 0 && (
-                    <div className="border-t border-slate-100 bg-slate-50/50">
+                    <div className="border-t border-border bg-muted/50">
                       <div className="p-4 space-y-3">
                         {/* Resumen financiero */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          <div className="bg-white rounded-lg border border-slate-200 p-3">
-                            <div className="flex items-center gap-1.5 text-emerald-600 text-[10px] font-semibold uppercase tracking-wider mb-1">
+                          <div className="card-section">
+                            <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold uppercase tracking-wider mb-1">
                               <TrendingUp className="w-3 h-3" /> Ingresos
                             </div>
-                            <div className="text-lg font-bold text-slate-900">Q {(p.ingresos || 0).toLocaleString()}</div>
+                            <div className="text-lg font-bold text-card-foreground">Q {(p.ingresos || 0).toLocaleString()}</div>
                           </div>
-                          <div className="bg-white rounded-lg border border-slate-200 p-3">
-                            <div className="flex items-center gap-1.5 text-red-600 text-[10px] font-semibold uppercase tracking-wider mb-1">
+                          <div className="card-section">
+                            <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400 text-[10px] font-semibold uppercase tracking-wider mb-1">
                               <TrendingDown className="w-3 h-3" /> Gastos
                             </div>
-                            <div className="text-lg font-bold text-slate-900">Q {(p.gastos || 0).toLocaleString()}</div>
+                            <div className="text-lg font-bold text-card-foreground">Q {(p.gastos || 0).toLocaleString()}</div>
                           </div>
-                          <div className="bg-white rounded-lg border border-slate-200 p-3">
-                            <div className="flex items-center gap-1.5 text-amber-600 text-[10px] font-semibold uppercase tracking-wider mb-1">
+                          <div className="card-section">
+                            <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-[10px] font-semibold uppercase tracking-wider mb-1">
                               <DollarSign className="w-3 h-3" /> Pendiente
                             </div>
-                            <div className="text-lg font-bold text-slate-900">Q {(p.pendienteAportar || 0).toLocaleString()}</div>
+                            <div className="text-lg font-bold text-card-foreground">Q {(p.pendienteAportar || 0).toLocaleString()}</div>
                           </div>
-                          <div className="bg-white rounded-lg border border-slate-200 p-3">
-                            <div className="flex items-center gap-1.5 text-blue-700 text-[10px] font-semibold uppercase tracking-wider mb-1">
+                          <div className="card-section">
+                            <div className="flex items-center gap-1.5 text-blue-700 dark:text-blue-400 text-[10px] font-semibold uppercase tracking-wider mb-1">
                               <Ruler className="w-3 h-3" /> Costo Directo
                             </div>
-                            <div className="text-lg font-bold text-slate-900">Q {(p.costo_directo || 0).toLocaleString()}</div>
+                            <div className="text-lg font-bold text-card-foreground">Q {(p.costo_directo || 0).toLocaleString()}</div>
                           </div>
                         </div>
 
                         {/* Tabla de renglones */}
-                        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                          <div className="bg-slate-100 px-3 py-2 flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                        <div className="card-standard !p-0 overflow-hidden">
+                          <div className="bg-muted px-3 py-2 flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                               Renglones de presupuesto ({renglones.length})
                             </span>
-                            <span className="text-[10px] font-bold text-blue-700">
+                            <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400">
                               Avance total: {Math.round(avancePonderado(renglones))}%
                             </span>
                           </div>
                           <div className="overflow-x-auto max-h-80 overflow-y-auto">
                             <table className="w-full text-[11px]">
-                              <thead className="sticky top-0 bg-slate-50">
-                                <tr className="border-b border-slate-200">
-                                  <th className="text-left px-3 py-2 font-semibold text-slate-600">Código</th>
-                                  <th className="text-left px-3 py-2 font-semibold text-slate-600">Descripción</th>
-                                  <th className="text-right px-3 py-2 font-semibold text-slate-600">Cant.</th>
-                                  <th className="text-right px-3 py-2 font-semibold text-slate-600">Unidad</th>
-                                  <th className="text-right px-3 py-2 font-semibold text-slate-600">Subtotal (Q)</th>
-                                  <th className="text-center px-3 py-2 font-semibold text-slate-600">Avance %</th>
+                              <thead className="sticky top-0 bg-muted">
+                                <tr className="border-b border-border">
+                                  <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Código</th>
+                                  <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Descripción</th>
+                                  <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Cant.</th>
+                                  <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Unidad</th>
+                                  <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Subtotal (Q)</th>
+                                  <th className="text-center px-3 py-2 font-semibold text-muted-foreground">Avance %</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -348,12 +357,12 @@ const ProyectosScreen: React.FC = () => {
                                   const av = renglonAvances[r.id] ?? r.avance;
                                   const sub = CalcularSubtotal(r);
                                   return (
-                                    <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50">
-                                      <td className="px-3 py-2 text-slate-500 font-mono">{r.codigo}</td>
-                                      <td className="px-3 py-2 font-medium text-slate-800 max-w-[200px] truncate">{r.descripcion}</td>
-                                      <td className="px-3 py-2 text-right text-slate-700">{r.cantidad} <span className="text-slate-400">{r.unidad}</span></td>
-                                      <td className="px-3 py-2 text-right text-slate-500">{r.unidad}</td>
-                                      <td className="px-3 py-2 text-right font-medium text-blue-800">Q {sub.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
+                                    <tr key={r.id} className="border-b border-border/50 hover:bg-muted">
+                                      <td className="px-3 py-2 text-muted-foreground font-mono">{r.codigo}</td>
+                                      <td className="px-3 py-2 font-medium text-card-foreground max-w-[200px] truncate">{r.descripcion}</td>
+                                      <td className="px-3 py-2 text-right text-card-foreground">{r.cantidad} <span className="text-muted-foreground">{r.unidad}</span></td>
+                                      <td className="px-3 py-2 text-right text-muted-foreground">{r.unidad}</td>
+                                      <td className="px-3 py-2 text-right font-medium text-blue-800 dark:text-blue-400">Q {sub.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
                                       <td className="px-3 py-2 text-center">
                                         <div className="flex items-center justify-center gap-1.5">
                                           <input type="range" min={0} max={100} value={av}
@@ -361,7 +370,7 @@ const ProyectosScreen: React.FC = () => {
                                             className="w-20 h-1.5 accent-blue-600 cursor-pointer" />
                                           <input type="number" min={0} max={100} value={av}
                                             onChange={e => setRenglonAvances(p => ({ ...p, [r.id]: Math.min(100, Math.max(0, Number(e.target.value) || 0)) }))}
-                                            className="w-12 px-1 py-0.5 text-[10px] border rounded text-right" />
+                                            className="w-12 px-1 py-0.5 text-[10px] border rounded text-right bg-card dark:bg-muted border-border" />
                                         </div>
                                       </td>
                                     </tr>
@@ -369,18 +378,18 @@ const ProyectosScreen: React.FC = () => {
                                 })}
                               </tbody>
                               <tfoot>
-                                <tr className="bg-blue-50">
-                                  <td colSpan={4} className="px-3 py-2 text-right font-bold text-slate-700">TOTAL RENGLONES</td>
-                                  <td className="px-3 py-2 text-right font-bold text-blue-900">Q {totalRenglones.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
-                                  <td className="px-3 py-2 text-center font-bold text-blue-800">
+                                <tr className="bg-blue-50 dark:bg-blue-950/20">
+                                  <td colSpan={4} className="px-3 py-2 text-right font-bold text-card-foreground">TOTAL RENGLONES</td>
+                                  <td className="px-3 py-2 text-right font-bold text-blue-900 dark:text-blue-400">Q {totalRenglones.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
+                                  <td className="px-3 py-2 text-center font-bold text-blue-800 dark:text-blue-400">
                                     <div className="flex items-center justify-center gap-2">
                                       <Percent className="w-3 h-3" />
                                       {Math.round(avancePonderado(renglones))}%
                                       {Object.keys(renglonAvances).length > 0 && (
-                                        <button onClick={() => guardarAvancesRenglones(p.id, p)}
-                                          className="ml-1 px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500 hover:bg-emerald-600 text-white">
-                                          Guardar
-                                        </button>
+                                          <button onClick={() => guardarAvancesRenglones(p.id, p)} disabled={saving}
+                                            className="ml-1 px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-50">
+                                            {saving ? 'Guardando...' : 'Guardar'}
+                                          </button>
                                       )}
                                     </div>
                                   </td>
@@ -392,20 +401,20 @@ const ProyectosScreen: React.FC = () => {
 
                         {/* Factores del presupuesto */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">
-                          <div className="bg-white rounded border border-slate-200 px-3 py-2">
-                            <span className="text-slate-500">Indirectos:</span>{' '}
+                          <div className="card-section">
+                            <span className="text-muted-foreground">Indirectos:</span>{' '}
                             <span className="font-semibold">{p.factor_indirectos || 0}%</span>
                           </div>
-                          <div className="bg-white rounded border border-slate-200 px-3 py-2">
-                            <span className="text-slate-500">Administrativos:</span>{' '}
+                          <div className="card-section">
+                            <span className="text-muted-foreground">Administrativos:</span>{' '}
                             <span className="font-semibold">{p.factor_administrativos || 0}%</span>
                           </div>
-                          <div className="bg-white rounded border border-slate-200 px-3 py-2">
-                            <span className="text-slate-500">Imprevistos:</span>{' '}
+                          <div className="card-section">
+                            <span className="text-muted-foreground">Imprevistos:</span>{' '}
                             <span className="font-semibold">{p.factor_imprevistos || 0}%</span>
                           </div>
-                          <div className="bg-white rounded border border-slate-200 px-3 py-2">
-                            <span className="text-slate-500">Utilidad:</span>{' '}
+                          <div className="card-section">
+                            <span className="text-muted-foreground">Utilidad:</span>{' '}
                             <span className="font-semibold">{p.factor_utilidad || 0}%</span>
                           </div>
                         </div>

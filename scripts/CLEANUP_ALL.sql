@@ -19,13 +19,16 @@ BEGIN
 END $$;
 
 -- 2. ELIMINAR TRIGGERS
-DROP TRIGGER IF EXISTS trg_presupuestos_updated_at ON public.presupuestos;
+-- Los triggers se eliminarán automáticamente con DROP TABLE ... CASCADE
 
 -- 3. ELIMINAR FUNCIONES (CASCADE por si quedan dependencias)
 DROP FUNCTION IF EXISTS public.fn_set_updated_at() CASCADE;
 DROP FUNCTION IF EXISTS public.user_owns_equipo(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.user_owns_presupuesto(uuid) CASCADE;
 
 -- 4. ELIMINAR TABLAS (orden inverso al de creación para respetar FKs)
+DROP TABLE IF EXISTS public.ocr_documentos CASCADE; -- New table
+DROP TABLE IF EXISTS public.device_tokens CASCADE; -- New table
 DROP TABLE IF EXISTS public.recepcion_oc_items CASCADE;
 DROP TABLE IF EXISTS public.recepcion_oc CASCADE;
 DROP TABLE IF EXISTS public.orden_compra_items CASCADE;
@@ -51,6 +54,7 @@ DROP TABLE IF EXISTS public.transacciones CASCADE;
 DROP TABLE IF EXISTS public.presupuestos CASCADE;
 DROP TABLE IF EXISTS public.proyectos CASCADE;
 DROP TABLE IF EXISTS public.clientes CASCADE;
+
 
 -- 5. ELIMINAR EXTENSIONES (opcional — comentar si se usan en otros proyectos)
 -- DROP EXTENSION IF EXISTS "uuid-ossp";

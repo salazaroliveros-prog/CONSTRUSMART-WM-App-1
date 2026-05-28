@@ -176,6 +176,22 @@ const RecepcionOCItemSchema = z.object({
   created_at: z.string().optional(),
 });
 
+const OcrDocumentoSchema = z.object({
+  id: z.string().optional(),
+  user_id: z.string().min(1, 'user_id requerido'),
+  file_url: z.string().min(1, 'file_url requerido'),
+  ocr_data: z.any().optional(),
+  status: z.enum(['pending', 'processing', 'completed', 'failed']).default('pending'),
+  created_at: z.string().optional(),
+});
+
+const DeviceTokenSchema = z.object({
+  id: z.string().optional(),
+  user_id: z.string().min(1, 'user_id requerido'),
+  token: z.string().min(1, 'token requerido'),
+  created_at: z.string().optional(),
+});
+
 // ====== Tipos TypeScript inferidos de Zod ======
 export type DBCliente = z.infer<typeof ClienteSchema>;
 export type DBProyecto = z.infer<typeof ProyectoSchema>;
@@ -189,6 +205,8 @@ export type DBOrdenCompra = z.infer<typeof OrdenCompraSchema>;
 export type DBOrdenCompraItem = z.infer<typeof OrdenCompraItemSchema>;
 export type DBRecepcionOC = z.infer<typeof RecepcionOCSchema>;
 export type DBRecepcionOCItem = z.infer<typeof RecepcionOCItemSchema>;
+export type DBOcrDocumento = z.infer<typeof OcrDocumentoSchema>;
+export type DBDeviceToken = z.infer<typeof DeviceTokenSchema>;
 
 // ====== Tipos de interfaz para la aplicación (transformados) ======
 export interface Cliente {
@@ -454,7 +472,7 @@ export interface RecepcionOCItem {
 }
 export type CreateRecepcionOCItem = Omit<RecepcionOCItem, 'id' | 'created_at'>;
 
-export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos' | 'bodega' | 'cotizacion' | 'compras';
+export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos' | 'bodega' | 'cotizacion' | 'compras' | 'aprobacion';
 
 export interface User {
   nombre: string;
@@ -798,7 +816,7 @@ export const ordenCompraItemToDb = (item: UpdateOrdenCompraItem): Partial<DBOrde
   if (item.precioUnitario !== undefined) out.precio_unitario = item.precioUnitario;
   if (item.importe !== undefined) out.importe = item.importe;
   if (item.cantidadRecibida !== undefined) out.cantidad_recibida = item.cantidadRecibida;
-  if ((item as any).materialId !== undefined) out.material_id = (item as any).materialId;
+  if (item.materialId !== undefined) out.material_id = item.materialId;
   return out as Partial<DBOrdenCompraItem>;
 };
 

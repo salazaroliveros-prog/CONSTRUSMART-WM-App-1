@@ -123,19 +123,19 @@ const GanttView: React.FC<GanttViewProps> = ({ proyectoId }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3">
+    <div className="bg-card dark:bg-card rounded-xl shadow-sm border border-border p-3">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-bold text-slate-700">Línea de Tiempo Gantt</h3>
+        <h3 className="text-xs font-bold text-card-foreground">Línea de Tiempo Gantt</h3>
         <div className="flex gap-1">
-          <button onClick={() => setSemanaOffset(s => s - 4)} className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded">‹ Anterior</button>
-          <button onClick={() => setSemanaOffset(0)} className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded">Hoy</button>
-          <button onClick={() => setSemanaOffset(s => s + 4)} className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded">Siguiente ›</button>
+          <button onClick={() => setSemanaOffset(s => s - 4)} className="text-[10px] px-2 py-0.5 bg-muted hover:bg-accent rounded">‹ Anterior</button>
+          <button onClick={() => setSemanaOffset(0)} className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary hover:bg-primary/20 rounded">Hoy</button>
+          <button onClick={() => setSemanaOffset(s => s + 4)} className="text-[10px] px-2 py-0.5 bg-muted hover:bg-accent rounded">Siguiente ›</button>
         </div>
       </div>
 
-      <div className="flex border-b border-slate-200 pb-1 mb-1" style={{ marginLeft: '140px' }}>
+      <div className="flex border-b border-border pb-1 mb-1" style={{ marginLeft: '140px' }}>
         {semanas.map((s, i) => (
-          <div key={i} className="flex-1 text-[8px] text-slate-400 text-center" style={{ minWidth: 0 }}>
+          <div key={i} className="flex-1 text-[8px] text-muted-foreground text-center" style={{ minWidth: 0 }}>
             <div>{s.getDate()}</div>
             <div>{MESES[s.getMonth()]}</div>
           </div>
@@ -150,17 +150,17 @@ const GanttView: React.FC<GanttViewProps> = ({ proyectoId }) => {
           return (
             <div key={p.id}>
               <div className="flex items-center gap-2">
-                <div className="text-[10px] font-medium text-slate-700 truncate shrink-0 flex items-center gap-1" style={{ width: '130px' }}>
+                <div className="text-[10px] font-medium text-card-foreground truncate shrink-0 flex items-center gap-1" style={{ width: '130px' }}>
                   {p.actividades.length > 0 && (
-                    <button onClick={() => toggleExpand(p.id)} className="text-slate-400 hover:text-slate-600 p-0.5">
+                    <button onClick={() => toggleExpand(p.id)} className="text-muted-foreground hover:text-card-foreground p-0.5">
                       {expanded.has(p.id) ? '▾' : '▸'}
                     </button>
                   )}
                   <span className="truncate">{p.proyecto}</span>
                 </div>
-                <div className="flex-1 relative h-5 bg-slate-100 rounded">
+                <div className="flex-1 relative h-5 bg-muted rounded">
                   <div
-                    className={`absolute h-full rounded ${faseColor[p.fase] || 'bg-slate-400'} opacity-80 hover:opacity-100 transition-opacity cursor-pointer`}
+                    className={`absolute h-full rounded ${faseColor[p.fase] || 'bg-muted-foreground'} opacity-80 hover:opacity-100 transition-opacity cursor-pointer`}
                     style={{ left: leftPct, width: widthPct, minWidth: '4px' }}
                     title={`${p.proyecto} · ${p.fase} · Avance: ${p.avanceFisico}%`}
                   >
@@ -179,11 +179,11 @@ const GanttView: React.FC<GanttViewProps> = ({ proyectoId }) => {
                     : 'bg-blue-400';
                 return (
                   <div key={i} className="flex items-center gap-2 pl-4">
-                    <div className="text-[8px] text-slate-500 truncate shrink-0 italic flex items-center gap-1" style={{ width: '126px' }}>
+                    <div className="text-[8px] text-muted-foreground truncate shrink-0 italic flex items-center gap-1" style={{ width: '126px' }}>
                       {act.esCritica && <span className="text-red-500 font-bold" title="Ruta crítica">⚠</span>}
                       <span className="truncate">{act.nombre}</span>
                     </div>
-                    <div className="flex-1 relative h-3 bg-slate-50 rounded">
+                    <div className="flex-1 relative h-3 bg-muted/50 rounded">
                       <div
                         className={`absolute h-full rounded ${barColor} ${act.esCritica ? 'opacity-90' : 'opacity-70'}`}
                         style={{ left: aLeft, width: aWidth, minWidth: '3px' }}
@@ -197,7 +197,7 @@ const GanttView: React.FC<GanttViewProps> = ({ proyectoId }) => {
           );
         })}
         {proyectos.length === 0 && (
-          <div className="text-center text-[10px] text-slate-400 py-6">Sin proyectos activos</div>
+          <div className="text-center text-[10px] text-muted-foreground py-6">Sin proyectos activos</div>
         )}
       </div>
     </div>

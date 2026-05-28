@@ -171,9 +171,9 @@ export const ConciliacionBancariaPanel: React.FC<ConciliacionBancariaProps> = ({
           )}
 
           {mostrarForm && (
-            <div className="p-4 border rounded-lg bg-slate-50 space-y-3">
+            <div className="p-4 border rounded-lg bg-muted/50 space-y-3">
               <p className="font-medium">Nuevo Movimiento</p>
-              <div className="text-xs text-slate-600">
+              <div className="text-xs text-muted-foreground">
                 (Implementar formulario completo en componente separado)
               </div>
               <Button size="sm" variant="outline" onClick={() => setMostrarForm(false)}>
@@ -186,7 +186,7 @@ export const ConciliacionBancariaPanel: React.FC<ConciliacionBancariaProps> = ({
           <div className="space-y-2">
             <h4 className="font-semibold">Últimos Movimientos</h4>
             {caja.movimientos.length === 0 ? (
-              <p className="text-slate-500 text-sm">Sin movimientos registrados</p>
+              <p className="text-muted-foreground text-sm">Sin movimientos registrados</p>
             ) : (
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {caja.movimientos
@@ -198,7 +198,7 @@ export const ConciliacionBancariaPanel: React.FC<ConciliacionBancariaProps> = ({
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-medium">{mov.descripcion}</p>
-                          <p className="text-xs text-slate-600">
+                          <p className="text-xs text-muted-foreground">
                             {mov.fecha.toLocaleDateString('es-GT')}
                           </p>
                         </div>

@@ -130,8 +130,8 @@ const ProfitReport: React.FC<{
 
       {/* Per-Project Profit Chart */}
       {chartData.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Rentabilidad por Proyecto</h3>
+        <div className="card-standard">
+          <h3 className="text-sm font-semibold text-card-foreground mb-3">Rentabilidad por Proyecto</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
@@ -154,14 +154,14 @@ const ProfitReport: React.FC<{
       )}
 
       {/* Per-Project Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Detalle por Proyecto</h3>
+      <div className="card-standard !p-0 overflow-hidden">
+        <div className="p-4 border-b border-border">
+          <h3 className="text-sm font-semibold text-card-foreground">Detalle por Proyecto</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400">
+              <tr className="bg-muted text-muted-foreground">
                 <th className="text-left p-3 font-medium">Proyecto</th>
                 <th className="text-right p-3 font-medium">Presupuesto</th>
                 <th className="text-right p-3 font-medium">Ingresos</th>
@@ -173,9 +173,9 @@ const ProfitReport: React.FC<{
             </thead>
             <tbody>
               {proyectos.map(p => (
-                <tr key={p.id} className="border-t border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                  <td className="p-3 font-medium text-gray-700 dark:text-gray-200">{p.nombre}</td>
-                  <td className="p-3 text-right text-gray-600 dark:text-gray-400">${p.presupuesto.toLocaleString()}</td>
+                <tr key={p.id} className="border-t border-border/50 hover:bg-accent">
+                  <td className="p-3 font-medium text-card-foreground">{p.nombre}</td>
+                  <td className="p-3 text-right text-muted-foreground">${p.presupuesto.toLocaleString()}</td>
                   <td className="p-3 text-right text-emerald-600 dark:text-emerald-400">${p.ingresos.toLocaleString()}</td>
                   <td className="p-3 text-right text-blue-600 dark:text-blue-400">${p.gastosOperativos.toLocaleString()}</td>
                   <td className="p-3 text-right text-amber-600 dark:text-amber-400">${p.gastosAdmin.toLocaleString()}</td>
@@ -193,27 +193,27 @@ const ProfitReport: React.FC<{
       </div>
 
       {/* Resumen */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Resumen de Rentabilidad</h3>
+      <div className="card-standard">
+        <h3 className="text-sm font-semibold text-card-foreground mb-3">Resumen de Rentabilidad</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <div className="text-gray-500 dark:text-gray-400 mb-1">Ingresos Totales</div>
+            <div className="card-section">
+            <div className="text-muted-foreground mb-1">Ingresos Totales</div>
             <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{fmtQ(totals.ingresos)}</div>
           </div>
-          <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <div className="text-gray-500 dark:text-gray-400 mb-1">Gastos Operativos</div>
+          <div className="card-section">
+            <div className="text-muted-foreground mb-1">Gastos Operativos</div>
             <div className="text-sm font-bold text-blue-600 dark:text-blue-400">{fmtQ(totals.gastoOperativo)}</div>
           </div>
-          <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <div className="text-gray-500 dark:text-gray-400 mb-1">Gastos Administrativos</div>
+          <div className="card-section">
+            <div className="text-muted-foreground mb-1">Gastos Administrativos</div>
             <div className="text-sm font-bold text-amber-600 dark:text-amber-400">{fmtQ(totals.gastoAdmin)}</div>
           </div>
-          <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <div className="text-gray-500 dark:text-gray-400 mb-1">Gastos Personales</div>
+          <div className="card-section">
+            <div className="text-muted-foreground mb-1">Gastos Personales</div>
             <div className="text-sm font-bold text-red-600 dark:text-red-400">{fmtQ(totals.gastoPersonal)}</div>
           </div>
-          <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg col-span-2">
-            <div className="text-gray-500 dark:text-gray-400 mb-1">Margen Bruto (Ingresos - Gastos Op. - Gastos Adm.)</div>
+          <div className="card-section col-span-2">
+            <div className="text-muted-foreground mb-1">Margen Bruto (Ingresos - Gastos Op. - Gastos Adm.)</div>
             <div className="text-sm font-bold text-purple-600 dark:text-purple-400">
               {fmtQ(salud.utilidadBruta)}
             </div>

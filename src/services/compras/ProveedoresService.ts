@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+  import { supabase } from '@/lib/supabase';
 import type { Proveedor, CreateProveedor, UpdateProveedor } from '@/types/supabase';
 import { dbToProveedor, proveedorToDb } from '@/types/supabase';
 
@@ -27,23 +27,23 @@ export const ProveedoresService = {
     const dbRecord = proveedorToDb(datos as UpdateProveedor);
     const { data, error } = await supabase
       .from('proveedores')
-      .insert({ ...dbRecord, user_id: userId })
+      .insert({ ...dbRecord, user_id: userId } as any)
       .select()
       .single();
     if (error) throw error;
-    return dbToProveedor(data);
+    return dbToProveedor(data as any);
   },
 
   async actualizar(id: string, datos: UpdateProveedor): Promise<Proveedor> {
     const dbRecord = proveedorToDb(datos);
     const { data, error } = await supabase
       .from('proveedores')
-      .update(dbRecord)
+      .update(dbRecord as any)
       .eq('id', id)
       .select()
       .single();
     if (error) throw error;
-    return dbToProveedor(data);
+    return dbToProveedor(data as any);
   },
 
   async eliminar(id: string): Promise<void> {

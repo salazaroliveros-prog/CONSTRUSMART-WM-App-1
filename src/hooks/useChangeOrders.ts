@@ -3,7 +3,6 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useAppContext } from '@/contexts/AppContext';
 import { 
   crearChangeOrder, 
@@ -13,6 +12,7 @@ import {
 } from '@/utils/changeOrders';
 import type { Presupuesto } from '@/types/supabase';
 import { crearNotificacion } from '@/utils/notificaciones';
+import { ChangeOrdersService } from '@/services/proyectos/ChangeOrdersService';
 
 export function useChangeOrders(presupuesto: Presupuesto) {
   const { session } = useAppContext();
@@ -22,25 +22,11 @@ export function useChangeOrders(presupuesto: Presupuesto) {
   useEffect(() => {
     if (!presupuesto.id) return;
     const cargar = async () => {
-      const { data } = await supabase
-        .from('cambios_presupuesto')
-        .select('*')
-        .eq('presupuesto_id', presupuesto.id)
-        .order('version', { ascending: false });
-      if (data) {
-        setChangeOrders(data.map((c: any) => ({
-          id: c.id,
-          presupuesto_id: c.presupuesto_id,
-          version: c.version,
-          cambios: c.cambios,
-          descripcion: c.motivo,
-          estado: c.estado === 'aprobado' ? 'aprobada' : c.estado === 'rechazado' ? 'rechazada' : 'pendiente',
-          solicitado_por: '',
-          solicitado_fecha: new Date(c.created_at),
-          aprobado_por: c.aprobado_por,
-          aprobado_fecha: undefined,
-          comentarios: undefined,
-        })));
+      try {
+        const data = await ChangeOrdersService.listar(presupuesto.id);
+        setChangeOrders(data);
+      } catch (e) {
+        console.error('Error cargando órdenes de cambio:', e);
       }
     };
     cargar();
@@ -58,13 +44,7 @@ export function useChangeOrders(presupuesto: Presupuesto) {
           changeOrders
         );
         
-        await supabase.from('cambios_presupuesto').insert({
-          presupuesto_id: presupuesto.id,
-          version: orden.version,
-          cambios: orden.cambios,
-          motivo: orden.descripcion,
-          estado: 'pendiente',
-        });
+        await ChangeOrdersService.crear(orden);
 
         setChangeOrders(prev => [...prev, orden]);
         if (session?.user.id) {
@@ -86,7 +66,7 @@ export function useChangeOrders(presupuesto: Presupuesto) {
           : co
       );
       setChangeOrders(updated);
-      await supabase.from('cambios_presupuesto').update({ estado: 'aprobado' }).eq('id', ordenId);
+      await ChangeOrdersService.aprobar(ordenId, aprobadoPor, comentarios);
       if (session?.user.id) {
         crearNotificacion(session.user.id, 'exito', 'Orden de cambio aprobada');
       }
@@ -102,7 +82,7 @@ export function useChangeOrders(presupuesto: Presupuesto) {
           : co
       );
       setChangeOrders(updated);
-      await supabase.from('cambios_presupuesto').update({ estado: 'rechazado' }).eq('id', ordenId);
+      await ChangeOrdersService.rechazar(ordenId, rechazadoPor, motivo);
       if (session?.user.id) {
         crearNotificacion(session.user.id, 'warning', 'Orden de cambio rechazada', motivo);
       }

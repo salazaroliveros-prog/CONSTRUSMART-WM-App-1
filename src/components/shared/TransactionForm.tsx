@@ -40,23 +40,23 @@ const TransactionForm: React.FC<{ compact?: boolean }> = ({ compact = false }) =
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-slate-200 p-4">
+    <div className="bg-card dark:bg-card rounded-xl shadow-md border border-border p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+        <h3 className="font-bold text-foreground text-sm flex items-center gap-2">
           <DollarSign className="w-4 h-4 text-emerald-600" /> Registro Rápido
         </h3>
-        <div className="flex gap-1 bg-slate-100 p-0.5 rounded-lg">
-          <button onClick={() => setTipo('ingreso')} className={`px-3 py-1 rounded text-[11px] font-semibold flex items-center gap-1 ${tipo === 'ingreso' ? 'bg-emerald-500 text-white' : 'text-slate-600'}`}>
+        <div className="flex gap-1 bg-muted p-0.5 rounded-lg">
+          <button onClick={() => setTipo('ingreso')} className={`px-3 py-1 rounded text-[11px] font-semibold flex items-center gap-1 ${tipo === 'ingreso' ? 'bg-emerald-500 text-white' : 'text-card-foreground'}`}>
             <TrendingUp className="w-3 h-3" /> Ingreso
           </button>
-          <button onClick={() => setTipo('gasto')} className={`px-3 py-1 rounded text-[11px] font-semibold flex items-center gap-1 ${tipo === 'gasto' ? 'bg-red-500 text-white' : 'text-slate-600'}`}>
+          <button onClick={() => setTipo('gasto')} className={`px-3 py-1 rounded text-[11px] font-semibold flex items-center gap-1 ${tipo === 'gasto' ? 'bg-red-500 text-white' : 'text-card-foreground'}`}>
             <TrendingDown className="w-3 h-3" /> Gasto
           </button>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className={`grid gap-2 ${compact ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'}`}>
-        <select value={form.proyectoId} onChange={e => setForm({ ...form, proyectoId: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg bg-slate-50 border-blue-200 focus:ring-2 focus:ring-blue-500" required>
+        <select value={form.proyectoId} onChange={e => setForm({ ...form, proyectoId: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg bg-muted border-border focus:ring-2 focus:ring-blue-500" required>
           <option value="">-- Seleccionar proyecto activo --</option>
           <option value="admin">— Administrativo / Operativo —</option>
           <option value="personal">— Gasto Personal —</option>
@@ -65,12 +65,12 @@ const TransactionForm: React.FC<{ compact?: boolean }> = ({ compact = false }) =
          <input placeholder="Descripción de la transacción" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg" required />
          <input type="number" placeholder="Ingrese la cantidad" value={form.cantidad} onChange={e => setForm({ ...form, cantidad: parseFloat(e.target.value) || 0 })} className="px-2 py-1.5 text-xs border rounded-lg" />
          <input placeholder="Ingrese la unidad (ej: m², kg, unidad)" value={form.unidad} onChange={e => setForm({ ...form, unidad: e.target.value })} className="px-2 py-1.5 text-xs border rounded-lg" />
-        <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value as Transaccion['categoria'] })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg bg-slate-50">
+        <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value as Transaccion['categoria'] })} className="col-span-2 px-2 py-1.5 text-xs border rounded-lg bg-muted">
           {categorias.map(c => <option key={c.v} value={c.v}>{c.label}</option>)}
         </select>
          <input type="number" placeholder="Ingrese el costo unitario" value={form.costoUnitario} onChange={e => setForm({ ...form, costoUnitario: parseFloat(e.target.value) || 0 })} className="px-2 py-1.5 text-xs border rounded-lg" />
         <input type="date" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} className="px-2 py-1.5 text-xs border rounded-lg" />
-        <div className="col-span-2 bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-900 text-right">
+        <div className="col-span-2 bg-blue-50 dark:bg-blue-950/30 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-900 dark:text-blue-300 text-right">
           Total: Q {total.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
         </div>
         <button type="submit" className={`col-span-2 ${tipo === 'ingreso' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'} text-white text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1`}>

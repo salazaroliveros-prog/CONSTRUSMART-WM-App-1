@@ -15,6 +15,7 @@ import { ProveedoresService } from '@/services/compras/ProveedoresService';
 import { OrdenesCompraService } from '@/services/compras/OrdenesCompraService';
 import { MaterialesService } from '@/services/presupuestos/MaterialesService';
 import { BodegaService } from '@/services/proyectos/BodegaService';
+import { DateUtils } from '@/utils/dateUtils';
 
 type OCItemForm = Omit<CreateOrdenCompraItem, 'ordenCompraId'> & {
   materialId?: string;
@@ -59,7 +60,7 @@ const ComprasScreen: React.FC = () => {
   const [ocItems, setOcItems] = useState<(OrdenCompraItem & { materialId?: string })[]>([]);
   const [showOCForm, setShowOCForm] = useState(false);
   const [ocForm, setOcForm] = useState<CreateOrdenCompra>({
-    userId: '', folio: '', proveedorId: '', proyectoId: '', fechaEmision: new Date().toISOString().split('T')[0],
+    userId: '', folio: '', proveedorId: '', proyectoId: '', fechaEmision: DateUtils.todayISO(),
     fechaEntrega: '', estatus: 'pendiente', subtotal: 0, iva: 0, total: 0, notas: '',
   });
   const [ocItemForms, setOcItemForms] = useState<OCItemForm[]>([]);
@@ -245,9 +246,10 @@ const ComprasScreen: React.FC = () => {
 
   const handleRecepcion = async () => {
     if (!selectedOC || !userId) return;
+    setSaveLoading(true);
     try {
       const rec = await OrdenesCompraService.crearRecepcion({
-        ordenCompraId: selectedOC.id, userId, fechaRecepcion: new Date().toISOString().split('T')[0],
+        ordenCompraId: selectedOC.id, userId, fechaRecepcion: DateUtils.todayISO(),
       } as CreateRecepcionOC, userId);
       const itemsRec: CreateRecepcionOCItem[] = [];
       const presupuesto = presupuestos.find(p => p.proyectoId === selectedOC.proyectoId);
@@ -292,6 +294,8 @@ const ComprasScreen: React.FC = () => {
     } catch (err) {
       toast.error('Error al registrar recepción');
       console.error(err);
+    } finally {
+      setSaveLoading(false);
     }
   };
 
@@ -341,12 +345,12 @@ const ComprasScreen: React.FC = () => {
     <PageShell showHome={false} title="Compras">
       <div className="p-3 sm:p-5 max-w-7xl mx-auto">
         {/* Tabs */}
-        <div className="flex gap-1 mb-5 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex gap-1 mb-5 border-b border-border dark:border-border">
           <button onClick={() => setTab('proveedores')}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === 'proveedores'
                 ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                : 'border-transparent text-muted-foreground hover:text-card-foreground dark:text-muted-foreground dark:hover:text-foreground'
             }`}>
             <Building2 className="w-4 h-4" /> Proveedores
           </button>
@@ -354,7 +358,7 @@ const ComprasScreen: React.FC = () => {
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === 'ordenes'
                 ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                : 'border-transparent text-muted-foreground hover:text-card-foreground dark:text-muted-foreground dark:hover:text-foreground'
             }`}>
             <FileText className="w-4 h-4" /> Órdenes de Compra
           </button>
@@ -363,14 +367,14 @@ const ComprasScreen: React.FC = () => {
         {/* Search + Add */}
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input type="text" placeholder={tab === 'proveedores' ? 'Buscar proveedores...' : 'Buscar OC...'}
               value={search} onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:text-gray-100" />
+              className="input-standard pl-9" />
           </div>
           {tab === 'proveedores' ? (
             <button onClick={() => { resetProveedorForm(); setShowProveedorForm(true); }}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+              className="btn-primary">
               <Plus className="w-4 h-4" /> Nuevo Proveedor
             </button>
           ) : (
@@ -380,7 +384,7 @@ const ComprasScreen: React.FC = () => {
               setOcForm(f => ({ ...f, folio }));
               setShowOCForm(true);
             }}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+              className="btn-primary">
               <Plus className="w-4 h-4" /> Nueva OC
             </button>
           )}
@@ -390,30 +394,30 @@ const ComprasScreen: React.FC = () => {
         {tab === 'proveedores' && (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {proveedoresFiltrados.map(p => (
-              <div key={p.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow">
+              <div key={p.id} className="card-standard">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{p.nombre}</h3>
-                    {p.contacto && <p className="text-xs text-gray-500 dark:text-gray-400">{p.contacto}</p>}
+                    <h3 className="font-semibold text-card-foreground">{p.nombre}</h3>
+                    {p.contacto && <p className="text-xs text-muted-foreground">{p.contacto}</p>}
                   </div>
                   <div className="flex gap-1">
-                    <button onClick={() => openEditProveedor(p)} className="p-1.5 text-gray-400 hover:text-blue-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><Edit2 className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => handleDeleteProveedor(p.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => openEditProveedor(p)} className="btn-ghost p-1.5 text-muted-foreground hover:text-blue-500"><Edit2 className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => handleDeleteProveedor(p.id)} className="btn-ghost p-1.5 text-muted-foreground hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
-                <div className="space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                <div className="space-y-1 text-xs text-muted-foreground">
                   {p.telefono && <p>📞 {p.telefono}</p>}
                   {p.email && <p>✉️ {p.email}</p>}
                   {p.rfc && <p>🔖 RFC: {p.rfc}</p>}
                 </div>
                 <div className="mt-2 flex items-center gap-2">
-                  <span className={`inline-block w-2 h-2 rounded-full ${p.activo ? 'bg-green-500' : 'bg-gray-400'}`} />
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{p.activo ? 'Activo' : 'Inactivo'}</span>
+                  <span className={`inline-block w-2 h-2 rounded-full ${p.activo ? 'bg-green-500' : 'bg-muted-foreground'}`} />
+                  <span className="text-xs text-muted-foreground">{p.activo ? 'Activo' : 'Inactivo'}</span>
                 </div>
               </div>
             ))}
             {proveedoresFiltrados.length === 0 && (
-              <div className="col-span-full text-center py-12 text-gray-400 dark:text-gray-500">
+              <div className="col-span-full text-center py-12 text-muted-foreground">
                 <Building2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p className="text-sm">No hay proveedores registrados</p>
               </div>
@@ -425,35 +429,35 @@ const ComprasScreen: React.FC = () => {
         {tab === 'ordenes' && (
           <div className="space-y-3">
             {ordenesFiltradas.map(oc => (
-              <div key={oc.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow">
+              <div key={oc.id} className="card-standard">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">{oc.folio}</span>
+                    <span className="font-semibold text-card-foreground">{oc.folio}</span>
                     <EstatusBadge estatus={oc.estatus} />
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => loadOCItems(oc)}
-                      className="text-xs px-3 py-1.5 text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                    <button onClick={async () => { try { await loadOCItems(oc); } catch (err) { toast.error('Error al cargar partidas'); console.error(err); } }}
+                      className="btn-secondary text-xs">
                       Ver partidas
                     </button>
                     {(oc.estatus === 'pendiente' || oc.estatus === 'aprobada' || oc.estatus === 'recibida_parcial') && (
                       <button onClick={() => openRecepcion(oc)}
-                        className="flex items-center gap-1 text-xs px-3 py-1.5 text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">
+                        className="btn-success text-xs">
                         <PackageCheck className="w-3.5 h-3.5" /> Recibir
                       </button>
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-gray-500 dark:text-gray-400">
-                  <span>Proveedor: <strong className="text-gray-700 dark:text-gray-200">{proveedorNombre(oc.proveedorId)}</strong></span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-muted-foreground">
+                  <span>Proveedor: <strong className="text-card-foreground">{proveedorNombre(oc.proveedorId)}</strong></span>
                   <span>Emisión: <strong>{oc.fechaEmision}</strong></span>
-                  <span>Total: <strong className="text-gray-700 dark:text-gray-200">${oc.total.toLocaleString()}</strong></span>
+                  <span>Total: <strong className="text-card-foreground">${oc.total.toLocaleString()}</strong></span>
                 </div>
                 {selectedOC?.id === oc.id && ocItems.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                    <table className="w-full text-xs">
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <table className="table-standard">
                       <thead>
-                        <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                        <tr>
                           <th className="text-left py-1 pr-2">Descripción</th>
                           <th className="text-right px-2">Cant</th>
                           <th className="text-right px-2">P/U</th>
@@ -462,11 +466,11 @@ const ComprasScreen: React.FC = () => {
                       </thead>
                       <tbody>
                         {ocItems.map(item => (
-                          <tr key={item.id} className="border-b border-gray-50 dark:border-gray-700/50">
-                            <td className="py-1.5 pr-2 text-gray-700 dark:text-gray-300">{item.descripcion}</td>
-                            <td className="text-right px-2 text-gray-600 dark:text-gray-400">{item.cantidad} {item.unidad}</td>
-                            <td className="text-right px-2 text-gray-600 dark:text-gray-400">${item.precioUnitario.toLocaleString()}</td>
-                            <td className="text-right pl-2 font-medium text-gray-700 dark:text-gray-200">${item.importe.toLocaleString()}</td>
+                          <tr key={item.id} className="border-b border-border/50">
+                            <td className="py-1.5 pr-2 text-card-foreground">{item.descripcion}</td>
+                            <td className="text-right px-2 text-muted-foreground">{item.cantidad} {item.unidad}</td>
+                            <td className="text-right px-2 text-muted-foreground">${item.precioUnitario.toLocaleString()}</td>
+                            <td className="text-right pl-2 font-medium text-card-foreground">${item.importe.toLocaleString()}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -476,7 +480,7 @@ const ComprasScreen: React.FC = () => {
               </div>
             ))}
             {ordenesFiltradas.length === 0 && (
-              <div className="text-center py-12 text-gray-400 dark:text-gray-500">
+              <div className="text-center py-12 text-muted-foreground">
                 <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p className="text-sm">No hay órdenes de compra</p>
               </div>
@@ -487,42 +491,42 @@ const ComprasScreen: React.FC = () => {
         {/* ===== MODAL: Proveedor Form ===== */}
         {showProveedorForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={resetProveedorForm}>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <div className="bg-card dark:bg-card rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <h2 className="text-lg font-semibold text-card-foreground">
                   {editProveedorId ? 'Editar Proveedor' : 'Nuevo Proveedor'}
                 </h2>
-                <button onClick={resetProveedorForm} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X className="w-5 h-5" /></button>
+                <button onClick={resetProveedorForm} className="btn-ghost p-1 text-muted-foreground"><X className="w-5 h-5" /></button>
               </div>
               <div className="p-5 space-y-4">
                 <input type="text" placeholder="Nombre del proveedor *" value={proveedorForm.nombre}
                   onChange={e => setProveedorForm(f => ({ ...f, nombre: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:text-gray-100" />
+                  className="input-standard" />
                 <div className="grid grid-cols-2 gap-3">
                   <input type="text" placeholder="Contacto" value={proveedorForm.contacto} onChange={e => setProveedorForm(f => ({ ...f, contacto: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:text-gray-100" />
+                    className="input-standard" />
                   <input type="text" placeholder="Teléfono" value={proveedorForm.telefono} onChange={e => setProveedorForm(f => ({ ...f, telefono: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:text-gray-100" />
+                    className="input-standard" />
                 </div>
                 <input type="email" placeholder="Email" value={proveedorForm.email} onChange={e => setProveedorForm(f => ({ ...f, email: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:text-gray-100" />
+                  className="input-standard" />
                 <div className="grid grid-cols-2 gap-3">
                   <input type="text" placeholder="RFC" value={proveedorForm.rfc} onChange={e => setProveedorForm(f => ({ ...f, rfc: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:text-gray-100" />
+                    className="input-standard" />
                   <input type="text" placeholder="Dirección" value={proveedorForm.direccion} onChange={e => setProveedorForm(f => ({ ...f, direccion: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:text-gray-100" />
+                    className="input-standard" />
                 </div>
                 <textarea placeholder="Notas" rows={3} value={proveedorForm.notas} onChange={e => setProveedorForm(f => ({ ...f, notas: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:text-gray-100 resize-none" />
-                <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  className="input-standard resize-none" />
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <input type="checkbox" checked={proveedorForm.activo} onChange={e => setProveedorForm(f => ({ ...f, activo: e.target.checked }))}
-                    className="rounded border-gray-300 dark:border-gray-600" /> Proveedor activo
+                    className="rounded border-border" /> Proveedor activo
                 </label>
               </div>
-              <div className="flex justify-end gap-2 p-5 border-t border-gray-200 dark:border-gray-700">
-                <button onClick={resetProveedorForm} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancelar</button>
+              <div className="flex justify-end gap-2 p-5 border-t border-border">
+                <button onClick={resetProveedorForm} className="btn-secondary">Cancelar</button>
                 <button onClick={handleSaveProveedor} disabled={saveLoading}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                  className="btn-primary">
                   <Save className="w-4 h-4" /> {saveLoading ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
@@ -533,22 +537,22 @@ const ComprasScreen: React.FC = () => {
         {/* ===== MODAL: OC Form ===== */}
         {showOCForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Nueva Orden de Compra</h2>
-                <button onClick={resetOCForm} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X className="w-5 h-5" /></button>
+            <div className="bg-card dark:bg-card rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <h2 className="text-lg font-semibold text-card-foreground">Nueva Orden de Compra</h2>
+                <button onClick={resetOCForm} className="btn-ghost p-1 text-muted-foreground"><X className="w-5 h-5" /></button>
               </div>
               <div className="p-5 space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Folio</label>
+                    <label className="label-standard">Folio</label>
                     <input type="text" value={ocForm.folio} readOnly
-                      className="w-full px-3 py-2 text-sm border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 dark:text-gray-300" />
+                      className="input-standard bg-muted" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Proveedor *</label>
+                    <label className="label-standard">Proveedor *</label>
                     <select value={ocForm.proveedorId} onChange={e => setOcForm(f => ({ ...f, proveedorId: e.target.value }))}
-                      className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100">
+                      className="select-standard w-full">
                       <option value="">Seleccionar...</option>
                       {proveedoresLocal.filter(p => p.activo).map(p => (
                         <option key={p.id} value={p.id}>{p.nombre}</option>
@@ -558,9 +562,9 @@ const ComprasScreen: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Proyecto</label>
+                    <label className="label-standard">Proyecto</label>
                     <select value={ocForm.proyectoId} onChange={e => setOcForm(f => ({ ...f, proyectoId: e.target.value }))}
-                      className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100">
+                      className="select-standard w-full">
                       <option value="">Seleccionar...</option>
                       {proyectos.map(p => (
                         <option key={p.id} value={p.id}>{p.nombre}</option>
@@ -568,31 +572,31 @@ const ComprasScreen: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Fecha de emisión</label>
+                    <label className="label-standard">Fecha de emisión</label>
                     <input type="date" value={ocForm.fechaEmision} onChange={e => setOcForm(f => ({ ...f, fechaEmision: e.target.value }))}
-                      className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100" />
+                      className="input-standard" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Fecha de entrega</label>
+                  <label className="label-standard">Fecha de entrega</label>
                   <input type="date" value={ocForm.fechaEntrega} onChange={e => setOcForm(f => ({ ...f, fechaEntrega: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100" />
+                    className="input-standard" />
                 </div>
                 <textarea placeholder="Notas" rows={2} value={ocForm.notas} onChange={e => setOcForm(f => ({ ...f, notas: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:text-gray-100 resize-none" />
+                  className="input-standard resize-none" />
 
                 {/* Items */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Partidas</label>
-                    <button onClick={addItemRow} className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400">+ Agregar partida</button>
+                    <label className="label-standard">Partidas</label>
+                    <button onClick={addItemRow} className="btn-ghost text-xs text-blue-600 dark:text-blue-400">+ Agregar partida</button>
                   </div>
                   {ocItemForms.map((item, idx) => (
                     <div key={idx} className="flex flex-col gap-2 mb-2">
                       <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr_0.9fr_0.9fr_0.6fr_auto] gap-2 items-end">
                         <select value={item.materialId || ''}
                           onChange={e => updateItemRow(idx, 'materialId', e.target.value)}
-                          className="w-full px-2 py-1.5 text-xs border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100">
+                          className="select-standard w-full text-xs">
                           <option value="">Material (opcional)</option>
                           {materialOptions.map(m => (
                             <option key={m.id} value={m.id}>{m.nombre} ({m.unidad})</option>
@@ -600,27 +604,27 @@ const ComprasScreen: React.FC = () => {
                         </select>
                         <input type="text" placeholder="Descripción" value={item.descripcion}
                           onChange={e => updateItemRow(idx, 'descripcion', e.target.value)}
-                          className="w-full px-2 py-1.5 text-xs border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100" />
+                          className="input-standard text-xs" />
                         <input type="number" placeholder="Cant" value={item.cantidad}
                           onChange={e => updateItemRow(idx, 'cantidad', Number(e.target.value))}
-                          className="w-full px-2 py-1.5 text-xs border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100 text-right" />
+                          className="input-standard text-xs text-right" />
                         <input type="text" placeholder="Und" value={item.unidad}
                           onChange={e => updateItemRow(idx, 'unidad', e.target.value)}
-                          className="w-full px-2 py-1.5 text-xs border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100" />
+                          className="input-standard text-xs" />
                         <input type="number" placeholder="$" value={item.precioUnitario}
                           onChange={e => updateItemRow(idx, 'precioUnitario', Number(e.target.value))}
-                          className="w-full px-2 py-1.5 text-xs border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100 text-right" />
-                        <button onClick={() => removeItemRow(idx)} className="p-1.5 text-gray-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
+                          className="input-standard text-xs text-right" />
+                        <button onClick={() => removeItemRow(idx)} className="btn-ghost p-1.5 text-muted-foreground hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
                       </div>
-                      <div className="text-right text-xs text-gray-600 dark:text-gray-400">Importe: ${item.importe.toLocaleString()}</div>
+                      <div className="text-right text-xs text-muted-foreground">Importe: ${item.importe.toLocaleString()}</div>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="flex justify-end gap-2 p-5 border-t border-gray-200 dark:border-gray-700">
-                <button onClick={resetOCForm} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancelar</button>
+              <div className="flex justify-end gap-2 p-5 border-t border-border">
+                <button onClick={resetOCForm} className="btn-secondary">Cancelar</button>
                 <button onClick={handleCreateOC} disabled={saveLoading}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                  className="btn-primary">
                   <Save className="w-4 h-4" /> {saveLoading ? 'Creando...' : 'Crear OC'}
                 </button>
               </div>
@@ -630,28 +634,33 @@ const ComprasScreen: React.FC = () => {
 
         {/* ===== MODAL: Recepción ===== */}
         {showRecepcion && selectedOC && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recepción — {selectedOC.folio}</h2>
-                <button onClick={() => { setShowRecepcion(false); setSelectedOC(null); }} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X className="w-5 h-5" /></button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-4">
+            <div className="bg-card dark:bg-card rounded-2xl shadow-xl w-full max-w-2xl max-h-[95vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border sticky top-0 bg-card dark:bg-card z-10">
+                <div>
+                  <h2 className="text-lg font-semibold text-card-foreground">Registrar Recepción</h2>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">OC: {selectedOC.folio}</p>
+                </div>
+                <button onClick={() => { setShowRecepcion(false); setSelectedOC(null); }} className="btn-ghost p-1 text-muted-foreground">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div className="p-5 space-y-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Ingresa las cantidades recibidas para cada partida:</p>
+              <div className="p-4 sm:p-5 space-y-4">
+                <p className="text-xs text-muted-foreground mb-3">Ingresa las cantidades recibidas para cada partida:</p>
                 {ocItems.map(item => {
                   const matchedMaterial = selectedProjectMaterials.find(m =>
                     item.materialId ? m.id === item.materialId : m.nombre.toLowerCase() === item.descripcion.toLowerCase()
                   );
                   return (
-                    <div key={item.id} className="flex flex-col gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <div key={item.id} className="card-section">
                       <div className="flex items-center gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{item.descripcion}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-sm font-medium text-card-foreground truncate">{item.descripcion}</p>
+                          <p className="text-xs text-muted-foreground">
                             Pedido: {item.cantidad} {item.unidad} · Recibido: {item.cantidadRecibida} · Pendiente: {item.cantidad - item.cantidadRecibida}
                           </p>
                         </div>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${matchedMaterial ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${matchedMaterial ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
                           {matchedMaterial ? `Material: ${matchedMaterial.nombre}` : 'Material no vinculado'}
                         </span>
                       </div>
@@ -661,18 +670,18 @@ const ComprasScreen: React.FC = () => {
                         max={item.cantidad - item.cantidadRecibida}
                         value={recepcionCantidades[item.id] || 0}
                         onChange={e => setRecepcionCantidades(c => ({ ...c, [item.id]: Number(e.target.value) }))}
-                        className="w-20 px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100 text-right"
+                        className="input-standard w-20 text-right"
                       />
                     </div>
                   );
                 })}
               </div>
-              <div className="flex justify-end gap-2 p-5 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex justify-end gap-2 p-5 border-t border-border">
                 <button onClick={() => { setShowRecepcion(false); setSelectedOC(null); }}
-                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancelar</button>
-                <button onClick={handleRecepcion}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700">
-                  <PackageCheck className="w-4 h-4" /> Confirmar Recepción
+                  className="btn-secondary">Cancelar</button>
+                <button onClick={handleRecepcion} disabled={saveLoading}
+                  className="btn-success">
+                  <PackageCheck className="w-4 h-4" /> {saveLoading ? 'Procesando...' : 'Confirmar Recepción'}
                 </button>
               </div>
             </div>

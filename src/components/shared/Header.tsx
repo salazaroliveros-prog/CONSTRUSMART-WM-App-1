@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import NotificationBell from '@/components/shared/NotificationBell';
-import { Home, LogOut, Search, Moon, Sun, User, Menu, X, LayoutGrid, Users, Calculator, Folder, LineChart, Wallet, Shield, Package, FileText, ShoppingCart } from 'lucide-react';
+import { Home, LogOut, Search, Moon, Sun, User, Menu, X, LayoutGrid, Users, Calculator, Folder, LineChart, Wallet, Shield, Package, FileText, ShoppingCart, ShieldCheck } from 'lucide-react';
 import { ViewType } from '@/types/supabase';
+
+type HeaderProps = { showHome?: boolean; title?: string };
 
 const modules = [
   { id: 'dashboard' as ViewType, label: 'Inicio', icon: LayoutGrid },
@@ -15,9 +17,10 @@ const modules = [
   { id: 'equipos' as ViewType, label: 'Equipos', icon: Shield },
   { id: 'cotizacion' as ViewType, label: 'Cotización', icon: FileText },
   { id: 'compras' as ViewType, label: 'Compras', icon: ShoppingCart },
+  { id: 'aprobacion' as ViewType, label: 'Aprobación', icon: ShieldCheck }, // Added Approval module
 ];
 
-const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = true, title }) => {
+const Header = React.memo(({ showHome = true, title }: HeaderProps) => {
   const { user, setView, signOut, darkMode, toggleDarkMode } = useAppContext();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -51,7 +54,7 @@ const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = t
 
   return (
     <header
-      className={`sticky top-0 z-40 transition-all duration-300 ${
+      className={`sticky top-0 z-40 transition-colors duration-200 animate-fade-in-down ${
         scrolled
           ? 'bg-gradient-to-r from-blue-950/90 via-blue-900/90 to-blue-950/90 glass-dark shadow-lg'
           : 'bg-gradient-to-r from-blue-950 via-blue-900 to-blue-950'
@@ -83,7 +86,7 @@ const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = t
             )}
           </div>
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-9 h-9 shrink-0 rounded-lg bg-white/15 backdrop-blur flex items-center justify-center border border-white/20 overflow-hidden">
+            <div className="w-9 h-9 shrink-0 rounded-lg bg-white/15 flex items-center justify-center border border-white/20 overflow-hidden">
               <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
             </div>
             <div className="leading-tight min-w-0 hidden xs:block">
@@ -156,6 +159,6 @@ const Header: React.FC<{ showHome?: boolean; title?: string }> = ({ showHome = t
       </div>
     </header>
   );
-};
+});
 
 export default Header;

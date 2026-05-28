@@ -2,8 +2,7 @@ import { supabase } from '@/lib/supabase';
 import type {
   OrdenCompra, CreateOrdenCompra, UpdateOrdenCompra,
   OrdenCompraItem, CreateOrdenCompraItem, UpdateOrdenCompraItem,
-  RecepcionOC, CreateRecepcionOC,
-  RecepcionOCItem, CreateRecepcionOCItem,
+  RecepcionOC, CreateRecepcionOC, CreateRecepcionOCItem,
 } from '@/types/supabase';
 import { dbToOrdenCompra, ordenCompraToDb, dbToOrdenCompraItem, ordenCompraItemToDb, dbToRecepcionOC, recepcionOCToDb, dbToRecepcionOCItem } from '@/types/supabase';
 
@@ -33,7 +32,7 @@ export const OrdenesCompraService = {
     const dbRecord = ordenCompraToDb(datos as UpdateOrdenCompra);
     const { data, error } = await supabase
       .from('ordenes_compra')
-      .insert({ ...dbRecord, user_id: userId })
+      .insert({ ...dbRecord, user_id: userId } as any)
       .select()
       .single();
     if (error) throw error;
@@ -44,7 +43,7 @@ export const OrdenesCompraService = {
     const dbRecord = ordenCompraToDb(datos);
     const { data, error } = await supabase
       .from('ordenes_compra')
-      .update(dbRecord)
+      .update(dbRecord as any)
       .eq('id', id)
       .select()
       .single();
@@ -66,7 +65,8 @@ export const OrdenesCompraService = {
       .order('created_at', { ascending: false })
       .limit(1);
     if (error) throw error;
-    const ultimo = (data?.[0]?.folio as string) || 'OC-0000';
+    const rows = data as any[];
+    const ultimo = rows?.[0]?.folio as string || 'OC-0000';
     const num = parseInt(ultimo.replace('OC-', ''), 10) + 1;
     return `OC-${String(num).padStart(4, '0')}`;
   },
@@ -86,7 +86,7 @@ export const OrdenesCompraService = {
     const dbRecord = ordenCompraItemToDb(datos as UpdateOrdenCompraItem);
     const { data, error } = await supabase
       .from('orden_compra_items')
-      .insert(dbRecord)
+      .insert(dbRecord as any)
       .select()
       .single();
     if (error) throw error;
@@ -97,7 +97,7 @@ export const OrdenesCompraService = {
     const dbRecords = items.map(i => ordenCompraItemToDb(i as UpdateOrdenCompraItem));
     const { data, error } = await supabase
       .from('orden_compra_items')
-      .insert(dbRecords)
+      .insert(dbRecords as any)
       .select();
     if (error) throw error;
     return (data || []).map(d => dbToOrdenCompraItem(d));
@@ -107,7 +107,7 @@ export const OrdenesCompraService = {
     const dbRecord = ordenCompraItemToDb(datos);
     const { error } = await supabase
       .from('orden_compra_items')
-      .update(dbRecord)
+      .update(dbRecord as any)
       .eq('id', id);
     if (error) throw error;
   },
@@ -122,7 +122,7 @@ export const OrdenesCompraService = {
     const dbRecord = recepcionOCToDb(datos);
     const { data, error } = await supabase
       .from('recepcion_oc')
-      .insert({ ...dbRecord, user_id: userId })
+      .insert({ ...dbRecord, user_id: userId } as any)
       .select()
       .single();
     if (error) throw error;
@@ -140,14 +140,14 @@ export const OrdenesCompraService = {
   },
 
   async crearItemsRecepcion(items: CreateRecepcionOCItem[]): Promise<void> {
-    const { error } = await supabase.from('recepcion_oc_items').insert(items);
+    const { error } = await supabase.from('recepcion_oc_items').insert(items as any);
     if (error) throw error;
   },
 
   async actualizarCantidadRecibida(itemId: string, cantidad: number): Promise<void> {
     const { error } = await supabase
       .from('orden_compra_items')
-      .update({ cantidad_recibida: cantidad })
+      .update({ cantidad_recibida: cantidad } as any)
       .eq('id', itemId);
     if (error) throw error;
   },
@@ -155,7 +155,7 @@ export const OrdenesCompraService = {
   async actualizarEstatusOC(ocId: string, estatus: OrdenCompra['estatus']): Promise<void> {
     const { error } = await supabase
       .from('ordenes_compra')
-      .update({ estatus })
+      .update({ estatus } as any)
       .eq('id', ocId);
     if (error) throw error;
   },
