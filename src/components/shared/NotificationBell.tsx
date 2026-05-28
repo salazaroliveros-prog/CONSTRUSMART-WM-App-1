@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { PushService } from '@/services/PushService'; // Import PushService
+import { toast } from 'sonner';
 import { Bell, Check, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -19,7 +20,7 @@ type Notification = {
 };
 
 const NotificationBell: React.FC = () => {
-  const { session, notifications, markNotificationAsRead, deleteNotification } = useAppContext();
+  const { session, notifications = [], markNotificationAsRead, deleteNotification } = useAppContext();
   const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
   const [loadingSubscription, setLoadingSubscription] = useState(false);
 
