@@ -575,6 +575,7 @@ export const dbToTransaccion = (db: DBRow): Transaccion => ({
   costoTotal: typeof db.costo_total === 'number' ? db.costo_total : Number(db.costo_total) || 0,
   fecha: (db.fecha as string) ?? new Date().toISOString().split('T')[0],
   proyectoId: (db.proyecto_id as string) ?? 'admin',
+  empleadoId: (db.empleado_id as string) ?? undefined,
 });
 
 export const transaccionToDb = (transaccion: UpdateTransaccion): Partial<DBTransaccion> => {
@@ -588,6 +589,7 @@ export const transaccionToDb = (transaccion: UpdateTransaccion): Partial<DBTrans
   if (transaccion.costoTotal !== undefined) out.costo_total = transaccion.costoTotal;
   if (transaccion.fecha !== undefined) out.fecha = transaccion.fecha;
   if (transaccion.proyectoId !== undefined) out.proyecto_id = transaccion.proyectoId;
+  if (transaccion.empleadoId !== undefined) out.empleado_id = transaccion.empleadoId;
   return out as Partial<DBTransaccion>;
 };
 
@@ -811,6 +813,7 @@ export const dbToRecepcionOC = (db: DBRow): RecepcionOC => ({
 export const recepcionOCToDb = (rec: UpdateRecepcionOC): Partial<DBRecepcionOC> => {
   const out: DBRow = {};
   if (rec.ordenCompraId !== undefined) out.orden_compra_id = rec.ordenCompraId;
+  if (rec.userId !== undefined) out.user_id = rec.userId;
   if (rec.fechaRecepcion !== undefined) out.fecha_recepcion = rec.fechaRecepcion;
   if (rec.observaciones !== undefined) out.observaciones = rec.observaciones;
   return out as Partial<DBRecepcionOC>;
