@@ -55,10 +55,10 @@ export const OcrService = {
     return data as OcrDoc;
   },
 
-  async updateDocumentStatus(id: string, status: OcrDoc['estado'], userId: string) {
+  async updateDocumentStatus(id: string, status: 'pending' | 'processing' | 'completed' | 'failed', userId: string) {
     const { data, error } = await supabase
       .from('ocr_documentos')
-      .update({ estado: status, revisado_por: userId })
+      .update({ status, revisado_por: userId })
       .eq('id', id)
       .select('*')
       .single();

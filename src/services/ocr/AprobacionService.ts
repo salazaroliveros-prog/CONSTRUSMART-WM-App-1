@@ -28,7 +28,20 @@ export const AprobacionService = {
   },
 
   async approveDocument(documentId: string, userId: string) {
-    return await OcrService.updateDocumentStatus(documentId, 'aprobado', userId);
+    const { data, error } = await supabase
+      .from('ocr_documentos')
+      .update({ estado: 'aprobado', revisado_por: userId })
+      .eq('id', documentId)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Error approving document:', error);
+      toast.error('Error al aprobar documento');
+      throw error;
+    }
+    toast.success('Documento aprobado');
+    return data as OcrDoc;
   },
 
   async rejectDocument(documentId: string, userId: string, notes: string) {
