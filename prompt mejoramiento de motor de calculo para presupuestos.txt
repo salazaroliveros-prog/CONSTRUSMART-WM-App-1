@@ -1,0 +1,33 @@
+analiza el modulo de proyectos y presupuesto como se capta la información y analiza la lógica que ahora tiene, pero el usuario necesita que el motor de calculo de presupuesto que contenga 40 renglones mas importantes por defecto en orden cronológico y por tipología y si, si los contiene, pero se necesita también que mientras se agrega renglones y si no encuentra uno adecuado que en ese entorno de agregar renglones que ya están por defecto con sus parámetros de calculo de desglose y rendimiento de materiales y de mano de obra también integre botón de agregar renglón personalizado porque ahora aparece pero cuando ya se ha guardado el presupuesto y se necesita agregar nuevos personalizados en el momento que se esta agregando renglones y que este formato de nuevo renglón contenga ya filtros de selección de parámetros de calculo y rendimientos, que el motor de cálculo y cuantificación de material también contenga una librería de parámetros de códigos de rendimientos y cálculos de materiales y mano de obra actuales y se integre a los códigos que va implementando en orden cronológico, y que estos renglones  a su vez tengan el despliegue de subrenglones como cantidad de materiales y sus costos ya integrados, mano de obra con sus costos y que se puedan editar y si el usuario cambia un dato el motor recalcula automáticamente y si agrega mas personal o quita recalcula el tiempo automáticamente así como muestra las cantidades unitarias y sus costos de los materiales y mano de obra desplegables del renglón padre, también que el informe que se exporta o imprime en pdf el informe para el administrador contenga el resumen de renglones así como el desglose o explosion unitario de materiales para que también estos los lea el modulo de bodega, también en el resumen de renglones para el usuario va reflejado el tiempo de duración de la obra, costos directos e indirectos, imprevistos y APUs, y en el informe para el cliente solo va reflejado el resumen de renglones con el total de la obra y el tiempo de duración de construcción todos los informes van con membrete de la empresa y con firmas en la ultima hoja y pie de pagina con correo, numero telefónico, y dirección de la empresa.
+
+
+en el modulo de presupuesto determina los parámetros de calculo mas actuales del mercado, y también integra a los renglones tipos de losa y cubierta incluyendo sus parámetros de cálculos automáticos solo se encuentra losa solida, y estructura metálica con lamina, en la tipología residencial pero también esta la losa prefabricada, pergola metálica, pergola de madera, tejado (teja de barro) implementalos con todos sus cálculos automáticos actuales y que en Guatemala ejecutamos casas de tres niveles económicos "cómoda o nivel básico; va de los Q. 3,000.00 A Q. 3,500.00 el metros cuadrado, moderada o nivel medio; va de los Q. 3,500.00 A Q. 4,000.00 el metro cuadrado, y premium o nivel alto; va de Q. 4,000.00 A Q. 5,000.00 el metro cuadrado. además de implementar campos de ingreso de datos cuando se agrega un renglón de cimentación agregar campo de dimensiones para que el sistema calcule los materiales exactos, columnas también un subrenglón hijo para agregar dimensiones de columna y el sistema calcule materiales y diámetros de acero, soleras tabien submenu hijo con campo de ingreso de sección, zapatas. a tu  criterio dejo los estilos y formato de estos elementos que también tengan cálculos autoamticos y funciones avanzadas y mejoradas.
+
+Actúa como un Ingeniero de Software Senior y Experto en Costos de Construcción para desarrollar un módulo de presupuesto avanzado y automatizado. El objetivo es optimizar el motor de cálculo para proyectos residenciales en Guatemala, integrando parámetros de mercado actualizados y una arquitectura de datos jerárquica.
+
+### 1. Configuración de Parámetros de Mercado (Guatemala)
+Implementa una matriz de costos por metro cuadrado ($m^2$) basada en la calidad de acabados, aplicada automáticamente al área total del proyecto:
+*   **Nivel Básico (Económico):** Q. 3,000.00 - Q. 3,500.00 / $m^2$
+*   **Nivel Moderado (Medio):** Q. 3,500.00 - Q. 4,000.00 / $m^2$
+*   **Nivel Premium (Alto):** Q. 4,000.00 - Q. 5,000.00 / $m^2$
+
+### 2. Expansión de Tipologías de Losa y Cubierta
+Sustituye el sistema actual (losa sólida y estructura metálica con lámina) por un catálogo integral con cálculos automáticos de materiales, peso y costos según la tipología:
+*   **Losa Sólida:** Cálculo de volumen de concreto, acero de refuerzo y encofrado.
+*   **Losa Prefabricada (Vigueta y Bovedilla):** Cálculo de unidades de vigueta, bovedillas, malla electrosoldada y capa de compresión.
+*   **Pergola Metálica:** Cálculo de perfiles estructurales, soldadura y pintura.
+*   **Pergola de Madera:** Cálculo de piezas de madera, herrajes y selladores.
+*   **Tejado (Teja de Barro):** Cálculo de cantidad de tejas por $m^2$, estructura de soporte y mortero de fijación.
+
+### 3. Arquitectura de Cómputos Métricos Dinámicos (Sub-renglones con Lógica de Ingeniería)
+Implementa una estructura de "Renglón Padre > Sub-renglón Hijo" que permita la entrada de dimensiones variables para la generación automática de cantidades de obra:
+
+*   **Cimentación:** Al agregar el renglón, habilitar campos de dimensiones (largo, ancho, profundidad) para calcular automáticamente volumen de excavación, concreto y acero.
+*   **Columnas:** Implementar sub-renglón con campos de sección (base x lado) y altura, para calcular automáticamente volumen de concreto, número de varillas y desperdicio.
+*   **Soleras:** Implementar sub-renglón con campos de sección (ancho x alto) y longitud, para el cálculo de materiales.
+*   **Zapatas:** Implementar campos de dimensiones para el cálculo automático de volumen de concreto y refuerzo de acero.
+
+### 4. Funcionalidades Avanzadas y Formato
+*   **Cálculo Automático de Acero:** El sistema debe determinar diámetros de acero y longitud total basándose en las dimensiones ingresadas.
+*   **Interfaz de Usuario (UI):** Diseña un formato profesional, limpio y técnico, con tablas dinámicas que permitan la expansión/contracción de sub-renglones.
+*   **Precisión de Ingeniería:** Incluye coeficientes de desperdicio configurables por material para garantizar la exactitud del presupuesto final.
