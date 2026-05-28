@@ -15,7 +15,7 @@ export async function crearNotificacion(
       titulo,
       mensaje: mensaje || null,
       leido: false,
-    });
+    } as any);
   } catch (e) {
     console.warn('Error creando notificación:', e);
   }

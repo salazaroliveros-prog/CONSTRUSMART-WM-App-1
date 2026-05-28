@@ -72,35 +72,37 @@ export async function obtenerPresupuesto(id: string, userId: string): Promise<Pr
 
     if (error || !data) return null;
 
+    const d = data as any;
+
     return {
-      id: data.id,
-      proyecto: data.proyecto,
-      cliente: data.cliente,
-      ubicacion: data.ubicacion,
-      tipologia: data.tipologia,
-      fase: data.fase,
-      lineas: data.lineas || [],
+      id: d.id,
+      proyecto: d.proyecto,
+      cliente: d.cliente,
+      ubicacion: d.ubicacion,
+      tipologia: d.tipologia,
+      fase: d.fase,
+      lineas: d.lineas || [],
       factores: {
-        indirectos: data.factor_indirectos || 0,
-        administrativos: data.factor_administrativos || 0,
-        imprevistos: data.factor_imprevistos || 0,
-        utilidad: data.factor_utilidad || 0,
+        indirectos: d.factor_indirectos || 0,
+        administrativos: d.factor_administrativos || 0,
+        imprevistos: d.factor_imprevistos || 0,
+        utilidad: d.factor_utilidad || 0,
       },
       resultado: {
-        costoDirecto: data.costo_directo || 0,
+        costoDirecto: d.costo_directo || 0,
         costosIndirectos: 0,
         costosAdministrativos: 0,
         costosImprevistos: 0,
         subtotal: 0,
         utilidad: 0,
-        total: data.total || 0,
+        total: d.total || 0,
         estimacionDiasTotal: 0,
         precioPorDia: 0,
         margenUtilidad: 0,
         margenRelativo: 0,
       },
-      created_at: data.created_at,
-      updated_at: data.updated_at,
+      created_at: d.created_at,
+      updated_at: d.updated_at,
     };
   } catch (error) {
     console.error('Error obteniendo presupuesto:', error);
@@ -121,7 +123,7 @@ export async function obtenerPresupuestos(userId: string): Promise<PresupuestoCo
 
     if (error || !data) return [];
 
-    return data.map((p) => ({
+    return (data as any[]).map((p: any) => ({
       id: p.id,
       proyecto: p.proyecto,
       cliente: p.cliente,
@@ -146,6 +148,7 @@ export async function obtenerPresupuestos(userId: string): Promise<PresupuestoCo
         estimacionDiasTotal: 0,
         precioPorDia: 0,
         margenUtilidad: 0,
+        margenRelativo: 0,
       },
       created_at: p.created_at,
       updated_at: p.updated_at,
@@ -198,17 +201,17 @@ export async function guardarPresupuesto(
       // Crear nuevo
       const { data, error } = await supabase
         .from('presupuestos')
-        .insert(payload)
+        .insert(payload as any)
         .select()
         .single();
 
       if (error) throw error;
-      return data.id;
+      return (data as any).id;
     } else {
       // Actualizar existente
       const { error } = await supabase
         .from('presupuestos')
-        .update(payload)
+        .update(payload as any)
         .eq('id', presupuesto.id)
         .eq('user_id', userId);
 
@@ -283,7 +286,7 @@ export async function obtenerPresupuestosPorTipologia(
       .order('created_at', { ascending: false });
 
     if (error || !data) return [];
-    return data.map((p) => ({
+    return (data as any[]).map((p: any) => ({
       id: p.id,
       proyecto: p.proyecto,
       cliente: p.cliente,
@@ -308,6 +311,7 @@ export async function obtenerPresupuestosPorTipologia(
         estimacionDiasTotal: 0,
         precioPorDia: 0,
         margenUtilidad: 0,
+        margenRelativo: 0,
       },
       created_at: p.created_at,
       updated_at: p.updated_at,
@@ -330,40 +334,22 @@ export async function obtenerEstadisticasPresupuestos(userId: string) {
 
     if (error || !data) return null;
 
-    const total = data.reduce((sum: number, p: unknown): number => {
-      const presupuesto = p as { total?: number };
-      return sum + (presupuesto.total || 0);
+    const rows = data as any[];
+    const total = rows.reduce((sum: number, p: any): number => {
+      return sum + (p.total || 0);
     }, 0);
-    const promedio = data.length > 0 ? total / data.length : 0;
-    const mayor = Math.max(...data.map((p: unknown): number => {
-      const presupuesto = p as { total?: number };
-      return presupuesto.total || 0;
-    }));
-    const menor = Math.min(...data.map((p: unknown): number => {
-      const presupuesto = p as { total?: number };
-      return presupuesto.total || 0;
-    }));
+    const promedio = rows.length > 0 ? total / rows.length : 0;
+    const mayor = Math.max(...rows.map((p: any): number => p.total || 0));
+    const menor = Math.min(...rows.map((p: any): number => p.total || 0));
     const porFase = {
-      planeacion: data.filter((p: unknown): boolean => {
-        const presupuesto = p as { fase?: string };
-        return presupuesto.fase === 'planeación';
-      }).length,
-      ejecucion: data.filter((p: unknown): boolean => {
-        const presupuesto = p as { fase?: string };
-        return presupuesto.fase === 'ejecución';
-      }).length,
-      pausa: data.filter((p: unknown): boolean => {
-        const presupuesto = p as { fase?: string };
-        return presupuesto.fase === 'pausa';
-      }).length,
-      finalizado: data.filter((p: unknown): boolean => {
-        const presupuesto = p as { fase?: string };
-        return presupuesto.fase === 'finalizado';
-      }).length,
+      planeacion: rows.filter((p: any): boolean => p.fase === 'planeación').length,
+      ejecucion: rows.filter((p: any): boolean => p.fase === 'ejecución').length,
+      pausa: rows.filter((p: any): boolean => p.fase === 'pausa').length,
+      finalizado: rows.filter((p: any): boolean => p.fase === 'finalizado').length,
     };
 
     return {
-      totalPresupuestos: data.length,
+      totalPresupuestos: rows.length,
       totalMonto: total,
       promedioMonto: promedio,
       mayorMonto: mayor,

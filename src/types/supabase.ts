@@ -420,6 +420,7 @@ export type UpdateOrdenCompra = Partial<CreateOrdenCompra>;
 export interface OrdenCompraItem {
   id: string;
   ordenCompraId: string;
+  materialId?: string;
   descripcion: string;
   cantidad: number;
   unidad: string;
