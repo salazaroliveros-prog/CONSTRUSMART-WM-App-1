@@ -112,20 +112,19 @@ const OCRFactura: React.FC<{ onClose?: () => void; proyectoId?: string }> = ({ o
 
     setSaving(true);
     try {
-      // Upload document for OCR processing and direct saving (for now)
-      // This part needs to change to trigger an approval workflow
       await OcrService.uploadDocument({
+        user_id: session?.user?.id,
         proyecto_id: dataToSave.proyectoId || null,
         proveedor: dataToSave.proveedor,
         monto: dataToSave.monto,
         fecha_factura: dataToSave.fecha,
-        // ocr_raw_text: result?.rawText, // Should be populated by OCR service if available
-        // ocr_data: result?.structuredData, // Should be populated by OCR service
-        // archivo_url: image // Store image URL if uploaded to storage
+        file_url: image || '', // Store image data URL
+        estado: 'pendiente',
+        ocr_data: { raw_text: result ? 'OCR processed' : undefined },
       });
 
-      toast.success('Factura enviada para procesamiento.');
-      onClose?.(); // Close modal after successful submission
+      toast.success('Factura enviada para aprobación.');
+      onClose?.();
     } catch (error) {
       console.error('Error saving OCR data:', error);
       toast.error('Error al guardar la factura.');

@@ -502,7 +502,14 @@ CREATE TABLE IF NOT EXISTS public.ocr_documentos (
   ocr_data jsonb,
   status text DEFAULT 'pending',
   revisado_por uuid REFERENCES auth.users(id),
-  created_at timestamptz DEFAULT now()
+  -- Campos para facturas OCR
+  proyecto_id uuid REFERENCES public.presupuestos(id) ON DELETE SET NULL,
+  proveedor text,
+  monto numeric(12,2),
+  fecha_factura date,
+  notas text,
+  created_at timestamptz DEFAULT now(),
+  estado text DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'aprobado', 'rechazado'))
 );
 
 -- 4.28. caja_proyecto (caja chica por proyecto)
@@ -1217,6 +1224,8 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_registro          ON public.audit_log(r
 CREATE INDEX IF NOT EXISTS idx_bitacora_presupuesto_id     ON public.bitacora_avance(presupuesto_id);
 CREATE INDEX IF NOT EXISTS idx_ocr_user                    ON public.ocr_documentos(user_id);
 CREATE INDEX IF NOT EXISTS idx_ocr_revisado_por           ON public.ocr_documentos(revisado_por);
+CREATE INDEX IF NOT EXISTS idx_ocr_proyecto_id          ON public.ocr_documentos(proyecto_id);
+CREATE INDEX IF NOT EXISTS idx_ocr_status              ON public.ocr_documentos(status);
 CREATE INDEX IF NOT EXISTS idx_tokens_user                 ON public.device_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_caja_proyecto_user_id       ON public.caja_proyecto(user_id);
 CREATE INDEX IF NOT EXISTS idx_caja_proyecto_proyecto_id   ON public.caja_proyecto(proyecto_id);
