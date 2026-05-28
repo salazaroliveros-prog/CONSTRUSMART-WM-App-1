@@ -3,8 +3,9 @@ import { useAppContext } from '@/contexts/AppContext';
 import PageShell from '@/components/shared/PageShell';
 import { MaterialesService } from '@/services/presupuestos/MaterialesService';
 import { BodegaService } from '@/services/proyectos/BodegaService';
+import { OrdenesCompraService } from '@/services/compras/OrdenesCompraService';
 import { toast } from 'sonner';
-import { Package, Plus, Minus, AlertTriangle, Search } from 'lucide-react';
+import { Package, Plus, Minus, AlertTriangle, Search, ShoppingCart } from 'lucide-react';
 
 interface MaterialRow {
   id: string;
@@ -27,7 +28,7 @@ interface ProyectoSimple {
 }
 
 const BodegaScreen: React.FC = () => {
-  const { presupuestos } = useAppContext();
+  const { presupuestos, session, setView } = useAppContext();
   const [selectedId, setSelectedId] = useState('');
   const [materiales, setMateriales] = useState<MaterialRow[]>([]);
   const [search, setSearch] = useState('');
@@ -37,6 +38,7 @@ const BodegaScreen: React.FC = () => {
   const [showUso, setShowUso] = useState<MaterialRow | null>(null);
   const [usoCantidad, setUsoCantidad] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [meta, setMeta] = useState({ proyectoId: '' });
 
   const proyectos = useMemo<ProyectoSimple[]>(() => {
     return presupuestos.map((p) => ({
@@ -49,8 +51,12 @@ const BodegaScreen: React.FC = () => {
   const loadMateriales = useCallback(async () => {
     if (!selectedId) return;
     try {
+      // 1. Obtener materiales registrados
       const items = await MaterialesService.getMateriales(selectedId);
-      // Reemplazo de supabase.from directo por BodegaService
+      // 2. Obtener desglose desde renglones (si no hay materiales)
+      const desglosado = items.length === 0 ? await MaterialesService.getDesglosado(selectedId) : [];
+      const allItems = [...items, ...desglosado];
+      
       const movs = await BodegaService.getMovimientos(selectedId);
 
       const movMap: Record<string, { comprado: number; consumido: number }> = {};
@@ -62,7 +68,7 @@ const BodegaScreen: React.FC = () => {
       });
 
       setMateriales(
-        items.map((m: Record<string, unknown>) => {
+        allItems.map((m: Record<string, unknown>) => {
           const mov = movMap[m.id as string] || { comprado: 0, consumido: 0 };
           return {
             id: m.id as string,
@@ -123,6 +129,43 @@ const BodegaScreen: React.FC = () => {
     m.nombre.toLowerCase().includes(search.toLowerCase())
   );
 
+  const generarOC = async () => {
+    if (!session?.user?.id) return;
+    const sinComprar = filtered.filter(m => m.comprado === 0 && m.cantidad_estimada > 0);
+    if (sinComprar.length === 0) {
+      toast.info('Todos los materiales ya tienen compras registradas');
+      return;
+    }
+    setSaving(true);
+    try {
+      const folio = await OrdenesCompraService.generarFolio(session.user.id);
+      const oc = await OrdenesCompraService.crear({
+        folio,
+        proveedorId: '',
+        proyectoId: meta.proyectoId || undefined,
+        fechaEmision: new Date().toISOString().slice(0, 10),
+        estatus: 'pendiente',
+      } as any, session.user.id);
+      
+      const items = sinComprar.map(m => ({
+        ordenCompraId: oc.id,
+        descripcion: m.nombre,
+        cantidad: m.cantidad_estimada,
+        unidad: m.unidad,
+        precioUnitario: m.costo_unitario,
+      }));
+      await OrdenesCompraService.crearItems(items as any);
+      
+      toast.success(`OC ${folio} creada con ${sinComprar.length} materiales`);
+      loadMateriales();
+    } catch (err) {
+      console.error(err);
+      toast.error('Error al generar orden de compra');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <PageShell title="Gestión de Bodega e Inventario">
       <div className="flex flex-col p-3 sm:p-5 max-w-7xl mx-auto space-y-4 animate-fadeIn">
@@ -132,7 +175,10 @@ const BodegaScreen: React.FC = () => {
               <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Seleccionar Proyecto</label>
               <select 
                 value={selectedId} 
-                onChange={(e) => setSelectedId(e.target.value)}
+                onChange={(e) => {
+                  setSelectedId(e.target.value);
+                  setMeta({ proyectoId: e.target.value });
+                }}
                 className="w-full px-3 py-2 border rounded-lg text-sm bg-background dark:bg-muted dark:border-border"
               >
                 <option value="">Seleccione un proyecto...</option>
@@ -157,6 +203,21 @@ const BodegaScreen: React.FC = () => {
                 />
               </div>
             </div>
+            <button
+              onClick={generarOC}
+              disabled={saving || !selectedId}
+              className="h-10 px-3 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 disabled:opacity-40 transition flex items-center gap-1"
+              title="Generar OC con materiales sin comprar"
+            >
+              <ShoppingCart className="w-3.5 h-3.5" /> Generar OC
+            </button>
+            <button
+              onClick={() => setView('compras')}
+              className="h-10 px-3 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition flex items-center gap-1"
+              title="Ver órdenes de compra"
+            >
+              <ShoppingCart className="w-3.5 h-3.5" /> Ver OC
+            </button>
           </div>
         </div>
 
