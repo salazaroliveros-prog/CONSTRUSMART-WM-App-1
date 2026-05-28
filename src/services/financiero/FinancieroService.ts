@@ -56,9 +56,10 @@ export const FinancieroService = {
   /**
    * Registra una nueva transacción con validación empresarial
    */
-  async registrarTransaccion(transaccion: Omit<Transaccion, 'id'>) {
+  async registrarTransaccion(transaccion: Omit<Transaccion, 'id' | 'userId'>, userId: string) {
     try {
       const dbRecord = {
+        user_id: userId,
         tipo: transaccion.tipo,
         descripcion: transaccion.descripcion,
         cantidad: transaccion.cantidad,

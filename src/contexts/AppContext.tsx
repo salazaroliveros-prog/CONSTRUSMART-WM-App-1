@@ -835,7 +835,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
       
-      const data = await FinancieroService.registrarTransaccion(dbRecord as any);
+      const data = await FinancieroService.registrarTransaccion(dbRecord as any, userId);
       if (data) {
         const mapped = dbToTransaccion(data);
         setTransacciones(p => [mapped, ...p]);
@@ -1209,6 +1209,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // 1. Se recrean en cada render (cambian siempre)
   // 2. Incluirlas forzaría re-render en cada keystroke
   // 3. Los arrays de datos (clientes, etc.) ya capturan el estado actual
+   
   const dataContextValue = useMemo(() => ({
     clientes, addCliente, updateCliente, deleteCliente,
     proyectos, addProyecto, updateProyecto,
@@ -1219,7 +1220,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     equipoMiembros, addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
     proveedores, ordenesCompra,
     notifications, markNotificationAsRead, deleteNotification,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }), [
     clientes, proyectos, transacciones, actividades, presupuestos,
     equipos, equipoMiembros, proveedores, ordenesCompra, notifications,
