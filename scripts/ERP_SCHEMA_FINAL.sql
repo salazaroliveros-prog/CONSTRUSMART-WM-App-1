@@ -504,6 +504,72 @@ CREATE TABLE IF NOT EXISTS public.device_tokens (
   created_at timestamptz DEFAULT now()
 );
 
+-- 4.28. caja_proyecto (caja chica por proyecto)
+CREATE TABLE IF NOT EXISTS public.caja_proyecto (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  proyecto_id uuid UNIQUE NOT NULL REFERENCES public.proyectos(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  saldo_inicial numeric(12,2) DEFAULT 0,
+  saldo_sistema_actual numeric(12,2) DEFAULT 0,
+  saldo_real_actual numeric(12,2),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- 4.29. movimientos_caja (movimientos de caja chica)
+CREATE TABLE IF NOT EXISTS public.movimientos_caja (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  caja_id uuid NOT NULL REFERENCES public.caja_proyecto(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  fecha date NOT NULL,
+  descripcion text NOT NULL,
+  subtipo varchar NOT NULL,
+  concepto varchar,
+  monto numeric(12,2) NOT NULL,
+  saldo_sistema_antes numeric(12,2) NOT NULL,
+  saldo_sistema_despues numeric(12,2) NOT NULL,
+  saldo_real_confirmado numeric(12,2),
+  diferencia numeric(12,2),
+  conciliado_fecha timestamptz,
+  motivo_diferencia text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- 4.30. transacciones_recurrentes (transacciones recurrentes automáticas)
+CREATE TABLE IF NOT EXISTS public.transacciones_recurrentes (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  presupuesto_id uuid NOT NULL REFERENCES public.presupuestos(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  descripcion text NOT NULL,
+  tipo varchar NOT NULL,
+  monto numeric(12,2) NOT NULL,
+  frecuencia varchar NOT NULL,
+  activa boolean DEFAULT true,
+  proxima_fecha date,
+  ultima_fecha date,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- 4.30. trigger updated_at para caja_proyecto
+DROP TRIGGER IF EXISTS trg_caja_proyecto_updated_at ON public.caja_proyecto;
+CREATE TRIGGER trg_caja_proyecto_updated_at
+  BEFORE UPDATE ON public.caja_proyecto
+  FOR EACH ROW EXECUTE FUNCTION public.fn_set_updated_at();
+
+-- 4.31. trigger updated_at para movimientos_caja
+DROP TRIGGER IF EXISTS trg_movimientos_caja_updated_at ON public.movimientos_caja;
+CREATE TRIGGER trg_movimientos_caja_updated_at
+  BEFORE UPDATE ON public.movimientos_caja
+  FOR EACH ROW EXECUTE FUNCTION public.fn_set_updated_at();
+
+-- 4.32. trigger updated_at para transacciones_recurrentes
+DROP TRIGGER IF EXISTS trg_transacciones_recurrentes_updated_at ON public.transacciones_recurrentes;
+CREATE TRIGGER trg_transacciones_recurrentes_updated_at
+  BEFORE UPDATE ON public.transacciones_recurrentes
+  FOR EACH ROW EXECUTE FUNCTION public.fn_set_updated_at();
+
 -- 5. HABILITAR ROW LEVEL SECURITY EN TODAS LAS TABLAS
 ALTER TABLE public.clientes               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.proyectos              ENABLE ROW LEVEL SECURITY;
@@ -536,6 +602,9 @@ ALTER TABLE public.subrenglon_mano_obra   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subrenglon_equipos     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ocr_documentos         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.device_tokens          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.caja_proyecto          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.movimientos_caja       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transacciones_recurrentes ENABLE ROW LEVEL SECURITY;
 
 -- 6. ELIMINAR POLÍTICAS EXISTENTES (para reinicio idempotente)
 -- clientes
@@ -723,6 +792,21 @@ DROP POLICY IF EXISTS "reci_select" ON public.recepcion_oc_items;
 DROP POLICY IF EXISTS "reci_insert" ON public.recepcion_oc_items;
 DROP POLICY IF EXISTS "reci_update" ON public.recepcion_oc_items;
 DROP POLICY IF EXISTS "reci_delete" ON public.recepcion_oc_items;
+
+-- ocr_documentos
+DROP POLICY IF EXISTS "ocr_owner" ON public.ocr_documentos;
+
+-- device_tokens
+DROP POLICY IF EXISTS "tokens_owner" ON public.device_tokens;
+
+-- caja_proyecto
+DROP POLICY IF EXISTS "caja_proyecto_owner" ON public.caja_proyecto;
+
+-- movimientos_caja
+DROP POLICY IF EXISTS "movimientos_caja_owner" ON public.movimientos_caja;
+
+-- transacciones_recurrentes
+DROP POLICY IF EXISTS "tr_owner" ON public.transacciones_recurrentes;
 
 -- 7. POLÍTICAS RLS
 
@@ -1061,6 +1145,24 @@ CREATE POLICY "tokens_owner" ON public.device_tokens
   USING     (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+-- 7.27. caja_proyecto
+CREATE POLICY "caja_proyecto_owner" ON public.caja_proyecto
+  FOR ALL TO authenticated
+  USING     (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- 7.28. movimientos_caja
+CREATE POLICY "movimientos_caja_owner" ON public.movimientos_caja
+  FOR ALL TO authenticated
+  USING     (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- 7.29. transacciones_recurrentes
+CREATE POLICY "tr_owner" ON public.transacciones_recurrentes
+  FOR ALL TO authenticated
+  USING     (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 -- 8. ÍNDICES DE PERFORMANCE
 CREATE INDEX IF NOT EXISTS idx_clientes_user_id            ON public.clientes(user_id);
 CREATE INDEX IF NOT EXISTS idx_proyectos_user_id           ON public.proyectos(user_id);
@@ -1116,9 +1218,15 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_registro          ON public.audit_log(r
 CREATE INDEX IF NOT EXISTS idx_bitacora_presupuesto_id     ON public.bitacora_avance(presupuesto_id);
 CREATE INDEX IF NOT EXISTS idx_ocr_user                    ON public.ocr_documentos(user_id);
 CREATE INDEX IF NOT EXISTS idx_tokens_user                 ON public.device_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_caja_proyecto_user_id       ON public.caja_proyecto(user_id);
+CREATE INDEX IF NOT EXISTS idx_caja_proyecto_proyecto_id   ON public.caja_proyecto(proyecto_id);
+CREATE INDEX IF NOT EXISTS idx_movimientos_caja_caja_id    ON public.movimientos_caja(caja_id);
+CREATE INDEX IF NOT EXISTS idx_movimientos_caja_user_id      ON public.movimientos_caja(user_id);
+CREATE INDEX IF NOT EXISTS idx_tr_recurrentes_presupuesto  ON public.transacciones_recurrentes(presupuesto_id);
+CREATE INDEX IF NOT EXISTS idx_tr_recurrentes_user_id        ON public.transacciones_recurrentes(user_id);
 
 -- 9. VERIFICACIÓN FINAL
--- 9a. RLS activo en las 20 tablas
+-- 9a. RLS activo en las 22 tablas
 SELECT
   tablename,
   CASE WHEN rowsecurity THEN '✅ RLS ON' ELSE '❌ RLS OFF' END AS rls
@@ -1133,7 +1241,8 @@ WHERE schemaname = 'public'
     'cambios_presupuesto','materiales_proyecto','movimientos_materiales',
     'conciliaciones','partidas_conciliacion','checklist_items',
     'notificaciones',
-    'proveedores','ordenes_compra','orden_compra_items','recepcion_oc','recepcion_oc_items'
+    'proveedores','ordenes_compra','orden_compra_items','recepcion_oc','recepcion_oc_items',
+    'ocr_documentos','device_tokens','caja_proyecto','movimientos_caja','transacciones_recurrentes'
   )
 ORDER BY tablename;
 
@@ -1149,7 +1258,8 @@ WHERE schemaname = 'public'
     'cambios_presupuesto','materiales_proyecto','movimientos_materiales',
     'conciliaciones','partidas_conciliacion','checklist_items',
     'notificaciones',
-    'proveedores','ordenes_compra','orden_compra_items','recepcion_oc','recepcion_oc_items'
+    'proveedores','ordenes_compra','orden_compra_items','recepcion_oc','recepcion_oc_items',
+    'ocr_documentos','device_tokens','caja_proyecto','movimientos_caja','transacciones_recurrentes'
   )
 ORDER BY tablename, policyname;
 

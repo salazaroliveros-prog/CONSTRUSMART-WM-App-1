@@ -27,6 +27,9 @@ DROP FUNCTION IF EXISTS public.user_owns_equipo(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.user_owns_presupuesto(uuid) CASCADE;
 
 -- 4. ELIMINAR TABLAS (orden inverso al de creación para respetar FKs)
+DROP TABLE IF EXISTS public.transacciones_recurrentes CASCADE;
+DROP TABLE IF EXISTS public.movimientos_caja CASCADE;
+DROP TABLE IF EXISTS public.caja_proyecto CASCADE;
 DROP TABLE IF EXISTS public.ocr_documentos CASCADE; -- New table
 DROP TABLE IF EXISTS public.device_tokens CASCADE; -- New table
 DROP TABLE IF EXISTS public.recepcion_oc_items CASCADE;
@@ -72,7 +75,8 @@ WHERE schemaname = 'public'
     'cambios_presupuesto','materiales_proyecto','movimientos_materiales',
     'conciliaciones','partidas_conciliacion','checklist_items',
     'notificaciones',
-    'proveedores','ordenes_compra','orden_compra_items','recepcion_oc','recepcion_oc_items'
+    'proveedores','ordenes_compra','orden_compra_items','recepcion_oc','recepcion_oc_items',
+    'ocr_documentos','device_tokens','caja_proyecto','movimientos_caja','transacciones_recurrentes'
   );
 
 -- Si el SELECT anterior no devuelve filas, la base está limpia ✅
