@@ -39,11 +39,11 @@ const ConciliacionPanel: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-2.5 space-y-2">
+    <div className="bg-card dark:bg-card rounded-xl shadow-sm border border-border p-2.5 space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Banknote className="w-4 h-4 text-blue-600" />
-          <h3 className="text-xs font-bold text-slate-700">Conciliación Bancaria</h3>
+          <h3 className="text-xs font-bold text-card-foreground">Conciliación Bancaria</h3>
         </div>
         <button onClick={nuevaConciliacion} className="flex items-center gap-1 text-[10px] bg-blue-600 text-white px-2 py-1 rounded font-semibold btn-press">
           <Plus className="w-3 h-3" /> Nueva
@@ -51,16 +51,16 @@ const ConciliacionPanel: React.FC = () => {
       </div>
       <div className="space-y-1 max-h-60 overflow-y-auto">
         {data.map(c => (
-          <div key={c.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 text-[11px]">
+          <div key={c.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-accent text-[11px]">
             {c.conciliado ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
-            <span className="font-semibold text-slate-600 w-20">{c.banco}</span>
-            <span className="text-slate-400">{c.periodo.slice(0, 7)}</span>
+            <span className="font-semibold text-card-foreground w-20">{c.banco}</span>
+            <span className="text-muted-foreground">{c.periodo.slice(0, 7)}</span>
             <span className={`ml-auto font-mono font-bold ${c.diferencia === 0 ? 'text-emerald-600' : 'text-red-500'}`}>
               Q{Number(c.diferencia).toLocaleString()}
             </span>
           </div>
         ))}
-        {data.length === 0 && <p className="text-[10px] text-slate-400 text-center py-4">Sin conciliaciones</p>}
+        {data.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-4">Sin conciliaciones</p>}
       </div>
     </div>
   );

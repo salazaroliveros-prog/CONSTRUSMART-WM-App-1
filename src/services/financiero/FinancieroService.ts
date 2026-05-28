@@ -58,9 +58,21 @@ export const FinancieroService = {
    */
   async registrarTransaccion(transaccion: Omit<Transaccion, 'id'>) {
     try {
+      const dbRecord = {
+        tipo: transaccion.tipo,
+        descripcion: transaccion.descripcion,
+        cantidad: transaccion.cantidad,
+        unidad: transaccion.unidad,
+        categoria: transaccion.categoria,
+        costo_unitario: transaccion.costoUnitario,
+        costo_total: transaccion.costoTotal,
+        fecha: transaccion.fecha,
+        proyecto_id: transaccion.proyectoId,
+        empleado_id: transaccion.empleadoId,
+      };
       const { data, error } = await supabase
         .from('transacciones')
-        .insert(transaccion)
+        .insert(dbRecord)
         .select()
         .single();
 

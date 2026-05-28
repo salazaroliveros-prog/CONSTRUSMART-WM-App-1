@@ -65,10 +65,10 @@ const MaterialesPanel: React.FC<Props> = ({ presupuestoId, onClose }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-2.5 space-y-2">
+    <div className="bg-card dark:bg-card rounded-xl shadow-sm border border-border p-2.5 space-y-2">
       <div className="flex items-center gap-1.5">
         <Package className="w-4 h-4 text-emerald-600" />
-        <h3 className="text-xs font-bold text-slate-700">Materiales</h3>
+        <h3 className="text-xs font-bold text-card-foreground">Materiales</h3>
       </div>
 
       <div className="flex gap-1.5">
@@ -81,16 +81,16 @@ const MaterialesPanel: React.FC<Props> = ({ presupuestoId, onClose }) => {
         {items.map(m => {
           const restante = Number(m.cantidad_estimada) - Number(m.cantidad_utilizada);
           return (
-            <div key={m.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 text-[11px] group">
-              <Package className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <div key={m.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-accent text-[11px] group">
+              <Package className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
-                <span className="font-semibold text-slate-700">{m.nombre}</span>
-                <span className="text-slate-400 ml-1">{m.codigo ? `(${m.codigo})` : ''}</span>
-                <div className="text-[9px] text-slate-400">
+                <span className="font-semibold text-card-foreground">{m.nombre}</span>
+                <span className="text-muted-foreground ml-1">{m.codigo ? `(${m.codigo})` : ''}</span>
+                <div className="text-[9px] text-muted-foreground">
                   Est: {Number(m.cantidad_estimada).toFixed(0)} | Usado: {Number(m.cantidad_utilizada).toFixed(0)} | Restante: <span className={restante <= 0 ? 'text-red-500 font-bold' : 'text-emerald-600'}>{restante.toFixed(0)}</span>
                 </div>
               </div>
-              <div className="font-mono text-[10px] text-slate-500">Q{Number(m.costo_unitario).toFixed(0)}</div>
+              <div className="font-mono text-[10px] text-muted-foreground">Q{Number(m.costo_unitario).toFixed(0)}</div>
               <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={() => registrarCompra(m.id, 1)} className="p-1.5 rounded hover:bg-emerald-100 text-emerald-600" title="Registrar Compra">
                     <Plus className="w-3 h-3" />
@@ -102,7 +102,7 @@ const MaterialesPanel: React.FC<Props> = ({ presupuestoId, onClose }) => {
             </div>
           );
         })}
-        {items.length === 0 && <p className="text-[10px] text-slate-400 text-center py-4">Sin materiales registrados</p>}
+        {items.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-4">Sin materiales registrados</p>}
       </div>
     </div>
   );

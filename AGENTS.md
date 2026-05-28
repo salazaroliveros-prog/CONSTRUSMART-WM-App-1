@@ -166,6 +166,16 @@ Se ha completado la refactorización profunda y la implementación de las capaci
 * Implementación de Notificaciones Push (Service Worker).
 * Integración de OCR de facturas con flujo de aprobación automática.
 * Escalabilidad: Migración progresiva a módulos de servicios agregados (Aggregators).
+- **Nuevas funcionalidades implementadas:**
+  - Sistema de Notificaciones Push (Web Push via Service Worker)
+  - OCR de Facturas con Flujo de Aprobación
+  - Módulos de Servicios Agregados (Dashboard, Financiero, Reportes, Sync)
+- **Herramientas nuevas:** `PushService`, `OcrService`, `AprobacionService`, `ReportesAggregator`, `DashboardAggregator`, `FinancieroAggregator`, `SyncAggregator`.
+- **Componentes nuevos:** `AprobacionScreen`, `UpdateNotification`.
+- **Tablas nuevas:** `ocr_documentos`, `device_tokens`.
+- **Actualizaciones:** `notificaciones` (columnas adicionales), `CLEANUP_ALL.sql`.
+- **Validación y Pruebas:** Build pass, typecheck pass, 17/17 tests pass.
+
 
 ---
 ## Servicios Principales Finales

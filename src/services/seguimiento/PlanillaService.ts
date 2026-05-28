@@ -6,7 +6,8 @@ export const PlanillaService = {
     empleadoId: string,
     monto: number,
     fecha: string,
-    notas: string
+    notas: string,
+    userId?: string,
   ) {
     // Validar existencia de empleado
     const { data: empleado, error: eError } = await supabase
@@ -19,6 +20,20 @@ export const PlanillaService = {
       throw new Error('El empleado seleccionado no existe o no es válido');
     }
 
+    // Validar duplicados (mismo empleado, mismo proyecto, misma fecha)
+    const { data: duplicado } = await supabase
+      .from('transacciones')
+      .select('id')
+      .eq('empleado_id', empleadoId)
+      .eq('proyecto_id', presupuestoId)
+      .eq('fecha', fecha)
+      .eq('categoria', 'mano-obra')
+      .maybeSingle();
+
+    if (duplicado) {
+      throw new Error(`Ya existe un registro de pago para este empleado en la fecha ${fecha}`);
+    }
+
     const { data, error } = await supabase
       .from('transacciones')
       .insert({
@@ -29,7 +44,7 @@ export const PlanillaService = {
         fecha: fecha,
         proyecto_id: presupuestoId,
         empleado_id: empleadoId,
-      } as any)
+      })
       .select()
       .single();
     if (error) throw error;

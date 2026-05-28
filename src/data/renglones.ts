@@ -269,7 +269,25 @@ const baseRenglones = (prefix: string): Renglon[] => [
     [mo('Soldador', 1, 350), mo('Ayudante', 2, 150)],
     [eq('Soldadora 220A', 0.125, 45), eq('Esmeril angular', 0.125, 18), eq('Andamio', 0.125, 8)]
   ),
-  reng(`${prefix}-36`, '14.01', 'Acera de concreto t=0.08m', 'm²', 15,
+  reng(`${prefix}-81`, '13.03', 'Pergola metálica', 'm²', 10,
+    [mat('Perfil metálico estructural', 'ml', 2.8, 48), mat('Placa metálica de anclaje', 'u', 0.5, 125), mat('Tornillo autorroscante', 'u', 6, 1.8),
+     mat('Pintura anticorrosiva', 'Lata', 0.08, 55), mat('Sellador de juntas', 'L', 0.03, 45)],
+    [mo('Soldador', 1, 350), mo('Ayudante', 1, 150)],
+    [eq('Soldadora 220A', 0.12, 45), eq('Nodo metálico', 0.1, 35), eq('Andamio', 0.1, 8)]
+  ),
+  reng(`${prefix}-82`, '13.04', 'Pergola de madera', 'm²', 12,
+    [mat('Vigas de madera tratada', 'ml', 1.9, 35), mat('Listón de madera', 'ml', 0.8, 28), mat('Lámina de techo translúcida', 'm²', 0.6, 65),
+     mat('Herrajes metálicos', 'u', 0.15, 80), mat('Barniz protector', 'L', 0.04, 65)],
+    [mo('Carpintero', 1, 320), mo('Ayudante', 1, 150)],
+    [eq('Sierra circular', 0.12, 25), eq('Taladro', 0.12, 15), eq('Elevador', 0.08, 120)]
+  ),
+  reng(`${prefix}-83`, '13.05', 'Tejado teja de barro', 'm²', 14,
+    [mat('Teja de barro', 'u', 10.5, 6.5), mat('Fieltro asfáltico', 'm²', 1.05, 12), mat('Madera para cabios', 'ml', 1.2, 28),
+     mat('Mortero de fijación', 'm³', 0.02, 850), mat('Clavos para teja', 'u', 12, 0.45)],
+    [mo('Techador', 1, 320), mo('Ayudante', 1.5, 150)],
+    [eq('Taladro', 0.1, 15), eq('Andamio', 0.1, 8), eq('Carretilla', 0.05, 5)]
+  ),
+  reng(`${prefix}-39`, '14.01', 'Acera de concreto t=0.08m', 'm²', 15,
     [mat('Cemento UGC', 'bolsa', 0.45, 85), mat('Arena de río', 'm³', 0.04, 120), mat('Grava 3/4"', 'm³', 0.06, 165),
      mat('Madera formaleta', 'pt', 0.5, 8), mat('Junta de dilatación', 'ml', 0.3, 5)],
     [mo('Albañil', 1, 250), mo('Ayudante', 1, 150)],

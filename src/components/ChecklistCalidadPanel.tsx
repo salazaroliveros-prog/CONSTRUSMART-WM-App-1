@@ -73,7 +73,7 @@ export const ChecklistCalidadPanel: React.FC<ChecklistCalidadPanelProps> = ({
           {/* Listado de checklists */}
           {checklists.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-slate-500">No hay checklists creados</p>
+              <p className="text-muted-foreground">No hay checklists creados</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -89,14 +89,14 @@ export const ChecklistCalidadPanel: React.FC<ChecklistCalidadPanelProps> = ({
                     className={`border-2 rounded-lg p-4 cursor-pointer transition ${
                       checklistActivo === checklist.id
                         ? 'border-blue-400 bg-blue-50'
-                        : 'border-slate-200 hover:border-slate-300'
+                        : 'border-border hover:border-border'
                     }`}
                     onClick={() => setChecklistActivo(checklist.id)}
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <p className="font-semibold capitalize">{checklist.fase}</p>
-                        <p className="text-xs text-slate-600">
+                        <p className="text-xs text-muted-foreground">
                           Tipología: {checklist.tipologia}
                         </p>
                       </div>
@@ -172,7 +172,7 @@ export const ChecklistCalidadPanel: React.FC<ChecklistCalidadPanelProps> = ({
                 {checklistActual.items.map((item) => (
                   <div
                     key={item.id}
-                    className="p-3 border rounded-lg hover:bg-slate-50 transition"
+                    className="p-3 border rounded-lg hover:bg-accent transition"
                   >
                     <div className="flex items-start gap-3">
                       <Checkbox
@@ -192,7 +192,7 @@ export const ChecklistCalidadPanel: React.FC<ChecklistCalidadPanelProps> = ({
                       />
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <p className={`font-medium ${item.completado ? 'line-through text-slate-500' : ''}`}>
+                          <p className={`font-medium ${item.completado ? 'line-through text-muted-foreground' : ''}`}>
                             {item.titulo}
                           </p>
                           {item.requerido && (
@@ -201,7 +201,7 @@ export const ChecklistCalidadPanel: React.FC<ChecklistCalidadPanelProps> = ({
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-slate-600 mt-1">{item.descripcion}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{item.descripcion}</p>
                         {item.completado && item.fecha_completado && (
                           <p className="text-xs text-green-600 mt-2">
                             ✅ Completado {item.fecha_completado.toLocaleDateString('es-GT')}

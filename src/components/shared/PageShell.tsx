@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, lazy, Suspense } from 'react';
 
 interface PageShellProps {
   children: React.ReactNode;
@@ -7,21 +7,21 @@ interface PageShellProps {
   header?: boolean;
 }
 
-const PageShell: React.FC<PageShellProps> = ({ children, title, showHome = true, header = true }) => {
-  const HeaderComponent = React.lazy(() => import('./Header'));
+const LazyHeader = lazy(() => import('./Header'));
 
+const PageShell: React.FC<PageShellProps> = ({ children, title, showHome = true, header = true }) => {
   return (
-    <div className="min-h-screen flex flex-col bg-background animate-fadeIn">
+    <div className="min-h-screen flex flex-col bg-background">
       {header && (
-        <React.Suspense fallback={null}>
-          <HeaderComponent showHome={showHome} title={title} />
-        </React.Suspense>
+        <Suspense fallback={null}>
+          <LazyHeader showHome={showHome} title={title} />
+        </Suspense>
       )}
-      <main className="flex-1 w-full mx-auto animate-fade-in-up">
+      <main className="flex-1 w-full mx-auto">
         {children}
       </main>
     </div>
   );
 };
 
-export default PageShell;
+export default memo(PageShell);

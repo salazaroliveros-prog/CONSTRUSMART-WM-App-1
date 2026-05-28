@@ -1,10 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import PageShell from '@/components/shared/PageShell';
 import { toast } from 'sonner';
-import { FileText, Plus, Trash2, Download, Printer, Search, Copy } from 'lucide-react';
-import type { Presupuesto } from '@/types/supabase';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { FileText, Plus, Trash2, Printer, Search, Copy } from 'lucide-react';
 
 interface CotizacionItem {
   id: string;
@@ -67,7 +66,6 @@ const CotizacionScreen: React.FC = () => {
   const [confirmRemoveItem, setConfirmRemoveItem] = useState<string | null>(null);
 
   const current = cotizaciones.find(c => c.id === selectedId);
-  const isNew = selectedId && !current;
 
   const defaultItems: CotizacionItem[] = CATEGORIAS.map(c => ({
     id: crypto.randomUUID(),
@@ -289,12 +287,12 @@ const CotizacionScreen: React.FC = () => {
     <PageShell showHome={false} title="Cotización Profesional">
       <div className="p-3 sm:p-5 max-w-[1600px] mx-auto space-y-4">
         {/* Toolbar */}
-        <div className="bg-white rounded-xl shadow-md p-3 flex flex-wrap items-center gap-2 justify-between">
+        <div className="bg-card rounded-xl shadow-md p-3 flex flex-wrap items-center gap-2 justify-between border dark:border-border">
           <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-            <Search className="w-4 h-4 text-slate-400" />
+            <Search className="w-4 h-4 text-muted-foreground" />
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Buscar cotización..."
-              className="flex-1 text-sm border-b pb-1 outline-none focus:border-blue-500" />
+              className="flex-1 text-sm border-b pb-1 outline-none focus:border-primary bg-transparent dark:text-foreground" />
           </div>
           <div className="flex gap-2">
             <button onClick={nuevaCotizacion}
@@ -312,34 +310,34 @@ const CotizacionScreen: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Sidebar: listado de cotizaciones */}
-          <div className="lg:col-span-1 bg-white rounded-xl shadow-md overflow-hidden max-h-[calc(100vh-200px)] overflow-y-auto">
+          <div className="lg:col-span-1 bg-card rounded-xl shadow-md overflow-hidden max-h-[calc(100vh-200px)] overflow-y-auto border dark:border-border">
             <div className="bg-gradient-to-r from-blue-800 to-blue-700 text-white p-3">
               <h3 className="font-bold text-sm">Cotizaciones ({filtered.length})</h3>
             </div>
             {filtered.map(c => (
               <div key={c.id}
                 onClick={() => loadCotizacion(c)}
-                className={`p-3 border-b cursor-pointer hover:bg-blue-50/50 transition ${selectedId === c.id ? 'bg-blue-50 border-l-4 border-l-blue-700' : ''}`}>
-                <div className="text-xs font-semibold text-slate-800 truncate">{c.cliente}</div>
-                <div className="text-[10px] text-slate-500 truncate">{c.proyecto}</div>
+                className={`p-3 border-b dark:border-border cursor-pointer hover:bg-muted/50 transition ${selectedId === c.id ? 'bg-primary/10 border-l-4 border-l-primary' : ''}`}>
+                <div className="text-xs font-semibold text-card-foreground truncate">{c.cliente}</div>
+                <div className="text-[10px] text-muted-foreground truncate">{c.proyecto}</div>
                 <div className="flex justify-between items-center mt-1">
-                  <span className="text-[9px] text-slate-400">{c.id.slice(0, 16)}</span>
-                  <span className="text-[10px] font-bold text-blue-700">Q {(c.items.reduce((s, i) => s + i.cantidad * i.precioUnitario, 0) * (1 - (c.descuento || 0) / 100)).toFixed(0)}</span>
+                  <span className="text-[9px] text-muted-foreground">{c.id.slice(0, 16)}</span>
+                  <span className="text-[10px] font-bold text-primary">Q {(c.items.reduce((s, i) => s + i.cantidad * i.precioUnitario, 0) * (1 - (c.descuento || 0) / 100)).toFixed(0)}</span>
                 </div>
                 <div className="flex gap-1 mt-1 justify-end">
                   <button onClick={(e) => { e.stopPropagation(); duplicarCotizacion(c); }}
-                    className="p-0.5 text-slate-400 hover:text-blue-600" title="Duplicar">
+                    className="p-0.5 text-muted-foreground hover:text-blue-600" title="Duplicar">
                     <Copy className="w-3 h-3" />
                   </button>
                   <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(c.id); }}
-                    className="p-0.5 text-slate-400 hover:text-red-600" title="Eliminar">
+                    className="p-0.5 text-muted-foreground hover:text-red-600" title="Eliminar">
                     <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
               </div>
             ))}
             {filtered.length === 0 && (
-              <div className="p-6 text-center text-slate-400 text-xs">Sin cotizaciones</div>
+              <div className="p-6 text-center text-muted-foreground text-xs">Sin cotizaciones</div>
             )}
           </div>
 
@@ -354,15 +352,15 @@ const CotizacionScreen: React.FC = () => {
                 </div>
 
                 {/* Proyecto / Cliente */}
-                <div className="bg-white rounded-xl shadow-md p-4">
-                  <h3 className="font-bold text-sm text-slate-800 mb-3 flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-blue-700" /> Datos del Cliente
+                <div className="bg-card rounded-xl shadow-md p-4 border dark:border-border">
+                  <h3 className="font-bold text-sm text-card-foreground mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-primary" /> Datos del Cliente
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] font-semibold text-slate-500 uppercase">Proyecto</label>
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase">Proyecto</label>
                       <select value={proyectoId} onChange={e => selectProyecto(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                        className="w-full px-3 py-2 border rounded-lg text-sm bg-background dark:bg-muted dark:border-border dark:text-foreground">
                         <option value="">-- Seleccionar proyecto --</option>
                         {presupuestos.map(p => (
                           <option key={p.id} value={p.id}>{p.proyecto} — {p.cliente}</option>
@@ -370,21 +368,21 @@ const CotizacionScreen: React.FC = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="text-[10px] font-semibold text-slate-500 uppercase">Cliente</label>
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase">Cliente</label>
                       <input value={cliente} onChange={e => setCliente(e.target.value)}
                         placeholder="Nombre del cliente"
-                        className="w-full px-3 py-2 border rounded-lg text-sm" />
+                        className="w-full px-3 py-2 border rounded-lg text-sm bg-background dark:bg-muted dark:border-border dark:text-foreground" />
                     </div>
                     <div>
-                      <label className="text-[10px] font-semibold text-slate-500 uppercase">Proyecto / Descripción</label>
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase">Proyecto / Descripción</label>
                       <input value={proyectoNombre} onChange={e => setProyectoNombre(e.target.value)}
                         placeholder="Nombre del proyecto"
-                        className="w-full px-3 py-2 border rounded-lg text-sm" />
+                        className="w-full px-3 py-2 border rounded-lg text-sm bg-background dark:bg-muted dark:border-border dark:text-foreground" />
                     </div>
                     <div>
-                      <label className="text-[10px] font-semibold text-slate-500 uppercase">Validez</label>
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase">Validez</label>
                       <select value={validez} onChange={e => setValidez(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                        className="w-full px-3 py-2 border rounded-lg text-sm bg-background dark:bg-muted dark:border-border dark:text-foreground">
                         <option>15 días</option>
                         <option>30 días</option>
                         <option>45 días</option>
@@ -395,37 +393,37 @@ const CotizacionScreen: React.FC = () => {
                 </div>
 
                 {/* Items por categoría */}
-                <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                <div className="bg-card rounded-xl shadow-md overflow-hidden border dark:border-border">
                   <div className="bg-gradient-to-r from-blue-800 to-blue-700 text-white p-3 flex items-center justify-between">
                     <h3 className="font-bold text-sm">Servicios y Productos</h3>
                     <span className="text-[10px] opacity-80">{items.filter(i => i.descripcion.trim()).length} items</span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
-                      <thead className="bg-slate-100">
+                      <thead className="bg-muted dark:bg-muted">
                         <tr>
-                          <th className="p-2 text-left">Categoría</th>
-                          <th className="p-2 text-left">Descripción</th>
-                          <th className="p-2 text-center w-16">Cant.</th>
-                          <th className="p-2 text-center w-16">Unidad</th>
-                          <th className="p-2 text-right w-24">Precio Unit.</th>
-                          <th className="p-2 text-right w-24">Total</th>
+                          <th className="p-2 text-left text-muted-foreground">Categoría</th>
+                          <th className="p-2 text-left text-muted-foreground">Descripción</th>
+                          <th className="p-2 text-center w-16 text-muted-foreground">Cant.</th>
+                          <th className="p-2 text-center w-16 text-muted-foreground">Unidad</th>
+                          <th className="p-2 text-right w-24 text-muted-foreground">Precio Unit.</th>
+                          <th className="p-2 text-right w-24 text-muted-foreground">Total</th>
                           <th className="p-2 text-center w-10"></th>
                         </tr>
                       </thead>
                       <tbody>
                         {items.map(i => (
-                          <tr key={i.id} className="border-b hover:bg-blue-50/30">
+                          <tr key={i.id} className="border-b dark:border-border hover:bg-muted/30 transition">
                             <td className="p-1.5">
                               <select value={i.categoria} onChange={e => updateItem(i.id, 'categoria', e.target.value)}
-                                className="w-full px-1.5 py-1 text-[10px] border rounded bg-white">
+                                className="w-full px-1.5 py-1 text-[10px] border rounded bg-background dark:bg-muted dark:border-border dark:text-foreground">
                                 {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
                               </select>
                             </td>
                             <td className="p-1.5">
                               <input value={i.descripcion} onChange={e => updateItem(i.id, 'descripcion', e.target.value)}
                                 placeholder="Describa el servicio..."
-                                className="w-full px-1.5 py-1 text-[10px] border rounded" />
+                                className="w-full px-1.5 py-1 text-[10px] border rounded bg-background dark:bg-muted dark:border-border dark:text-foreground" />
                             </td>
                             <td className="p-1.5">
                               <input type="number" min={0} step={0.01} value={i.cantidad}
@@ -441,7 +439,7 @@ const CotizacionScreen: React.FC = () => {
                                 onChange={e => updateItem(i.id, 'precioUnitario', parseFloat(e.target.value) || 0)}
                                 className="w-full px-1 py-1 text-[10px] border rounded text-right" />
                             </td>
-                            <td className="p-1.5 text-right font-semibold text-blue-800">
+                            <td className="p-1.5 text-right font-semibold text-primary">
                               Q {(i.cantidad * i.precioUnitario).toFixed(2)}
                             </td>
                             <td className="p-1.5 text-center">
@@ -455,10 +453,10 @@ const CotizacionScreen: React.FC = () => {
                       </tbody>
                     </table>
                   </div>
-                  <div className="p-2 flex gap-1.5 flex-wrap bg-slate-50">
+                  <div className="p-2 flex gap-1.5 flex-wrap bg-muted/50">
                     {CATEGORIAS.map(c => (
                       <button key={c} onClick={() => agregarItem(c)}
-                        className="text-[9px] px-2 py-1 rounded bg-white border hover:bg-blue-50 text-slate-600 transition">
+                        className="text-[9px] px-2 py-1 rounded bg-card dark:bg-card border hover:bg-blue-50 text-muted-foreground transition">
                         + {c}
                       </button>
                     ))}
@@ -467,19 +465,19 @@ const CotizacionScreen: React.FC = () => {
 
                 {/* Totales y notas */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="bg-white rounded-xl shadow-md p-4 md:col-span-2">
-                    <label className="text-[10px] font-semibold text-slate-500 uppercase">Notas / Condiciones</label>
+                  <div className="bg-card dark:bg-card rounded-xl shadow-md p-4 md:col-span-2">
+                    <label className="text-[10px] font-semibold text-muted-foreground uppercase">Notas / Condiciones</label>
                     <textarea value={notas} onChange={e => setNotas(e.target.value)}
                       placeholder="Condiciones de pago, tiempo de entrega, garantía..."
                       className="w-full px-3 py-2 border rounded-lg text-sm mt-1" rows={3} />
                   </div>
-                  <div className="bg-white rounded-xl shadow-md p-4">
+                  <div className="bg-card dark:bg-card rounded-xl shadow-md p-4">
                     <div className="space-y-1.5 text-sm">
-                      <div className="flex justify-between text-slate-600">
+                      <div className="flex justify-between text-muted-foreground">
                         <span>Subtotal</span>
                         <span>Q {subtotal.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between items-center text-slate-600">
+                      <div className="flex justify-between items-center text-muted-foreground">
                         <span>Descuento</span>
                         <div className="flex items-center gap-1">
                           <input type="number" min={0} max={100} value={descuento}
@@ -530,4 +528,4 @@ const CotizacionScreen: React.FC = () => {
   );
 };
 
-export default CotizacionScreen;
+export default React.memo(CotizacionScreen);

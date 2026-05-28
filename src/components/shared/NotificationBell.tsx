@@ -1,130 +1,136 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, BellDot, X, Check, Info, AlertTriangle, CheckCircle, AlertCircle, Trash2 } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
-import { NotificationService } from '@/services/equipos/NotificationService';
-import { toast } from 'sonner';
-import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { supabase } from '@/lib/supabase';
+import { PushService } from '@/services/PushService'; // Import PushService
+import { Bell, Check, XCircle, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-interface Notif {
+// Placeholder for notification type (adjust as needed)
+type Notification = {
   id: string;
-  tipo: 'info' | 'alerta' | 'exito' | 'warning';
   titulo: string;
-  mensaje: string | null;
+  mensaje: string;
+  tipo: 'info' | 'alerta' | 'exito' | 'warning';
   leido: boolean;
   created_at: string;
-}
-
-const iconMap = { info: Info, alerta: AlertTriangle, exito: CheckCircle, warning: AlertCircle };
-const colorMap = {
-  info: 'bg-blue-100 text-blue-700', alerta: 'bg-amber-100 text-amber-700',
-  exito: 'bg-emerald-100 text-emerald-700', warning: 'bg-red-100 text-red-700',
+  accion_url?: string;
 };
 
 const NotificationBell: React.FC = () => {
-  const [open, setOpen] = useState(false);
-  const [notifs, setNotifs] = useState<Notif[]>([]);
-  const { session } = useAppContext();
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const { session, notifications, markNotificationAsRead, deleteNotification } = useAppContext();
+  const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
+  const [loadingSubscription, setLoadingSubscription] = useState(false);
 
-  const cargar = useCallback(async () => {
-    if (!session) return;
+  const checkSubscription = useCallback(async () => {
+    if (!('serviceWorker' in navigator)) return setIsSubscribed(false);
     try {
-      const data = await NotificationService.getNotificaciones(session.user.id);
-      setNotifs(data as unknown as Notif[]);
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      setIsSubscribed(!!subscription);
     } catch (err) {
-      console.error('Error al cargar notificaciones:', err);
+      console.error("Error checking subscription:", err);
+      setIsSubscribed(false);
     }
-  }, [session]);
+  }, []);
 
   useEffect(() => {
-    cargar();
-    const userId = session?.user.id;
-    if (!userId) return;
-    const canal = supabase.channel('notificaciones-bell')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notificaciones', filter: `user_id=eq.${userId}` }, () => cargar())
-      .subscribe();
-    return () => { supabase.removeChannel(canal); };
-  }, [cargar, session?.user.id]);
+    if (session) {
+      checkSubscription();
+    } else {
+      setIsSubscribed(false);
+    }
+  }, [session, checkSubscription]);
 
-  const marcarLeido = async (id: string) => {
+  const handleToggleSubscription = async () => {
+    if (loadingSubscription) return;
+    setLoadingSubscription(true);
     try {
-      await NotificationService.marcarLeido(id);
-      setNotifs(prev => prev.map(n => n.id === id ? { ...n, leido: true } : n));
+      if (isSubscribed) {
+        await PushService.unsubscribe();
+        setIsSubscribed(false);
+        toast.success('Suscripción a notificaciones cancelada');
+      } else {
+        await PushService.requestPermissionAndSubscribe();
+        setIsSubscribed(true);
+      }
     } catch (err) {
-      console.error('Error al marcar como leído:', err);
+      console.error('Error toggling subscription:', err);
+      toast.error('Error al cambiar el estado de la suscripción');
+    } finally {
+      setLoadingSubscription(false);
     }
   };
 
-  const eliminar = async (id: string) => {
-    try {
-      await NotificationService.eliminar(id);
-      setNotifs(prev => prev.filter(n => n.id !== id));
-    } catch (err) {
-      toast.error('Error al eliminar notificación');
-      console.error(err);
-    }
-  };
-
-  const noLeidas = notifs.filter(n => !n.leido).length;
-
-  useEffect(() => { if (!open) return; const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); }; document.addEventListener('keydown', h); return () => document.removeEventListener('keydown', h); }, [open]);
+  const unreadCount = notifications.filter(n => !n.leido).length;
 
   return (
-    <div className="relative">
-      <button onClick={() => setOpen(o => !o)} className="relative p-1.5 rounded-lg hover:bg-slate-100 transition-colors btn-press">
-        {noLeidas > 0
-          ? <BellDot className="w-4 h-4 text-blue-600" />
-          : <Bell className="w-4 h-4 text-slate-500" />
-        }
-        {noLeidas > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
-            {noLeidas > 9 ? '9+' : noLeidas}
-          </span>
-        )}
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50" onClick={e => e.stopPropagation()}>
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
-            <h3 className="text-xs font-bold text-slate-700">Notificaciones</h3>
-            <button onClick={() => setOpen(false)} className="p-0.5 rounded hover:bg-slate-100"><X className="w-3 h-3 text-slate-400" /></button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="relative p-2 hover:bg-accent/10 rounded-lg">
+          {unreadCount > 0 && <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-red-600 text-white text-xs flex items-center justify-center">{unreadCount}</span>}
+          <Bell className="h-5 w-5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80 p-0" onCloseAutoFocus={e => e.preventDefault()}> {/* Prevent closing on click outside */}
+        <DropdownMenuLabel className="flex items-center justify-between p-3 border-b">
+          <div className="font-bold">Notificaciones</div>
+          <div className="flex items-center gap-2">
+             {isSubscribed === null ? (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              ) : (
+                <Button onClick={handleToggleSubscription} disabled={loadingSubscription} className="h-7 px-2 text-xs">
+                  {loadingSubscription ? 'Procesando...' : isSubscribed ? 'Darse de baja' : 'Suscribirse'}
+                </Button>
+              )}
           </div>
-
-          <div className="max-h-72 overflow-y-auto">
-            {notifs.length === 0 && (
-              <div className="py-8 text-center text-[11px] text-slate-400">Sin notificaciones</div>
-            )}
-            {notifs.map(n => {
-              const Icon = iconMap[n.tipo];
-              return (
-                <div key={n.id} className={`px-4 py-2.5 border-b border-slate-50 last:border-0 flex gap-2.5 ${n.leido ? '' : 'bg-blue-50/40'}`}>
-                  <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${colorMap[n.tipo].split(' ')[1]}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-[11px] leading-tight ${n.leido ? 'text-slate-600' : 'text-slate-800 font-semibold'}`}>{n.titulo}</p>
-                    {n.mensaje && <p className="text-[10px] text-slate-400 mt-0.5 truncate">{n.mensaje}</p>}
-                    <p className="text-[8px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleString()}</p>
+        </DropdownMenuLabel>
+        <ScrollArea className="h-[300px] px-3">
+          {notifications.length === 0 ? (
+            <div className="p-4 text-center text-muted-foreground">No hay notificaciones</div>
+          ) : (
+            notifications.map(n => (
+              <div key={n.id} className={`p-3 rounded-lg flex items-start gap-3 my-2 cursor-pointer transition-colors ${n.leido ? 'bg-muted/20 hover:bg-muted/40' : 'bg-accent/10 hover:bg-accent/30 border border-accent'}`}>
+                <Avatar className="h-8 w-8">
+                  {/* Placeholder for notification type icon */}
+                  <AvatarImage src="/path/to/avatar.png" /> {/* Replace with actual icon */}
+                  <AvatarFallback className={`bg-blue-500`}>
+                    {/* Dynamic fallback based on notification type */}
+                    {n.tipo === 'exito' && <Check className="h-4 w-4 text-white" />}
+                    {n.tipo === 'alerta' && <XCircle className="h-4 w-4 text-white" />}
+                    {n.tipo === 'warning' && <XCircle className="h-4 w-4 text-white" />}
+                    {n.tipo === 'info' && <Bell className="h-4 w-4 text-white" />}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="font-semibold text-sm flex items-center justify-between">
+                    {n.titulo}
+                    {!n.leido && <span className="text-xs text-red-500 font-light">Nuevo</span>}
                   </div>
-                  <div className="flex flex-col gap-1">
-                    {!n.leido && <button onClick={() => marcarLeido(n.id)} className="p-0.5 rounded hover:bg-blue-100"><Check className="w-3 h-3 text-blue-500" /></button>}
-                    <button onClick={() => setConfirmDelete(n.id)} className="p-0.5 rounded hover:bg-red-100"><Trash2 className="w-3 h-3 text-red-400" /></button>
+                  <p className="text-xs text-muted-foreground mb-1">{n.mensaje}</p>
+                  <div className="text-xs text-muted-foreground/70">
+                    {new Date(n.created_at).toLocaleString()}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      <ConfirmDialog
-        open={confirmDelete !== null}
-        onOpenChange={o => { if (!o) setConfirmDelete(null); }}
-        onConfirm={() => { if (confirmDelete) eliminar(confirmDelete); setConfirmDelete(null); }}
-        title="Eliminar notificación"
-        description="¿Estás seguro de eliminar esta notificación?"
-        confirmText="Aceptar"
-      />
-    </div>
+                <div className="flex flex-col justify-between items-center">
+                  {!n.leido && (
+                    <Button variant="ghost" size="icon" onClick={() => markNotificationAsRead(n.id)} className="text-blue-500 hover:bg-blue-500/10 h-7 w-7">
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="icon" onClick={() => deleteNotification(n.id)} className="text-red-500 hover:bg-red-500/10 h-7 w-7">
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </ScrollArea>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 
 export default NotificationBell;
+

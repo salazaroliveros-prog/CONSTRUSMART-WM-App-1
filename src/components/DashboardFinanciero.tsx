@@ -79,15 +79,15 @@ export const DashboardFinanciero: React.FC<DashboardFinancieroProps> = ({
   ];
 
   const saludColor = {
-    buena: 'bg-green-50 border-green-200',
-    riesgo: 'bg-yellow-50 border-yellow-200',
-    critica: 'bg-red-50 border-red-200',
+    buena: 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800',
+    riesgo: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800',
+    critica: 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800',
   };
 
   const saludBadge = {
-    buena: <Badge className="bg-green-100 text-green-800">✅ Buena</Badge>,
-    riesgo: <Badge className="bg-yellow-100 text-yellow-800">⚠️ Riesgo</Badge>,
-    critica: <Badge className="bg-red-100 text-red-800">🚨 Crítica</Badge>,
+    buena: <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">✅ Buena</Badge>,
+    riesgo: <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">⚠️ Riesgo</Badge>,
+    critica: <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">🚨 Crítica</Badge>,
   };
 
   return (
@@ -121,10 +121,10 @@ export const DashboardFinanciero: React.FC<DashboardFinancieroProps> = ({
                   { label: 'Imprevistos', actual: presupuesto.factor_imprevistos, sugerido: sugeridos.factor_imprevistos },
                   { label: 'Utilidad', actual: presupuesto.factor_utilidad, sugerido: sugeridos.factor_utilidad },
                 ].map(factor => (
-                  <div key={factor.label} className="p-3 bg-slate-50 rounded-lg">
-                    <p className="text-sm font-medium text-slate-600">{factor.label}</p>
+                  <div key={factor.label} className="card-section">
+                    <p className="text-sm font-medium text-muted-foreground">{factor.label}</p>
                     <p className="text-2xl font-bold">{factor.actual}%</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       Sugerido: {factor.sugerido}%
                       {Math.abs(factor.actual - factor.sugerido) > 2 && (
                         <span className="ml-1">
@@ -138,9 +138,9 @@ export const DashboardFinanciero: React.FC<DashboardFinancieroProps> = ({
 
               {/* Advertencias y sugerencias */}
               {validacion.advertencias.length > 0 && (
-                <Alert className="border-yellow-200 bg-yellow-50">
+                <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/20">
                   <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                  <AlertDescription className="text-yellow-800">
+                  <AlertDescription className="text-yellow-800 dark:text-yellow-200">
                     <strong>Advertencias ({validacion.advertencias.length})</strong>
                     <ul className="mt-2 space-y-1">
                       {validacion.advertencias.map((adv, i) => (
@@ -152,9 +152,9 @@ export const DashboardFinanciero: React.FC<DashboardFinancieroProps> = ({
               )}
 
               {validacion.sugerencias.length > 0 && (
-                <Alert className="border-blue-200 bg-blue-50">
+                <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20">
                   <CheckCircle className="h-4 w-4 text-blue-600" />
-                  <AlertDescription className="text-blue-800">
+                  <AlertDescription className="text-blue-800 dark:text-blue-200">
                     <strong>Sugerencias</strong>
                     <ul className="mt-2 space-y-1">
                       {validacion.sugerencias.map((sug, i) => (
@@ -187,20 +187,20 @@ export const DashboardFinanciero: React.FC<DashboardFinancieroProps> = ({
               </ResponsiveContainer>
 
               <div className="grid grid-cols-3 gap-4 mt-6">
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-600 font-medium">Material</p>
+                <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                  <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Material</p>
                   <p className="text-2xl font-bold">Q{totalMaterial.toLocaleString()}</p>
-                  <p className="text-xs text-blue-500">{((totalMaterial / costoDirecto) * 100).toFixed(1)}% del total</p>
+                  <p className="text-xs text-blue-500 dark:text-blue-300">{((totalMaterial / costoDirecto) * 100).toFixed(1)}% del total</p>
                 </div>
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <p className="text-sm text-green-600 font-medium">Mano de Obra</p>
+                <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                  <p className="text-sm text-green-600 dark:text-green-400 font-medium">Mano de Obra</p>
                   <p className="text-2xl font-bold">Q{totalManoObra.toLocaleString()}</p>
-                  <p className="text-xs text-green-500">{((totalManoObra / costoDirecto) * 100).toFixed(1)}% del total</p>
+                  <p className="text-xs text-green-500 dark:text-green-300">{((totalManoObra / costoDirecto) * 100).toFixed(1)}% del total</p>
                 </div>
-                <div className="p-4 bg-orange-50 rounded-lg">
-                  <p className="text-sm text-orange-600 font-medium">Herramienta</p>
+                <div className="p-4 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
+                  <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Herramienta</p>
                   <p className="text-2xl font-bold">Q{totalHerramienta.toLocaleString()}</p>
-                  <p className="text-xs text-orange-500">{((totalHerramienta / costoDirecto) * 100).toFixed(1)}% del total</p>
+                  <p className="text-xs text-orange-500 dark:text-orange-300">{((totalHerramienta / costoDirecto) * 100).toFixed(1)}% del total</p>
                 </div>
               </div>
             </CardContent>
@@ -209,9 +209,9 @@ export const DashboardFinanciero: React.FC<DashboardFinancieroProps> = ({
 
         <TabsContent value="cashflow" className="space-y-4">
           {cashflow.length === 0 ? (
-            <Alert className="border-blue-200 bg-blue-50">
+            <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20">
               <AlertTriangle className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-blue-800">
+              <AlertDescription className="text-blue-800 dark:text-blue-200">
                 No hay datos de flujo de caja suficiente para proyectar. Registra transacciones de ingresos y gastos para ver la proyección.
               </AlertDescription>
             </Alert>
@@ -249,29 +249,29 @@ export const DashboardFinanciero: React.FC<DashboardFinancieroProps> = ({
                   <CardDescription>Saldo acumulado y alertas de liquidez.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <p className="text-sm text-slate-600">Saldo inicial estimado</p>
+                  <div className="card-section">
+                    <p className="text-sm text-muted-foreground">Saldo inicial estimado</p>
                     <p className="text-2xl font-bold">Q{saldoInicial.toLocaleString()}</p>
                   </div>
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <p className="text-sm text-slate-600">Saldo final proyectado</p>
+                  <div className="card-section">
+                    <p className="text-sm text-muted-foreground">Saldo final proyectado</p>
                     <p className="text-2xl font-bold">Q{cashflow[cashflow.length - 1]?.saldoAcumulado.toLocaleString()}</p>
                   </div>
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <p className="text-sm text-slate-600">Ingresos totales</p>
+                  <div className="card-section">
+                    <p className="text-sm text-muted-foreground">Ingresos totales</p>
                     <p className="text-2xl font-bold">Q{cashflow.reduce((sum, item) => sum + item.ingresos, 0).toLocaleString()}</p>
                   </div>
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <p className="text-sm text-slate-600">Egresos totales</p>
+                  <div className="card-section">
+                    <p className="text-sm text-muted-foreground">Egresos totales</p>
                     <p className="text-2xl font-bold">Q{cashflow.reduce((sum, item) => sum + item.egresos, 0).toLocaleString()}</p>
                   </div>
                 </CardContent>
               </Card>
 
               {alertasCashflow.length > 0 && (
-                <Alert className="border-red-200 bg-red-50">
+                <Alert className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20">
                   <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <AlertDescription className="text-red-800">
+                  <AlertDescription className="text-red-800 dark:text-red-200">
                     <strong>Alertas de caja</strong>
                     <ul className="mt-2 space-y-1">
                       {alertasCashflow.map((mensaje, i) => (
@@ -288,9 +288,9 @@ export const DashboardFinanciero: React.FC<DashboardFinancieroProps> = ({
         {/* Tab: Alertas General */}
         <TabsContent value="alertas" className="space-y-4">
           {anomalias.length > 0 && (
-            <Alert className="border-red-200 bg-red-50">
+            <Alert className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20">
               <AlertTriangle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800">
+              <AlertDescription className="text-red-800 dark:text-red-200">
                 <strong>Anomalías Detectadas ({anomalias.length})</strong>
                 <ul className="mt-2 space-y-1">
                   {anomalias.map((anom, i) => (
@@ -302,9 +302,9 @@ export const DashboardFinanciero: React.FC<DashboardFinancieroProps> = ({
           )}
 
           {anomalias.length === 0 && (
-            <Alert className="border-green-200 bg-green-50">
+            <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20">
               <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
+              <AlertDescription className="text-green-800 dark:text-green-200">
                 ✅ No se detectaron anomalías. Los costos están dentro de rangos normales.
               </AlertDescription>
             </Alert>

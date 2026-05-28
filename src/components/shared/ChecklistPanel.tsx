@@ -89,15 +89,15 @@ const ChecklistPanel: React.FC<{ presupuestoId: string; fase: string; onComplete
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <CheckSquare className="w-3.5 h-3.5 text-emerald-600" />
-          <h3 className="text-xs font-bold text-slate-700">Checklist {faseLabels[fase] || fase}</h3>
+          <h3 className="text-xs font-bold text-card-foreground">Checklist {faseLabels[fase] || fase}</h3>
         </div>
         {total > 0 && (
-          <span className="text-[10px] font-semibold text-slate-500">{completados}/{total}</span>
+          <span className="text-[10px] font-semibold text-muted-foreground">{completados}/{total}</span>
         )}
       </div>
 
       {total > 0 && (
-        <div className="w-full bg-slate-100 rounded-full h-1.5">
+        <div className="w-full bg-muted rounded-full h-1.5">
           <div className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${(completados / total) * 100}%` }} />
         </div>
       )}
@@ -108,14 +108,14 @@ const ChecklistPanel: React.FC<{ presupuestoId: string; fase: string; onComplete
             <button onClick={() => toggleItem(item)} className="shrink-0">
               {item.completado
                 ? <CheckSquare className="w-4 h-4 text-emerald-600" />
-                : <Square className="w-4 h-4 text-slate-300 hover:text-slate-400" />
+                : <Square className="w-4 h-4 text-muted-foreground/50 hover:text-muted-foreground" />
               }
             </button>
-            <span className={`text-[11px] flex-1 ${item.completado ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+            <span className={`text-[11px] flex-1 ${item.completado ? 'line-through text-muted-foreground' : 'text-card-foreground'}`}>
               {item.item}
             </span>
             {item.completado_por && (
-              <span className="text-[8px] text-slate-400">{new Date(item.completado_en || '').toLocaleDateString()}</span>
+              <span className="text-[8px] text-muted-foreground">{new Date(item.completado_en || '').toLocaleDateString()}</span>
             )}
             <button onClick={() => eliminarItem(item.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 p-0.5">
               <Trash2 className="w-3 h-3" />
@@ -126,8 +126,8 @@ const ChecklistPanel: React.FC<{ presupuestoId: string; fase: string; onComplete
 
       {items.length === 0 && (
         <div className="text-center py-2">
-          <p className="text-[10px] text-slate-400 mb-2">Sin items de checklist para esta fase</p>
-          <button onClick={inicializarPredefinidos} className="text-[10px] bg-blue-100 text-blue-700 hover:bg-blue-200 px-2.5 py-1 rounded font-semibold btn-press">
+          <p className="text-[10px] text-muted-foreground mb-2">Sin items de checklist para esta fase</p>
+          <button onClick={inicializarPredefinidos} className="text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 px-2.5 py-1 rounded font-semibold btn-press">
             + Cargar checklist predeterminado
           </button>
         </div>

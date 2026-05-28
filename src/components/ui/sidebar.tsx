@@ -153,7 +153,7 @@ const SidebarProvider = React.forwardRef<
 SidebarProvider.displayName = "SidebarProvider"
 
 const sidebarVariants = cva(
-  "h-full bg-background/80 backdrop-blur-sm border-r border-border/40 shadow-sm",
+  "h-full bg-background border-r border-border/40 shadow-sm",
   {
     variants: {
       size: {

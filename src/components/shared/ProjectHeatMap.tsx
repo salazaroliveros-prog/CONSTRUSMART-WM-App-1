@@ -17,10 +17,10 @@ const ProjectHeatMap: React.FC = () => {
   }, [presupuestos, transacciones]);
 
   const getColor = (rent: number) => {
-    if (rent >= 15) return 'bg-emerald-100 text-emerald-800 border-emerald-300';
-    if (rent >= 5) return 'bg-green-100 text-green-800 border-green-300';
-    if (rent >= 0) return 'bg-amber-100 text-amber-800 border-amber-300';
-    return 'bg-red-100 text-red-800 border-red-300';
+    if (rent >= 15) return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700';
+    if (rent >= 5) return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700';
+    if (rent >= 0) return 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700';
+    return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border-red-300 dark:border-red-700';
   };
 
   return (
@@ -36,7 +36,7 @@ const ProjectHeatMap: React.FC = () => {
         </div>
       ))}
       {proyectos.length === 0 && (
-        <div className="col-span-full text-center text-[10px] text-slate-400 py-4">
+        <div className="col-span-full text-center text-[10px] text-muted-foreground py-4">
           Sin proyectos activos para mostrar
         </div>
       )}

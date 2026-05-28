@@ -72,8 +72,8 @@ const ChangeOrderPanel: React.FC<{ presupuestoId: string; onVersionChange?: () =
     <div className="space-y-2">
       <div className="flex items-center gap-1.5">
         <GitBranch className="w-3.5 h-3.5 text-blue-600" />
-        <h3 className="text-xs font-bold text-slate-700">Órdenes de Cambio</h3>
-        <span className="text-[10px] text-slate-400 ml-auto">v{(cambios[0]?.version || 0)}</span>
+        <h3 className="text-xs font-bold text-card-foreground">Órdenes de Cambio</h3>
+        <span className="text-[10px] text-muted-foreground ml-auto">v{(cambios[0]?.version || 0)}</span>
       </div>
 
       <div className="flex gap-2">
@@ -86,14 +86,14 @@ const ChangeOrderPanel: React.FC<{ presupuestoId: string; onVersionChange?: () =
       </div>
 
       {cambios.map(c => (
-        <div key={c.id} className="border rounded-lg p-2 text-[10px]">
+        <div key={c.id} className="border border-border rounded-lg p-2 text-[10px]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-slate-700">v{c.version}</span>
+              <span className="font-bold text-card-foreground">v{c.version}</span>
               <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-semibold ${
-                c.estado === 'aprobado' ? 'bg-emerald-100 text-emerald-700' :
-                c.estado === 'rechazado' ? 'bg-red-100 text-red-700' :
-                'bg-amber-100 text-amber-700'
+                c.estado === 'aprobado' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
+                c.estado === 'rechazado' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
               }`}>
                 {c.estado}
               </span>
@@ -101,25 +101,25 @@ const ChangeOrderPanel: React.FC<{ presupuestoId: string; onVersionChange?: () =
             <div className="flex items-center gap-1">
               {c.estado === 'pendiente' && (
                 <>
-                  <button onClick={() => aprobarCambio(c.id)} className="text-emerald-600 hover:bg-emerald-50 p-1 rounded">
+                  <button onClick={() => aprobarCambio(c.id)} className="text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 p-1 rounded">
                     <CheckCircle className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={() => rechazarCambio(c.id)} className="text-red-600 hover:bg-red-50 p-1 rounded">
+                  <button onClick={() => rechazarCambio(c.id)} className="text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 p-1 rounded">
                     <XCircle className="w-3.5 h-3.5" />
                   </button>
                 </>
               )}
-              <button onClick={() => setExpanded(expanded === c.id ? null : c.id)} className="text-slate-400 hover:text-slate-600 p-1">
+              <button onClick={() => setExpanded(expanded === c.id ? null : c.id)} className="text-muted-foreground hover:text-card-foreground p-1">
                 <span className="text-xs">{expanded === c.id ? '▲' : '▼'}</span>
               </button>
             </div>
           </div>
-          <div className="text-slate-500 mt-0.5">{c.motivo}</div>
-          {c.aprobado_por && <div className="text-slate-400 mt-0.5">Aprobado por: {c.aprobado_por.slice(0, 8)}...</div>}
+          <div className="text-muted-foreground mt-0.5">{c.motivo}</div>
+          {c.aprobado_por && <div className="text-muted-foreground mt-0.5">Aprobado por: {c.aprobado_por.slice(0, 8)}...</div>}
           {expanded === c.id && (
-            <div className="mt-1.5 bg-slate-50 rounded p-1.5 space-y-1">
+            <div className="mt-1.5 bg-muted rounded p-1.5 space-y-1">
               {c.cambios.map((cc, i) => (
-                <div key={i} className="text-[9px] text-slate-600">
+                <div key={i} className="text-[9px] text-card-foreground">
                   <span className="font-semibold">{cc.campo}:</span>{' '}
                   <span className="text-red-600 line-through">{String(cc.anterior ?? '—')}</span>
                   {' → '}
@@ -131,7 +131,7 @@ const ChangeOrderPanel: React.FC<{ presupuestoId: string; onVersionChange?: () =
         </div>
       ))}
       {cambios.length === 0 && (
-        <div className="text-center text-[10px] text-slate-400 py-3">Sin cambios registrados</div>
+        <div className="text-center text-[10px] text-muted-foreground py-3">Sin cambios registrados</div>
       )}
     </div>
   );

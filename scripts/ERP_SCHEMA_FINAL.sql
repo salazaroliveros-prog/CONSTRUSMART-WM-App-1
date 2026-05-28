@@ -486,6 +486,24 @@ CREATE TABLE IF NOT EXISTS public.recepcion_oc_items (
   created_at        timestamptz DEFAULT now()
 );
 
+-- 4.26. ocr_documentos
+CREATE TABLE IF NOT EXISTS public.ocr_documentos (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  file_url text NOT NULL,
+  ocr_data jsonb,
+  status text DEFAULT 'pending',
+  created_at timestamptz DEFAULT now()
+);
+
+-- 4.27. device_tokens
+CREATE TABLE IF NOT EXISTS public.device_tokens (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  token text NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
 -- 5. HABILITAR ROW LEVEL SECURITY EN TODAS LAS TABLAS
 ALTER TABLE public.clientes               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.proyectos              ENABLE ROW LEVEL SECURITY;
@@ -516,6 +534,8 @@ ALTER TABLE public.subrenglones           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subrenglon_materiales  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subrenglon_mano_obra   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subrenglon_equipos     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ocr_documentos         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.device_tokens          ENABLE ROW LEVEL SECURITY;
 
 -- 6. ELIMINAR POLÍTICAS EXISTENTES (para reinicio idempotente)
 -- clientes
@@ -1029,6 +1049,18 @@ CREATE POLICY "reci_owner" ON public.recepcion_oc_items
   USING     (EXISTS (SELECT 1 FROM public.recepcion_oc r WHERE r.id = recepcion_id AND r.user_id = auth.uid()))
   WITH CHECK (EXISTS (SELECT 1 FROM public.recepcion_oc r WHERE r.id = recepcion_id AND r.user_id = auth.uid()));
 
+-- 7.25. ocr_documentos
+CREATE POLICY "ocr_owner" ON public.ocr_documentos
+  FOR ALL TO authenticated
+  USING     (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- 7.26. device_tokens
+CREATE POLICY "tokens_owner" ON public.device_tokens
+  FOR ALL TO authenticated
+  USING     (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 -- 8. ÍNDICES DE PERFORMANCE
 CREATE INDEX IF NOT EXISTS idx_clientes_user_id            ON public.clientes(user_id);
 CREATE INDEX IF NOT EXISTS idx_proyectos_user_id           ON public.proyectos(user_id);
@@ -1082,6 +1114,8 @@ CREATE INDEX IF NOT EXISTS idx_notificaciones_leido        ON public.notificacio
 CREATE INDEX IF NOT EXISTS idx_audit_log_user              ON public.audit_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_registro          ON public.audit_log(registro_id);
 CREATE INDEX IF NOT EXISTS idx_bitacora_presupuesto_id     ON public.bitacora_avance(presupuesto_id);
+CREATE INDEX IF NOT EXISTS idx_ocr_user                    ON public.ocr_documentos(user_id);
+CREATE INDEX IF NOT EXISTS idx_tokens_user                 ON public.device_tokens(user_id);
 
 -- 9. VERIFICACIÓN FINAL
 -- 9a. RLS activo en las 20 tablas

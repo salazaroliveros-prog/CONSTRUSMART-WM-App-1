@@ -70,7 +70,7 @@ export const BitacoraAvancePanel: React.FC<BitacoraAvancePanelProps> = ({ presup
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-4 mt-4">
+    <div className="bg-card dark:bg-card rounded-xl shadow-md dark:shadow-none p-4 mt-4">
       <h3 className="font-bold text-sm mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-emerald-600" /> Bitácora de Avance</h3>
       <div className="flex gap-2 mb-4">
         <input type="number" placeholder="%" className="w-20 p-2 text-xs border rounded" value={nuevoAvance.avance} onChange={e => setNuevoAvance({...nuevoAvance, avance: Number(e.target.value)})} />
@@ -79,10 +79,10 @@ export const BitacoraAvancePanel: React.FC<BitacoraAvancePanelProps> = ({ presup
       </div>
       <div className="space-y-2 max-h-60 overflow-y-auto">
         {avances.map(a => (
-          <div key={a.id} className="flex items-center justify-between p-2 border rounded text-xs hover:bg-slate-50">
+          <div key={a.id} className="flex items-center justify-between p-2 border border-border rounded text-xs hover:bg-accent">
             <div>
               <span className="font-bold text-emerald-600">{a.avance}%</span> - {a.notas}
-              <span className="text-slate-400 ml-2 text-[10px]">{new Date(a.fecha).toLocaleDateString()}</span>
+              <span className="text-muted-foreground ml-2 text-[10px]">{new Date(a.fecha).toLocaleDateString()}</span>
             </div>
             <button onClick={() => handleDelete(a.id!)} className="text-red-400 hover:text-red-600"><Trash2 className="w-3 h-3" /></button>
           </div>

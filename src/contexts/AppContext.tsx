@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useTheme } from '@/components/theme-provider';
 import { supabase } from '@/lib/supabase';
 import { FinancieroService } from '@/services/financiero/FinancieroService';
 import { PresupuestosService } from '@/services/presupuestos/PresupuestosService';
@@ -123,13 +124,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    const [loading, setLoading] = useState(true);
    const [authError, setAuthError] = useState<string | null>(null);
    const [sidebarOpen, setSidebarOpen] = useState(false);
-   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+   const { setTheme } = useTheme();
    const loadingRef = useRef(false);
-
-   useEffect(() => {
-     document.documentElement.classList.toggle('dark', darkMode);
-     localStorage.setItem('darkMode', String(darkMode));
-   }, [darkMode]);
 
    const [clientes, setClientes] = useState<Cliente[]>([]);
    const [proyectos, setProyectos] = useState<Proyecto[]>([]);
@@ -1024,9 +1020,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------- CRUD Equipos ----------
   const addEquipo = async (e: CreateEquipo) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
-    const userId = session.user.id;
     try {
-      const validated = validateEquipo({ ...e, user_id: userId });
+      const validated = validateEquipo({
+        nombre: e.nombre,
+        user_id: e.userId || session.user.id,
+        estado: e.estado,
+        descripcion: e.descripcion,
+      });
       const dbRecord = { ...equipoToDb(validated), user_id: userId };
       if (!isOnline) {
         addPendingMutation({ table: 'equipos', action: 'INSERT', data: dbRecord, userId });
@@ -1091,9 +1091,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------- CRUD Equipo Miembros ----------
   const addEquipoMiembro = async (em: CreateEquipoMiembro) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
-    const userId = session.user.id;
     try {
-      const validated = validateEquipoMiembro({ ...em, user_id: userId });
+      const validated = validateEquipoMiembro({
+        equipo_id: em.equipoId,
+        user_id: em.userId || session.user.id,
+        rol: em.rol,
+      });
       const dbRecord = { ...equipoMiembroToDb(validated), user_id: userId };
       if (!isOnline) {
         addPendingMutation({ table: 'equipo_miembros', action: 'INSERT', data: dbRecord, userId });
@@ -1155,8 +1158,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toast.success('Miembro removido del equipo');
   };
 
+  const { theme } = useTheme();
+  const darkMode = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const toggleDarkMode = useCallback(() => setTheme(theme === 'dark' ? 'light' : 'dark'), [theme, setTheme]);
   const toggleSidebar = useCallback(() => setSidebarOpen(p => !p), []);
-  const toggleDarkMode = useCallback(() => setDarkMode(p => !p), []);
 
   // ===== AUTH CONTEXT VALUE (ESTABLE) =====
   // Solo cambia cuando view, session o loading cambian

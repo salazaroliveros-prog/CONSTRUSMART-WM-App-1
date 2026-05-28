@@ -43,7 +43,7 @@ export const PanelAPUPredictor: React.FC<PanelAPUPredictorProps> = ({
       case 'rentabilidad':
         return <TrendingUp className="w-4 h-4 text-green-600" />;
       default:
-        return <AlertCircle className="w-4 h-4 text-gray-600" />;
+        return <AlertCircle className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
@@ -59,7 +59,7 @@ export const PanelAPUPredictor: React.FC<PanelAPUPredictorProps> = ({
         <CardTitle className="flex items-center gap-2">
           <Lightbulb className="w-5 h-5" />
           Asistente Inteligente de Presupuestos (APU Predictivo)
-          <span className="ml-2 text-xs font-normal text-gray-600">
+          <span className="ml-2 text-xs font-normal text-muted-foreground">
             Basado en {presupuestosHistorico.length} proyectos históricos
           </span>
         </CardTitle>
@@ -68,7 +68,7 @@ export const PanelAPUPredictor: React.FC<PanelAPUPredictorProps> = ({
       <CardContent>
         <div className="space-y-3">
           {sugerencias.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               <p>Sin sugerencias - Completa el presupuesto para obtener recomendaciones</p>
             </div>
           ) : (
@@ -82,10 +82,10 @@ export const PanelAPUPredictor: React.FC<PanelAPUPredictorProps> = ({
                 <div className="flex items-start gap-3 flex-1">
                   {getIconoTipo(sugerencia.tipo)}
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-800">{sugerencia.mensaje}</p>
+                    <p className="text-sm font-medium text-card-foreground">{sugerencia.mensaje}</p>
                     {sugerencia.confianza && (
                       <div className="mt-2 flex items-center gap-2">
-                        <div className="flex-1 bg-gray-300 rounded-full h-2">
+                        <div className="flex-1 bg-muted rounded-full h-2">
                           <div
                             className={`h-2 rounded-full ${
                               sugerencia.confianza >= 80
@@ -97,7 +97,7 @@ export const PanelAPUPredictor: React.FC<PanelAPUPredictorProps> = ({
                             style={{ width: `${sugerencia.confianza}%` }}
                           />
                         </div>
-                        <span className="text-xs text-gray-600">{sugerencia.confianza}%</span>
+                        <span className="text-xs text-muted-foreground">{sugerencia.confianza}%</span>
                       </div>
                     )}
                   </div>

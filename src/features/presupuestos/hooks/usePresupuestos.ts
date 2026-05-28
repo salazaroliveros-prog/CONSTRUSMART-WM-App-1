@@ -1,8 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
 import type { Presupuesto, Cliente, Transaccion } from '@/types/supabase';
-import { validatePresupuesto, validateCliente, validateTransaccion } from '@/types/supabase';
+import { validateCliente, validateTransaccion } from '@/types/supabase';
 import { toast } from 'sonner';
+import { PresupuestosService } from '@/services/presupuestos/PresupuestosService';
+import { ClientesService } from '@/services/clientes/ClientesService';
+import { FinancieroService } from '@/services/financiero/FinancieroService';
+import { useAppContext } from '@/contexts/AppContext';
 
 const KEYS = {
   presupuestos: ['presupuestos'] as const,
@@ -14,38 +17,33 @@ export function usePresupuestos() {
   return useQuery({
     queryKey: KEYS.presupuestos,
     queryFn: async (): Promise<Presupuesto[]> => {
-      const { data, error } = await supabase.from('presupuestos').select('*').order('created_at', { ascending: false });
-      if (error) {
-        if (error.code === 'PGRST116' || error.message.includes('row-level security')) {
-          throw new Error('No tienes permisos suficientes para ver estos datos.');
-        }
-        throw error;
-      }
-      return (data || []).map((item: unknown) => validatePresupuesto(item) as unknown as Presupuesto);
+      return await PresupuestosService.listar();
     },
     staleTime: 30_000,
   });
 }
 
 export function useClientes() {
+  const { session } = useAppContext();
   return useQuery({
     queryKey: KEYS.clientes,
     queryFn: async (): Promise<Cliente[]> => {
-      const { data, error } = await supabase.from('clientes').select('*').order('nombre');
-      if (error) throw error;
-      return (data || []).map((item: unknown) => validateCliente(item) as unknown as Cliente);
+      if (session?.user.id) {
+        return await ClientesService.getClientes(session.user.id);
+      }
+      // Fallback for cases where session is not yet loaded but query runs
+      return [];
     },
     staleTime: 30_000,
   });
 }
 
 export function useTransacciones() {
+  const { session } = useAppContext();
   return useQuery({
     queryKey: KEYS.transacciones,
     queryFn: async (): Promise<Transaccion[]> => {
-      const { data, error } = await supabase.from('transacciones').select('*').order('fecha', { ascending: false });
-      if (error) throw error;
-      return (data || []).map((item: unknown) => validateTransaccion(item) as unknown as Transaccion);
+      return await FinancieroService.getTransacciones(session?.user.id);
     },
     staleTime: 30_000,
   });
@@ -64,9 +62,7 @@ export function useAddPresupuesto() {
   const invalidate = useInvalidateAll();
   return useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
-      const { data, error } = await supabase.from('presupuestos').insert(payload).select().single();
-      if (error) throw error;
-      return data;
+      return await PresupuestosService.addPresupuesto(payload);
     },
     onSuccess: () => {
       invalidate();

@@ -29,9 +29,7 @@ export const MaterialesService = {
       .from('materiales_proyecto')
       .select('*')
       .eq('presupuesto_id', presupuestoId)
-      .or(
-        `nombre.ilike.%${criterio}%,descripcion_material.ilike.%${criterio}%`
-      )
+      .ilike('nombre', `%${criterio}%`)
       .limit(1);
 
     if (error) throw error;
