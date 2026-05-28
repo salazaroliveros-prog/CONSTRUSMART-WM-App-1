@@ -208,6 +208,25 @@ export type DBRecepcionOCItem = z.infer<typeof RecepcionOCItemSchema>;
 export type DBOcrDocumento = z.infer<typeof OcrDocumentoSchema>;
 export type DBDeviceToken = z.infer<typeof DeviceTokenSchema>;
 
+export interface OcrDocumento {
+  id: string;
+  user_id: string;
+  file_url: string;
+  ocr_data?: any;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  created_at?: string;
+}
+
+export interface DeviceToken {
+  id: string;
+  user_id: string;
+  token: string;
+  created_at?: string;
+}
+
+export type UpdateOcrDocumento = Partial<Omit<OcrDocumento, 'id' | 'created_at'>>;
+export type UpdateDeviceToken = Partial<Omit<DeviceToken, 'id' | 'created_at'>>;
+
 // ====== Tipos de interfaz para la aplicación (transformados) ======
 export interface Cliente {
   id: string;
