@@ -1035,10 +1035,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------- CRUD Equipos ----------
   const addEquipo = async (e: CreateEquipo) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
     try {
       const validated = validateEquipo({
         nombre: e.nombre,
-        user_id: e.userId || session.user.id,
+        user_id: e.userId || userId,
         estado: e.estado,
         descripcion: e.descripcion,
       });
@@ -1106,10 +1107,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------- CRUD Equipo Miembros ----------
   const addEquipoMiembro = async (em: CreateEquipoMiembro) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
     try {
       const validated = validateEquipoMiembro({
         equipo_id: em.equipoId,
-        user_id: em.userId || session.user.id,
+        user_id: em.userId || userId,
         rol: em.rol,
       });
       const dbRecord = { ...equipoMiembroToDb(validated), user_id: userId };
