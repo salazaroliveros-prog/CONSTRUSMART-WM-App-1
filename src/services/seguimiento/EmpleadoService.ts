@@ -44,8 +44,10 @@ export const EmpleadoService = {
     return dbToEmpleado(data);
   },
 
-  async eliminar(id: string): Promise<void> {
-    const { error } = await supabase.from('empleados').delete().eq('id', id);
+  async eliminar(id: string, userId?: string): Promise<void> {
+    let query = supabase.from('empleados').delete().eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+    const { error } = await query;
     if (error) throw error;
   },
 };
