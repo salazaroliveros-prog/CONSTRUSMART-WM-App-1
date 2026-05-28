@@ -68,8 +68,5 @@ CREATE TABLE IF NOT EXISTS public.transacciones_recurrentes (
   updated_at timestamptz DEFAULT now()
 );
 
--- Indexes
-CREATE INDEX IF NOT EXISTS idx_ocr_proyecto_id ON public.ocr_documentos(proyecto_id);
-CREATE INDEX IF NOT EXISTS idx_ocr_status ON public.ocr_documentos(estado);
-CREATE INDEX IF NOT EXISTS idx_caja_proyecto_user_id ON public.caja_proyecto(user_id);
-CREATE INDEX IF NOT EXISTS idx_movimientos_caja_caja_id ON public.movimientos_caja(caja_id);
+ALTER TABLE public.presupuestos ADD COLUMN IF NOT EXISTS area_construccion numeric DEFAULT 0;
+ALTER TABLE public.presupuestos ADD COLUMN IF NOT EXISTS nivel_calidad text DEFAULT 'basico';

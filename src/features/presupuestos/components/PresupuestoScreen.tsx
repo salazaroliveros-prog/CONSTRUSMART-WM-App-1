@@ -170,6 +170,13 @@ const PresupuestoScreen: React.FC = () => {
   const addRenglon = useCallback((r: Renglon) => {
     // aplicar multiplicador por nivel de calidad
     const multiplier = meta.nivelCalidad === 'basico' ? 0.95 : meta.nivelCalidad === 'premium' ? 1.15 : 1.0;
+    
+    // escalar por área de construcción si es de tipo área
+    const area = Math.max(0, meta.areaConstruccion || 0);
+    const cantidadAuto = r.unidad === 'm²' || r.descripcion.toLowerCase().includes('superficie') || r.descripcion.toLowerCase().includes('piso')
+      ? area || 1
+      : 1;
+    
     const scaled: LineaPresupuesto = {
       ...r,
       id: r.id,
@@ -185,7 +192,7 @@ const PresupuestoScreen: React.FC = () => {
         manoObra: (r.subrenglones?.manoObra || []).map(m => ({ ...m })),
         equipos: (r.subrenglones?.equipos || []).map(e => ({ ...e })),
       },
-      cantidad: 1,
+      cantidad: cantidadAuto,
       baseTotalPersonas: (r.subrenglones?.manoObra || []).reduce((s, m) => s + (m.cantidadPersonas || 0), 0),
     } as LineaPresupuesto;
 
@@ -194,7 +201,7 @@ const PresupuestoScreen: React.FC = () => {
       return [...prev, scaled];
     });
     setExpanded(prev => new Set(prev).add(scaled.id));
-  }, [meta.nivelCalidad]);
+  }, [meta.nivelCalidad, meta.areaConstruccion]);
 
   const updateLinea = useCallback((id: string, field: keyof LineaPresupuesto, value: any) => {
     setLineas(prev => prev.map(l => l.id === id ? { ...l, [field]: value } : l));
@@ -543,6 +550,8 @@ const PresupuestoScreen: React.FC = () => {
         total,
         costo_directo: costoDirecto,
         proyecto_id: meta.proyectoId || null,
+        area_construccion: meta.areaConstruccion || 0,
+        nivel_calidad: meta.nivelCalidad || 'basico',
       };
       if (savedPresupuestoId) {
         await updatePresupuesto(savedPresupuestoId, { ...payload, updated_at: new Date().toISOString() });
