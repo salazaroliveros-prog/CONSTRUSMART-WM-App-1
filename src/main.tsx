@@ -36,8 +36,12 @@ const updateSW = registerSW({
   },
 });
 
-// Request push notification permission and subscribe
-PushService.requestPermissionAndSubscribe().catch(err => console.error("Failed to subscribe to push notifications:", err));
+// Request push notification permission and subscribe only when VAPID key is configured
+if (import.meta.env.VITE_PUBLIC_VAPID_KEY) {
+  PushService.requestPermissionAndSubscribe().catch(err => console.error("Failed to subscribe to push notifications:", err));
+} else {
+  console.info('VAPID key not configured, skipping push subscription');
+}
 
 // Remove dark mode class addition
 createRoot(document.getElementById("root")!).render(<App />);

@@ -35,6 +35,16 @@ export interface User {
   avatar: string;
 }
 
+type AppNotification = {
+  id: string;
+  titulo: string;
+  mensaje: string;
+  tipo: 'info' | 'alerta' | 'exito' | 'warning';
+  leido: boolean;
+  created_at: string;
+  accion_url?: string;
+}
+
 // ===================== AUTH CONTEXT =====================
 // Contiene SOLO lo que AppLayout necesita: view, session, loading
 // Esto evita que AppLayout re-renderice cuando los datos CRUD cambian
@@ -88,6 +98,9 @@ interface DataContextType {
   deleteEquipoMiembro: (id: string) => Promise<void>;
   proveedores: Proveedor[];
   ordenesCompra: OrdenCompra[];
+  notifications: AppNotification[];
+  markNotificationAsRead: (id: string) => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -136,6 +149,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [equipoMiembros, setEquipoMiembros] = useState<EquipoMiembro[]>([]);
     const [proveedores, setProveedores] = useState<Proveedor[]>([]);
     const [ordenesCompra, setOrdenesCompra] = useState<OrdenCompra[]>([]);
+    const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [pendingCount, setPendingCount] = useState(0);
    const realtimeClientes = useRef<RealtimeChannel | null>(null);
@@ -258,6 +272,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (view === 'login') setView('dashboard');
       } else {
         setClientes([]); setProyectos([]); setTransacciones([]); setActividades([]);
+        setNotifications([]);
         setView('login');
       }
     });
@@ -1163,6 +1178,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const toggleDarkMode = useCallback(() => setTheme(theme === 'dark' ? 'light' : 'dark'), [theme, setTheme]);
   const toggleSidebar = useCallback(() => setSidebarOpen(p => !p), []);
 
+  const markNotificationAsRead = useCallback(async (id: string) => {
+    setNotifications(prev => prev.map(notification => notification.id === id ? { ...notification, leido: true } : notification));
+  }, []);
+
+  const deleteNotification = useCallback(async (id: string) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
+  }, []);
+
   // ===== AUTH CONTEXT VALUE (ESTABLE) =====
   // Solo cambia cuando view, session o loading cambian
   // NO incluye los arrays de datos CRUD
@@ -1193,10 +1216,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     equipos, addEquipo, updateEquipo, deleteEquipo,
     equipoMiembros, addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
     proveedores, ordenesCompra,
+    notifications, markNotificationAsRead, deleteNotification,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [
     clientes, proyectos, transacciones, actividades, presupuestos,
-    equipos, equipoMiembros, proveedores, ordenesCompra,
+    equipos, equipoMiembros, proveedores, ordenesCompra, notifications,
+    addCliente, updateCliente, deleteCliente,
+    addProyecto, updateProyecto,
+    addTransaccion, deleteTransaccion,
+    addActividad, deleteActividad,
+    addPresupuesto, updatePresupuesto, deletePresupuesto, transicionFase,
+    addEquipo, updateEquipo, deleteEquipo,
+    addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
+    markNotificationAsRead, deleteNotification,
   ]);
 
   return (
