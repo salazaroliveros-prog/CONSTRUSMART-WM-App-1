@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, Suspense, lazy } from 'react';
+import React, { useRef, useState, useEffect, Suspense, lazy, useCallback } from 'react';
 import { useAuthContext } from '@/contexts/AppContext';
 import { ScreenSkeleton } from '@/components/shared/Skeleton';
 import LoginScreen from '@/components/screens/LoginScreen';
@@ -22,24 +22,66 @@ import CommandPalette from '@/components/shared/CommandPalette';
 import OfflineBanner from '@/components/shared/OfflineBanner';
 import DevDiagnostics from '@/dev/DevDiagnostics';
 
-const viewOrder = ['login', 'dashboard', 'clientes', 'presupuesto', 'proyectos', 'seguimiento', 'financiero', 'equipos', 'bodega', 'cotizacion', 'compras', 'aprobacion'];
-
 const AppLayout: React.FC = () => {
   const { view, session, loading } = useAuthContext();
-  const animKeyRef = useRef(view);
+  const [fadeState, setFadeState] = useState<'visible' | 'fading'>('visible');
+  const [prevView, setPrevView] = useState(view);
+  const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const animKey = useMemo(() => {
-    if (animKeyRef.current !== view) {
-      const prev = animKeyRef.current;
-      animKeyRef.current = view;
-      return { key: view, dir: viewOrder.indexOf(prev) <= viewOrder.indexOf(view) ? 'right' : 'left' };
+  // Smoothly fade between views
+  useEffect(() => {
+    if (prevView === view) return;
+    
+    // Clear any pending transition
+    if (transitionTimerRef.current) {
+      clearTimeout(transitionTimerRef.current);
     }
-    return { key: animKeyRef.current, dir: 'none' };
-  }, [view]);
+
+    // Step 1: Fade out current view
+    setFadeState('fading');
+    
+    // Step 2: After fade out completes, update the view and fade in
+    transitionTimerRef.current = setTimeout(() => {
+      setPrevView(view);
+      setFadeState('visible');
+    }, 150); // match CSS transition duration
+
+    return () => {
+      if (transitionTimerRef.current) {
+        clearTimeout(transitionTimerRef.current);
+      }
+    };
+  }, [view, prevView]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (transitionTimerRef.current) {
+        clearTimeout(transitionTimerRef.current);
+      }
+    };
+  }, []);
+
+  const renderViewContent = useCallback((v: string) => {
+    switch (v) {
+      case 'dashboard': return <Dashboard />;
+      case 'clientes': return <ClientesScreen />;
+      case 'presupuesto': return <PresupuestoScreen />;
+      case 'proyectos': return <ProyectosScreen />;
+      case 'seguimiento': return <SeguimientoScreen />;
+      case 'financiero': return <FinancieroScreen />;
+      case 'equipos': return <TeamsScreen />;
+      case 'bodega': return <BodegaScreen />;
+      case 'cotizacion': return <CotizacionScreen />;
+      case 'compras': return <ComprasScreen />;
+      case 'aprobacion': return <AprobacionScreen />;
+      default: return null;
+    }
+  }, []);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 animate-login-bg-enter">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800">
         <div className="text-center text-white">
           <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-white/10 mb-3 overflow-hidden">
             <img src="/logo.png" alt="Logo" className="w-full h-full object-contain p-2" />
@@ -54,43 +96,21 @@ const AppLayout: React.FC = () => {
 
   if (!loading && !session) return <LoginScreen />;
 
-  const renderView = () => {
-    switch (view) {
-      case 'dashboard': return <Dashboard />;
-      case 'clientes': return <ClientesScreen />;
-      case 'presupuesto': return <PresupuestoScreen />;
-      case 'proyectos': return <ProyectosScreen />;
-      case 'seguimiento': return <SeguimientoScreen />;
-      case 'financiero': return <FinancieroScreen />;
-      case 'equipos': return <TeamsScreen />;
-      case 'bodega': return <BodegaScreen />;
-      case 'cotizacion': return <CotizacionScreen />;
-      case 'compras': return <ComprasScreen />;
-      case 'aprobacion': return <AprobacionScreen />;
-      default: return null;
-    }
-  };
-
-  // Improved slide animation based on direction
-  const getAnimClass = () => {
-    if (animKey.dir === 'none') return 'animate-view-enter';
-    if (animKey.dir === 'right') return 'animate-view-slide-right';
-    return 'animate-view-slide-left';
-  };
-
   const isNotLogin = view !== 'login' && session;
 
   return (
-    <div key={animKey.key} className={`flex h-screen overflow-hidden ${getAnimClass()}`} data-view={view}>
+    <div className="flex h-screen overflow-hidden bg-background" data-view={view}>
       {isNotLogin && <Sidebar />}
-      <main className="flex-1 min-w-0 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-w-0 min-h-0 overflow-y-auto">
         <CommandPalette />
         <DevDiagnostics />
-        <Suspense fallback={<ScreenSkeleton />}>
-          {renderView()}
-        </Suspense>
+        <div className={`w-full ${fadeState === 'fading' ? 'main-content-fade' : 'main-content'}`} style={{ transitionDuration: '0.15s' }}>
+          <Suspense fallback={<ScreenSkeleton />}>
+            {renderViewContent(prevView)}
+          </Suspense>
+        </div>
         <OfflineBanner />
-      </main>
+      </div>
     </div>
   );
 };

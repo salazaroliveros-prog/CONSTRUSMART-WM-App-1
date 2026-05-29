@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { LayoutGrid, Users, Calculator, Folder, LineChart, Wallet, Shield, Package, FileText, ShoppingCart, ShieldCheck, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { ViewType } from '@/types/supabase';
@@ -31,6 +31,12 @@ const Sidebar: React.FC = () => {
   });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const prevViewRef = useRef(view);
+
+  // Track view changes for transition direction
+  useEffect(() => {
+    prevViewRef.current = view;
+  }, [view]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -40,7 +46,12 @@ const Sidebar: React.FC = () => {
 
   useEffect(() => { localStorage.setItem(STORAGE_KEY, String(collapsed)); }, [collapsed]);
 
-  const navigate = useCallback((v: ViewType) => { setView(v); setMobileOpen(false); }, [setView]);
+  const navigate = useCallback((v: ViewType) => { 
+    if (v !== view) {
+      setView(v); 
+      setMobileOpen(false); 
+    }
+  }, [setView, view]);
 
   const navItem = (id: ViewType, label: string, Icon: React.ComponentType<{ className?: string }>) => {
     const active = view === id;
@@ -49,17 +60,19 @@ const Sidebar: React.FC = () => {
         key={id}
         onClick={() => navigate(id)}
         title={collapsed && !isMobile ? label : undefined}
-        className={`w-full flex items-center gap-2.5 rounded-lg text-sm font-medium transition-all duration-200
+        className={`sidebar-btn w-full flex items-center gap-2.5 rounded-lg text-sm font-medium
           ${collapsed && !isMobile ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'}
           ${active
-            ? 'bg-primary/15 text-primary shadow-sm shadow-primary/10'
+            ? 'sidebar-btn-active'
             : 'text-muted-foreground hover:bg-accent/60 hover:text-accent-foreground'}`}
       >
-        <Icon className={`shrink-0 transition-all duration-200 ${active ? 'scale-110' : ''} ${collapsed && !isMobile ? 'w-5 h-5' : 'w-4 h-4'}`} />
+        <Icon className={`sidebar-icon shrink-0 ${active ? 'scale-110' : ''} ${collapsed && !isMobile ? 'w-5 h-5' : 'w-4 h-4'}`} />
         {(!collapsed || isMobile) && (
-          <span className="truncate animate-fadeIn">{label}</span>
+          <span className="sidebar-label truncate animate-fadeIn">{label}</span>
         )}
-        {active && collapsed && !isMobile && <span className="absolute right-1.5 w-1.5 h-1.5 rounded-full bg-primary animate-pulse-soft" />}
+        {active && collapsed && !isMobile && (
+          <span className="absolute right-1.5 w-1.5 h-1.5 rounded-full bg-primary animate-pulse-soft" />
+        )}
       </button>
     );
   };
@@ -105,7 +118,7 @@ const Sidebar: React.FC = () => {
                 <ChevronLeft className="w-4 h-4" />
               </button>
             </div>
-            <nav className="flex-1 space-y-0.5 overflow-y-auto">
+            <nav className="flex-1 space-y-0.5 overflow-y-auto stagger-children">
               {modules.map((m, i) => (
                 <div key={m.id} style={{ animationDelay: `${i * 0.03}s` }} className="animate-fadeIn">
                   {navItem(m.id, m.label, m.icon)}
@@ -114,7 +127,7 @@ const Sidebar: React.FC = () => {
             </nav>
             <button
               onClick={signOut}
-              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition mt-2"
+              className="sidebar-btn flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition mt-2"
             >
               <LogOut className="w-4 h-4 shrink-0" /><span>Cerrar sesión</span>
             </button>
@@ -134,7 +147,7 @@ const Sidebar: React.FC = () => {
       {/* Toggle button */}
       <button
         onClick={() => setCollapsed(c => !c)}
-        className="absolute -right-3 top-14 z-10 w-6 h-6 rounded-full bg-background border border-border shadow flex items-center justify-center hover:bg-accent transition-transform hover:scale-110"
+        className="absolute -right-3 top-14 z-10 w-6 h-6 rounded-full bg-background border border-border shadow flex items-center justify-center hover:bg-accent transition-transform hover:scale-110 active:scale-95"
         title={collapsed ? 'Expandir' : 'Colapsar'}
       >
         {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
@@ -156,7 +169,7 @@ const Sidebar: React.FC = () => {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto p-1.5 space-y-0.5 mt-1">
+      <nav className="flex-1 overflow-y-auto p-1.5 space-y-0.5 mt-1 stagger-children">
         {modules.map((m, i) => (
           <div
             key={m.id}
@@ -171,13 +184,13 @@ const Sidebar: React.FC = () => {
       <div className="border-t border-border p-1.5">
         <button
           onClick={signOut}
-          className={`flex items-center gap-2.5 w-full rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all duration-200 ${
+          className={`sidebar-btn flex items-center gap-2.5 w-full rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 ${
             collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
           }`}
           title={collapsed ? 'Cerrar sesión' : undefined}
         >
-          <LogOut className="w-4 h-4 shrink-0" />
-          <span className={`sidebar-transition ${collapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'}`}>
+          <LogOut className="w-4 h-4 shrink-0 sidebar-icon" />
+          <span className={`sidebar-label sidebar-transition ${collapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'}`}>
             Cerrar sesión
           </span>
         </button>
