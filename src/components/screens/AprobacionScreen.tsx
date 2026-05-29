@@ -113,12 +113,12 @@ const AprobacionScreen: React.FC = () => {
 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="min-w-0">
-                <Select value={selectedProyectoId || ''} onValueChange={(value) => setSelectedProyectoId(value || null)}>
+                <Select value={selectedProyectoId || 'all'} onValueChange={(value) => setSelectedProyectoId(value === 'all' ? null : value)}>
                   <SelectTrigger className="min-w-[220px]">
                     <SelectValue placeholder="Todos los proyectos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos los proyectos</SelectItem>
+                    <SelectItem value="all">Todos los proyectos</SelectItem>
                     {proyectos.map((proyecto) => (
                       <SelectItem key={proyecto.id} value={proyecto.id}>
                         {proyecto.nombre}

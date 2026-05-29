@@ -2,10 +2,9 @@ import { CoreEngineService } from '@/services/CoreEngineService';
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import PageShell from '@/components/shared/PageShell';
-import TransactionForm from '@/components/shared/TransactionForm';
 import ChartCard from '@/components/shared/ChartCard';
 import { fmtQ } from '@/lib/exporters';
-import { TrendingUp, TrendingDown, Wallet, Filter, BarChart3, PieChartIcon, ArrowLeft, ArrowRight, LineChartIcon, DollarSign, Percent, Target, Activity, CreditCard } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, PieChartIcon, ArrowLeft, ArrowRight, LineChartIcon, DollarSign, Percent, Target, Activity, CreditCard } from 'lucide-react';
 import ProfitReport from './ProfitReport';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, LineChart, Line, AreaChart, Area, RadialBarChart, RadialBar } from 'recharts';
 
@@ -135,12 +134,6 @@ const FinancieroScreen: React.FC = () => {
     let bal = 0;
     return flujoMensual.map(d => { bal += d.ingresos - d.gastos; return { ...d, balance: bal }; });
   }, [flujoMensual]);
-
-  const getProyectoNombre = (id: string) => {
-    if (id === 'admin' || !id) return 'Administrativo';
-    if (id === 'personal') return 'Personal';
-    return proyectos.find(p => p.id === id)?.nombre || presupuestos.find(p => p.id === id)?.proyecto || '—';
-  };
 
   const currentPageCharts = useMemo(() => chartOrder[pagina] || [], [chartOrder, pagina]);
   const totalPaginas = chartOrder.length;
