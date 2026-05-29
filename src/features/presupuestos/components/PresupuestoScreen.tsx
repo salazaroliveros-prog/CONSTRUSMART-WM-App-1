@@ -276,7 +276,41 @@ const PresupuestoScreen: React.FC = () => {
       const cm = nuevosSub.materiales.reduce((s, m) => s + m.cantidad * (1 + (m.desperdicio ?? 0) / 100) * m.costoUnitario, 0);
       const co = nuevosSub.manoObra.reduce((s, m) => s + m.cantidadPersonas * m.jornal / l.rendimiento, 0);
       const ce = equipos.reduce((s, e) => s + e.cantidad * e.costoHora, 0);
-      return { ...l, subrenglones: nuevosSub, costoMaterial: Math.round(cm), costoManoObra: Math.round(co), costoHerramienta: Math.round(ce) };
+      return { ...l, subrenglones: nuevosSub, costoMaterial: cm, costoManoObra: co, costoHerramienta: ce };
+    }));
+  }, []);
+
+  // Agregar sub-material, sub-MO, sub-equipo
+  const addSubMaterial = useCallback((id: string) => {
+    setLineas(prev => prev.map(l => {
+      if (l.id !== id) return l;
+      const nuevoMaterial: SubMaterial = { nombre: 'Nuevo material', unidad: 'und', cantidad: 1, costoUnitario: 0, desperdicio: 0 };
+      const materiales = [...l.subrenglones.materiales, nuevoMaterial];
+      const nuevosSub = { ...l.subrenglones, materiales };
+      const cm = materiales.reduce((s, m) => s + m.cantidad * (1 + (m.desperdicio ?? 0) / 100) * m.costoUnitario, 0);
+      return { ...l, subrenglones: nuevosSub, costoMaterial: cm };
+    }));
+  }, []);
+
+  const addSubMO = useCallback((id: string) => {
+    setLineas(prev => prev.map(l => {
+      if (l.id !== id) return l;
+      const nuevaMO: SubManoObra = { descripcion: 'Nuevo oficial/albañil', cantidadPersonas: 1, jornal: 0 };
+      const manoObra = [...l.subrenglones.manoObra, nuevaMO];
+      const nuevosSub = { ...l.subrenglones, manoObra };
+      const co = manoObra.reduce((s, m) => s + m.cantidadPersonas * m.jornal / l.rendimiento, 0);
+      return { ...l, subrenglones: nuevosSub, costoManoObra: co };
+    }));
+  }, []);
+
+  const addSubEquipo = useCallback((id: string) => {
+    setLineas(prev => prev.map(l => {
+      if (l.id !== id) return l;
+      const nuevoEquipo: SubEquipo = { descripcion: 'Nuevo equipo/herramienta', cantidad: 1, costoHora: 0 };
+      const equipos = [...l.subrenglones.equipos, nuevoEquipo];
+      const nuevosSub = { ...l.subrenglones, equipos };
+      const ce = equipos.reduce((s, e) => s + e.cantidad * e.costoHora, 0);
+      return { ...l, subrenglones: nuevosSub, costoHerramienta: ce };
     }));
   }, []);
 
@@ -816,6 +850,9 @@ const PresupuestoScreen: React.FC = () => {
                       onUpdateMemoria={updateMemoriaCalculo}
                       onRemove={removeLinea}
                       onToggle={toggleExpand}
+                      onAddSubMaterial={addSubMaterial}
+                      onAddSubMO={addSubMO}
+                      onAddSubEquipo={addSubEquipo}
                     />
                   );
                 })}
@@ -867,7 +904,10 @@ const RenglonCard = React.memo<{
   onUpdateMemoria: (id: string, memoria: Partial<MemoriaCalculo>) => void;
   onRemove: (id: string) => void;
   onToggle: (id: string) => void;
-}>(({ linea: l, apu, isOpen, onUpdate, onUpdateSubMaterial, onUpdateSubMO, onUpdateSubEquipo, onUpdateMemoria, onRemove, onToggle }) => {
+  onAddSubMaterial?: (id: string) => void;
+  onAddSubMO?: (id: string) => void;
+  onAddSubEquipo?: (id: string) => void;
+}>(({ linea: l, apu, isOpen, onUpdate, onUpdateSubMaterial, onUpdateSubMO, onUpdateSubEquipo, onUpdateMemoria, onRemove, onToggle, onAddSubMaterial, onAddSubMO, onAddSubEquipo }) => {
   const [showMemoria, setShowMemoria] = useState(false);
   const costoUnit = apu?.costoUnitario ?? l.costoMaterial + l.costoManoObra + l.costoHerramienta;
   const subtotal = apu?.subtotal ?? costoUnit * l.cantidad;
@@ -1027,7 +1067,14 @@ const RenglonCard = React.memo<{
 
           {sub.materiales.length > 0 && (
             <div>
-              <h4 className="text-[10px] font-bold text-blue-800 mb-1 flex items-center gap-1"><Package className="w-3 h-3" /> Materiales</h4>
+              <h4 className="text-[10px] font-bold text-blue-800 mb-1 flex items-center justify-between gap-1">
+                <span><Package className="w-3 h-3 inline mr-1" /> Materiales</span>
+                {onAddSubMaterial && (
+                  <button onClick={() => onAddSubMaterial(l.id)} className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold transition whitespace-nowrap">
+                    + Agregar material
+                  </button>
+                )}
+              </h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-[10px]">
                   <thead><tr className="text-muted-foreground border-b"><th className="text-left py-0.5">Material</th><th className="text-center py-0.5">Unidad</th><th className="text-right py-0.5">Cant.</th><th className="text-right py-0.5">Q/Und</th><th className="text-right py-0.5">Desp.%</th><th className="text-right py-0.5">Subtotal</th></tr></thead>
@@ -1051,7 +1098,14 @@ const RenglonCard = React.memo<{
 
           {sub.manoObra.length > 0 && (
             <div>
-              <h4 className="text-[10px] font-bold text-emerald-800 mb-1 flex items-center gap-1"><Users className="w-3 h-3" /> Mano de Obra</h4>
+              <h4 className="text-[10px] font-bold text-emerald-800 mb-1 flex items-center justify-between gap-1">
+                <span><Users className="w-3 h-3 inline mr-1" /> Mano de Obra</span>
+                {onAddSubMO && (
+                  <button onClick={() => onAddSubMO(l.id)} className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-semibold transition whitespace-nowrap">
+                    + Agregar MO
+                  </button>
+                )}
+              </h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-[10px]">
                   <thead><tr className="text-muted-foreground border-b"><th className="text-left py-0.5">Cuadrilla</th><th className="text-center py-0.5">Personas</th><th className="text-right py-0.5">Jornal (Q/día)</th><th className="text-right py-0.5">Costo/día</th><th className="text-right py-0.5">Costo/und</th></tr></thead>

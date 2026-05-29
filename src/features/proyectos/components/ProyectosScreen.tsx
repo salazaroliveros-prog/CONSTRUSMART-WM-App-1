@@ -31,6 +31,10 @@ const faseBadgeColors: Record<Fase, string> = {
 const FASES: Fase[] = ['planeación', 'ejecución', 'pausa', 'finalizado'];
 
 interface EditForm {
+  proyecto: string;
+  cliente: string;
+  ubicacion: string;
+  tipologia: string;
   ingresos: number;
   gastos: number;
   pendienteAportar: number;
@@ -58,6 +62,7 @@ const ProyectosScreen: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({
+    proyecto: '', cliente: '', ubicacion: '', tipologia: '',
     ingresos: 0, gastos: 0, pendienteAportar: 0, avanceFisico: 0, avanceFinanciero: 0,
   });
   const [renglonAvances, setRenglonAvances] = useState<Record<string, number>>({});
@@ -80,6 +85,10 @@ const ProyectosScreen: React.FC = () => {
   const startEditing = (p: Presupuesto) => {
     setEditingId(p.id);
     setEditForm({
+      proyecto: p.proyecto || '',
+      cliente: p.cliente || '',
+      ubicacion: p.ubicacion || '',
+      tipologia: p.tipologia || 'general',
       ingresos: p.ingresos ?? 0,
       gastos: p.gastos ?? 0,
       pendienteAportar: p.pendienteAportar ?? 0,
@@ -91,9 +100,19 @@ const ProyectosScreen: React.FC = () => {
   const saveEditing = async (id: string) => {
     setSaving(true);
     try {
-      await updatePresupuesto(id, editForm);
+      await updatePresupuesto(id, {
+        proyecto: editForm.proyecto,
+        cliente: editForm.cliente,
+        ubicacion: editForm.ubicacion,
+        tipologia: editForm.tipologia,
+        ingresos: editForm.ingresos,
+        gastos: editForm.gastos,
+        pendienteAportar: editForm.pendienteAportar,
+        avanceFisico: editForm.avanceFisico,
+        avanceFinanciero: editForm.avanceFinanciero,
+      });
       setEditingId(null);
-      toast.success('Datos financieros actualizados');
+      toast.success('Proyecto actualizado');
     } catch {
       toast.error('Error al actualizar');
     } finally {
@@ -262,6 +281,35 @@ const ProyectosScreen: React.FC = () => {
 
                         {isEditing ? (
                           <div className="mt-2 grid grid-cols-2 md:grid-cols-5 gap-2">
+                            <div className="col-span-2">
+                              <label className="text-[9px] font-semibold text-muted-foreground">Nombre del Proyecto</label>
+                              <input type="text" value={editForm.proyecto}
+                                onChange={e => setEditForm(f => ({ ...f, proyecto: e.target.value }))}
+                                className="input-standard" />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-semibold text-muted-foreground">Cliente</label>
+                              <input type="text" value={editForm.cliente}
+                                onChange={e => setEditForm(f => ({ ...f, cliente: e.target.value }))}
+                                className="input-standard" />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-semibold text-muted-foreground">Ubicación</label>
+                              <input type="text" value={editForm.ubicacion}
+                                onChange={e => setEditForm(f => ({ ...f, ubicacion: e.target.value }))}
+                                className="input-standard" />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-semibold text-muted-foreground">Tipología</label>
+                              <select value={editForm.tipologia} onChange={e => setEditForm(f => ({ ...f, tipologia: e.target.value }))} className="input-standard">
+                                <option value="general">General</option>
+                                <option value="residencial">Residencial</option>
+                                <option value="comercial">Comercial</option>
+                                <option value="industrial">Industrial</option>
+                                <option value="civil">Civil</option>
+                                <option value="publica">Pública</option>
+                              </select>
+                            </div>
                             <div>
                               <label className="text-[9px] font-semibold text-muted-foreground">Ingresos (Q)</label>
                               <input type="number" value={editForm.ingresos}
