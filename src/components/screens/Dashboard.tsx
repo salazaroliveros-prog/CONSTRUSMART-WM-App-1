@@ -52,7 +52,7 @@ interface ChartDef {
 }
 
 const Dashboard: React.FC = () => {
-  const { presupuestos, transacciones, proveedores, ordenesCompra, setView, addTransaccion, session } = useAppContext();
+  const { presupuestos, transacciones, proveedores, ordenesCompra, setView, addTransaccion, session, transicionFase } = useAppContext();
   const [pagina, setPagina] = useState(0);
   const [carouselDir, setCarouselDir] = useState<'left' | 'right'>('right');
   const [alertas, setAlertas] = useState<any[]>([]);
