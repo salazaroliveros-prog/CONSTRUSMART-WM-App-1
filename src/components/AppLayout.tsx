@@ -1,9 +1,9 @@
-import React, { useRef, useMemo, Suspense, lazy, useState, useEffect } from 'react';
+import React, { useRef, useMemo, Suspense, lazy } from 'react';
 import { useAuthContext } from '@/contexts/AppContext';
 import { ScreenSkeleton } from '@/components/shared/Skeleton';
 import LoginScreen from '@/components/screens/LoginScreen';
 import Sidebar from '@/components/shared/Sidebar';
-import { Loader2 } from 'lucide-react';
+import Loader3D from '@/components/shared/Loader3D';
 
 // Lazy loading para reducir bundle inicial
 const Dashboard = lazy(() => import('@/components/screens/Dashboard'));
@@ -39,14 +39,14 @@ const AppLayout: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 animate-login-bg-enter">
         <div className="text-center text-white">
           <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-white/10 mb-3 overflow-hidden">
             <img src="/logo.png" alt="Logo" className="w-full h-full object-contain p-2" />
           </div>
           <h2 className="font-bold tracking-wide">CONSTRUCTORA WM/M&S</h2>
           <p className="text-emerald-300 italic text-sm">Edificando el Futuro</p>
-          <Loader2 className="w-6 h-6 animate-spin mx-auto mt-4 text-emerald-300" />
+          <Loader3D size={60} className="mt-4" text="Cargando..." />
         </div>
       </div>
     );

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from 'sonner';
 import { Lock, User, Mail, ArrowRight, AlertCircle } from 'lucide-react';
+import Loader3D from '@/components/shared/Loader3D';
 
 const LoginScreen: React.FC = () => {
   const { signIn, signUp, signInWithGoogle, authError } = useAppContext();
@@ -44,14 +45,14 @@ const LoginScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:bg-gradient-to-br dark:from-slate-900 dark:via-blue-900 dark:to-slate-800 p-3 sm:p-4 relative overflow-hidden animate-fadeIn">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:bg-gradient-to-br dark:from-slate-900 dark:via-blue-900 dark:to-slate-800 p-3 sm:p-4 relative overflow-hidden animate-login-bg-enter">
       <div className="absolute inset-0 opacity-5 sm:opacity-10">
         <div className="absolute top-10 left-10 w-48 h-48 sm:w-72 sm:h-72 bg-blue-500 rounded-full blur-3xl animate-pulse-soft"></div>
         <div className="absolute bottom-10 right-10 w-64 h-64 sm:w-96 sm:h-96 bg-emerald-500 rounded-full blur-3xl animate-pulse-soft"></div>
       </div>
       <div className="relative z-10 w-full max-w-md">
-        <div className="bg-white/95 dark:bg-slate-950/95 rounded-3xl shadow-2xl p-5 sm:p-6 md:p-8 border border-slate-200/70 dark:border-slate-700/60">
-          <div className="text-center mb-4 sm:mb-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+        <div className="bg-white/95 dark:bg-slate-950/95 rounded-3xl shadow-2xl p-5 sm:p-6 md:p-8 border border-slate-200/70 dark:border-slate-700/60 login-card">
+          <div className="text-center mb-4 sm:mb-6 login-child">
             <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-blue-800 to-blue-600 mb-3 sm:mb-4 shadow-lg">
               <img src="/logo.png" alt="Logo CONSTRUCTORA WM/M&S" className="w-full h-full object-contain p-1" />
             </div>
@@ -60,7 +61,7 @@ const LoginScreen: React.FC = () => {
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 sm:mt-3">Plataforma de Gestión Arquitectónica</p>
           </div>
 
-          <div className="flex gap-1 bg-slate-100/80 dark:bg-slate-900/70 p-1 rounded-2xl mb-4 sm:mb-5 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+          <div className="flex gap-1 bg-slate-100/80 dark:bg-slate-900/70 p-1 rounded-2xl mb-4 sm:mb-5 login-child">
             <button
               type="button"
               onClick={() => { setMode('login'); setInfo(null); }}
@@ -73,7 +74,7 @@ const LoginScreen: React.FC = () => {
             >Crear Cuenta</button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+          <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3 login-child">
             {mode === 'signup' && (
               <div>
                 <label className="text-xs font-semibold text-slate-700 dark:text-white mb-1 block">Nombre completo</label>
@@ -136,25 +137,26 @@ const LoginScreen: React.FC = () => {
               className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold py-2 sm:py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl disabled:opacity-60 text-xs sm:text-sm animate-bounce-in"
               style={{ animationDelay: '400ms' }}
             >
-              {loading ? 'Procesando...' : (
+              {loading ? (
+                <Loader3D size={28} text="" />
+              ) : (
                 <>{mode === 'login' ? 'Ingresar' : 'Crear Cuenta'} <ArrowRight className="w-4 h-4" /></>
               )}
             </button>
           </form>
 
-          <div className="relative my-3 sm:my-4 animate-fade-in-up" style={{ animationDelay: '500ms' }}>
+          <div className="relative my-3 sm:my-4 login-child">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/20"></div></div>
             <div className="relative flex justify-center"><span className="bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:bg-gradient-to-br dark:from-slate-900 dark:via-blue-900 dark:to-slate-800 px-2 sm:px-3 text-[10px] text-white/60 dark:text-white/60 font-semibold">O CONTINÚA CON</span></div>
           </div>
 
           <button onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center gap-2.5 bg-slate-100/90 hover:bg-white border border-slate-300/80 dark:bg-white/10 dark:hover:bg-white/20 dark:border-white/20 text-slate-900 dark:text-white font-semibold py-2 sm:py-2.5 rounded-lg transition-all shadow-sm hover:shadow text-xs sm:text-sm animate-fade-in-up"
-            style={{ animationDelay: '600ms' }}>
+            className="w-full flex items-center justify-center gap-2.5 bg-slate-100/90 hover:bg-white border border-slate-300/80 dark:bg-white/10 dark:hover:bg-white/20 dark:border-white/20 text-slate-900 dark:text-white font-semibold py-2 sm:py-2.5 rounded-lg transition-all shadow-sm hover:shadow text-xs sm:text-sm login-child">
             <svg viewBox="0 0 48 48" className="w-4 h-4 sm:w-5 sm:h-5"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.54 28.59A14.5 14.5 0 0 1 9.5 24c0-1.59.28-3.14.76-4.59l-7.98-6.19A23.99 23.99 0 0 0 0 24c0 3.77.87 7.35 2.56 10.56l7.98-5.97z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 5.97C6.51 42.62 14.62 48 24 48z"/></svg>
             <span>Google</span>
           </button>
 
-          <p className="text-center text-[10px] text-white/50 mt-4 sm:mt-5">
+          <p className="text-center text-[10px] text-white/50 mt-4 sm:mt-5 login-child">
             © 2026 WM/M&S · Datos almacenados de forma segura en la nube
           </p>
         </div>
