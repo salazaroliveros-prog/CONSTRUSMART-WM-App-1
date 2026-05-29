@@ -4,7 +4,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import PageShell from '@/components/shared/PageShell';
 import ChartCard from '@/components/shared/ChartCard';
 import { fmtQ } from '@/lib/exporters';
-import { TrendingUp, TrendingDown, Wallet, PieChartIcon, ArrowLeft, ArrowRight, LineChartIcon, DollarSign, Percent, Target, Activity, CreditCard } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, PieChartIcon, ArrowLeft, ArrowRight, LineChartIcon, DollarSign, Percent, Target, Activity, CreditCard, BarChart3 } from 'lucide-react';
 import ProfitReport from './ProfitReport';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, LineChart, Line, AreaChart, Area, RadialBarChart, RadialBar } from 'recharts';
 
