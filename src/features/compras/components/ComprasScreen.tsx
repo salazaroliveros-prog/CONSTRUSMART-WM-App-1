@@ -15,6 +15,7 @@ import { ProveedoresService } from '@/services/compras/ProveedoresService';
 import { OrdenesCompraService } from '@/services/compras/OrdenesCompraService';
 import { MaterialesService } from '@/services/presupuestos/MaterialesService';
 import { BodegaService } from '@/services/proyectos/BodegaService';
+import { FinancieroService } from '@/services/financiero/FinancieroService';
 import { DateUtils } from '@/utils/dateUtils';
 
 type OCItemForm = Omit<CreateOrdenCompraItem, 'ordenCompraId'> & {
@@ -299,6 +300,27 @@ const ComprasScreen: React.FC = () => {
       if (itemsRec.length > 0) {
         await OrdenesCompraService.crearItemsRecepcion(itemsRec);
       }
+
+      // Crear transacción de gasto para que aparezca en Dashboard
+      const totalRecibido = itemsRec.reduce((s, i) => s + i.cantidadRecibida, 0);
+      if (totalRecibido > 0 && selectedOC.total > 0) {
+        try {
+          await FinancieroService.registrarTransaccion({
+            tipo: 'gasto',
+            descripcion: `Recepción OC ${selectedOC.folio} — ${selectedOC.items?.length || itemsRec.length} partidas`,
+            cantidad: totalRecibido,
+            unidad: 'lote',
+            categoria: 'materiales',
+            costoUnitario: selectedOC.subtotal / (itemsRec.length || 1),
+            costoTotal: selectedOC.total,
+            fecha: DateUtils.todayISO(),
+            proyectoId: selectedOC.proyectoId || 'admin',
+          }, userId);
+        } catch (e) {
+          console.warn('No se pudo registrar transacción de recepción:', e);
+        }
+      }
+
       const totalPendiente = ocItems.reduce((s, i) => s + (i.cantidad - i.cantidadRecibida - (recepcionCantidades[i.id] || 0)), 0);
       const nuevoEstatus = totalPendiente <= 0 ? 'recibida' : 'recibida_parcial';
       await OrdenesCompraService.actualizarEstatusOC(selectedOC.id, nuevoEstatus);

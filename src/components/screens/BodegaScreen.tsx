@@ -4,6 +4,7 @@ import PageShell from '@/components/shared/PageShell';
 import { MaterialesService } from '@/services/presupuestos/MaterialesService';
 import { BodegaService } from '@/services/proyectos/BodegaService';
 import { OrdenesCompraService } from '@/services/compras/OrdenesCompraService';
+import { FinancieroService } from '@/services/financiero/FinancieroService';
 import { toast } from 'sonner';
 import type { CreateOrdenCompraItem, CreateOrdenCompra } from '@/types/supabase';
 import { Input } from '@/components/ui/input';
@@ -60,11 +61,8 @@ const BodegaScreen: React.FC = () => {
       return;
     }
     try {
-      // 1. Obtener materiales registrados
-      const items = await MaterialesService.getMateriales(selectedPresupuestoId);
-      // 2. Obtener desglose desde renglones (si no hay materiales)
-      const desglosado = items.length === 0 ? await MaterialesService.getDesglosado(selectedPresupuestoId) : [];
-      const allItems = [...items, ...desglosado];
+      // 1. Persistir materiales desglosados si no existen (evita IDs efímeros)
+      const items = await MaterialesService.persistDesglosados(selectedPresupuestoId);
       
       const movs = await BodegaService.getMovimientos(selectedPresupuestoId);
 
@@ -77,7 +75,7 @@ const BodegaScreen: React.FC = () => {
       });
 
       setMateriales(
-        allItems.map((m: Record<string, unknown>) => {
+        items.map((m: Record<string, unknown>) => {
           const mov = movMap[m.id as string] || { comprado: 0, consumido: 0 };
           return {
             id: m.id as string,
@@ -102,10 +100,24 @@ const BodegaScreen: React.FC = () => {
   useEffect(() => { loadMateriales(); }, [loadMateriales]);
 
   const registrarCompra = async () => {
-    if (!showCompra || compraCantidad <= 0) return;
+    if (!showCompra || compraCantidad <= 0 || !session?.user?.id) return;
     setSaving(true);
     try {
       await BodegaService.registrarCompra(showCompra.id, compraCantidad, compraRef);
+      // Registrar gasto en transacciones para que aparezca en Dashboard
+      try {
+        await FinancieroService.registrarTransaccion({
+          tipo: 'gasto',
+          descripcion: `Compra material: ${showCompra.nombre}${compraRef ? ` (${compraRef})` : ''}`,
+          cantidad: compraCantidad,
+          unidad: showCompra.unidad,
+          categoria: 'materiales',
+          costoUnitario: showCompra.costo_unitario,
+          costoTotal: compraCantidad * showCompra.costo_unitario,
+          fecha: new Date().toISOString().split('T')[0],
+          proyectoId: selectedPresupuesto?.proyectoId || 'admin',
+        }, session.user.id);
+      } catch { /* transacción secundaria, no bloquear */ }
       toast.success('Compra registrada');
       setShowCompra(null);
       setCompraCantidad(0);
@@ -177,6 +189,7 @@ const BodegaScreen: React.FC = () => {
         precioUnitario: m.costo_unitario,
         importe: m.cantidad_estimada * m.costo_unitario,
         cantidadRecibida: 0,
+        materialId: m.id,
       }));
       await OrdenesCompraService.crearItems(items);
       

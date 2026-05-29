@@ -11,7 +11,7 @@ export const MaterialesService = {
     return data as any as Material[];
   },
 
-  // Nueva función: desglosar materiales desde renglones del presupuesto
+  // Extrae materiales del JSON embebido de lineas (subrenglones.materiales)
   async getDesglosado(presupuestoId: string) {
     const { data: presupuesto, error } = await supabase
       .from('presupuestos')
@@ -21,7 +21,7 @@ export const MaterialesService = {
     if (error) throw error;
     
     const lineas = presupuesto.lineas || [];
-    const materialesDesglosados: Record<string, { cantidad: number; unidad: string; costoUnitario: number; nombre: string }> = {};
+    const materialesDesglosados: Record<string, { cantidad: number; unidad: string; costoUnitario: number; nombre: string; codigo: string }> = {};
     
     lineas.forEach((linea: any) => {
       (linea?.subrenglones?.materiales || []).forEach((mat: any) => {
@@ -32,6 +32,7 @@ export const MaterialesService = {
             unidad: mat.unidad || 'u',
             costoUnitario: mat.costoUnitario || 0,
             nombre: mat.nombre || key,
+            codigo: mat.codigo || linea.codigo || '',
           };
         }
         materialesDesglosados[key].cantidad += (mat.cantidad || 0) * (linea.cantidad || 1);
@@ -39,7 +40,6 @@ export const MaterialesService = {
     });
     
     return Object.entries(materialesDesglosados).map(([_, m]) => ({
-      id: crypto.randomUUID(),
       nombre: m.nombre,
       unidad: m.unidad,
       cantidad_estimada: m.cantidad,
@@ -47,6 +47,32 @@ export const MaterialesService = {
       costo_unitario: m.costoUnitario,
       proveedor: null,
     }));
+  },
+
+  // Persiste materiales desglosados en la tabla real (evita IDs efímeros)
+  async persistDesglosados(presupuestoId: string): Promise<Material[]> {
+    const existentes = await this.getMateriales(presupuestoId);
+    if (existentes.length > 0) return existentes;
+    
+    const desglosados = await this.getDesglosado(presupuestoId);
+    if (desglosados.length === 0) return [];
+
+    const inserts = desglosados.map(m => ({
+      presupuesto_id: presupuestoId,
+      nombre: m.nombre,
+      unidad: m.unidad,
+      cantidad_estimada: m.cantidad_estimada,
+      costo_unitario: m.costo_unitario,
+      cantidad_utilizada: 0,
+      proveedor: null,
+    }));
+
+    const { data, error } = await supabase
+      .from('materiales_proyecto')
+      .insert(inserts)
+      .select();
+    if (error) throw error;
+    return (data || []) as any as Material[];
   },
 
   async addMaterial(material: any) {
