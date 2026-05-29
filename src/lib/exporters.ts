@@ -1,6 +1,13 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+// Extensión de tipos para lastAutoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    lastAutoTable?: { finalY: number };
+  }
+}
+
 type SubMaterial = { nombre: string; unidad: string; cantidad: number; costoUnitario: number; desperdicio?: number };
 type SubManoObra = { descripcion: string; cantidadPersonas: number; jornal: number };
 type SubEquipo = { descripcion: string; cantidad: number; costoHora: number };
@@ -66,10 +73,10 @@ export function exportPresupuestoPDF(params: {
     
     // Tipo de documento
     doc.setFontSize(9);
-    doc.text(tipo === 'admin' ? 'PRESUPUESTO (Administración)' : 'COTIZACIÓN', margin + pageW - 4, y + 9, { align: 'r' });
+    doc.text(tipo === 'admin' ? 'PRESUPUESTO (Administración)' : 'COTIZACIÓN', margin + pageW - 4, y + 9, { align: 'right' });
     doc.setFontSize(7);
-    doc.text(`No. ${new Date().getTime().toString(36).toUpperCase()}`, margin + pageW - 4, y + 16, { align: 'r' });
-    doc.text(new Date().toLocaleDateString('es-GT'), margin + pageW - 4, y + 22, { align: 'r' });
+    doc.text(`No. ${new Date().getTime().toString(36).toUpperCase()}`, margin + pageW - 4, y + 16, { align: 'right' });
+    doc.text(new Date().toLocaleDateString('es-GT'), margin + pageW - 4, y + 22, { align: 'right' });
     
     y += 32;
   };
@@ -86,7 +93,7 @@ export function exportPresupuestoPDF(params: {
     doc.text(`${EMPRESA.nombre} · ${EMPRESA.direccion}`, margin, 280);
     doc.text(`Tel: ${EMPRESA.telefono} · Email: ${EMPRESA.email} · ${EMPRESA.web}`, margin, 284);
     doc.text(`${EMPRESA.nit}`, margin, 288);
-    doc.text(`Pág. ${paginaActual}`, margin + pageW, 288, { align: 'r' });
+    doc.text(`Pág. ${paginaActual}`, margin + pageW, 288, { align: 'right' });
     paginaActual++;
   };
 
@@ -101,21 +108,21 @@ export function exportPresupuestoPDF(params: {
   doc.setTextColor(30, 58, 138);
   doc.text('Información General del Proyecto', margin, y);
   y += 5;
-  autoTable(doc, {
-    startY: y,
-    tableWidth: pageW,
-    styles: { fontSize: 8, cellPadding: 1.5 },
-    headStyles: { fillColor: [30, 58, 138] },
-    body: [
-      ['Proyecto', proyecto],
-      ['Cliente', cliente || 'N/A'],
-      ['Ubicación', ubicacion || 'N/A'],
-      ['Tipología', tipologia],
-      ['Área Construcción', `${params.areaConstruccion || 0} m²`],
-      ['Nivel de Calidad', params.nivelCalidad],
-    ],
-    theme: 'grid',
-  });
+    autoTable(doc, {
+      startY: y,
+      tableWidth: pageW,
+      styles: { fontSize: 8, cellPadding: 1.5 },
+      headStyles: { fillColor: [30, 58, 138] },
+      body: [
+        ['Proyecto', proyecto ?? ''],
+        ['Cliente', cliente ?? 'N/A'],
+        ['Ubicación', ubicacion ?? 'N/A'],
+        ['Tipología', tipologia ?? ''],
+        ['Área Construcción', `${params.areaConstruccion || 0} m²`],
+        ['Nivel de Calidad', params.nivelCalidad ?? ''],
+      ],
+      theme: 'grid',
+    });
   y = (doc.lastAutoTable?.finalY ?? y) + 6;
 
   // === RENGLONES (ambos reportes) ===
@@ -142,7 +149,7 @@ export function exportPresupuestoPDF(params: {
         { header: 'C.Unit.', dataKey: '4' },
         { header: 'Subtotal', dataKey: '5' },
       ],
-      body: renglonesBody.map(r => r.map(v => ({ content: v, styles: { align: v === r[3] || v === r[4] || v === r[5] ? 'right' : 'left' as const } }))),
+      body: renglonesBody as string[][],
       foot: [[{ content: 'COSTO DIRECTO TOTAL', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fillColor: [219, 234, 254] } },
         { content: fmtQ(totales.costoDirecto), styles: { halign: 'right', fontStyle: 'bold', fillColor: [219, 234, 254] } }]],
       theme: 'grid',
@@ -180,7 +187,7 @@ export function exportPresupuestoPDF(params: {
           { header: 'Q/Und', dataKey: '5' },
           { header: 'Subtotal', dataKey: '6' },
         ],
-        body: matBody.map(r => r.map((v, i) => ({ content: v, styles: { halign: i >= 3 ? 'right' : 'left' as const } }))),
+      body: matBody as string[][],
         theme: 'grid',
       });
       y = (doc.lastAutoTable?.finalY ?? y) + 6;
@@ -211,7 +218,7 @@ export function exportPresupuestoPDF(params: {
           { header: 'Jornal', dataKey: '3' },
           { header: 'C/Und', dataKey: '4' },
         ],
-        body: moBody.map(r => r.map((v, i) => ({ content: v, styles: { halign: i >= 2 ? 'right' : 'left' as const } }))),
+        body: moBody as string[][],
         theme: 'grid',
       });
       y = (doc.lastAutoTable?.finalY ?? y) + 6;
@@ -239,7 +246,7 @@ export function exportPresupuestoPDF(params: {
           { header: 'Q/Hora', dataKey: '3' },
           { header: 'Subtotal', dataKey: '4' },
         ],
-        body: eqBody.map(r => r.map((v, i) => ({ content: v, styles: { halign: i >= 2 ? 'right' : 'left' as const } }))),
+        body: eqBody as string[][],
         theme: 'grid',
       });
       y = (doc.lastAutoTable?.finalY ?? y) + 6;
@@ -275,9 +282,9 @@ export function exportPresupuestoPDF(params: {
     tableWidth: pageW,
     styles: { fontSize: 8, cellPadding: 1.5 },
     headStyles: { fillColor: [30, 58, 138] },
-    body: resumenBody,
+    body: resumenBody as string[][],
     theme: 'grid',
-    foot: [[{ content: `Tiempo Estimado: ${totales.tiempo.toFixed(1)} días${tipo === 'cliente' ? '' : ` · ${totales.totalPersonasDia.toFixed(0)} personas-día`}`, colSpan: 2, styles: { fontSize: 7, fontStyle: 'italic' } }]],
+    foot: [[{ content: `Tiempo Estimado: ${totales.tiempo.toFixed(1)} días${tipo === 'cliente' ? '' : ` · ${totales.totalPersonasDia.toFixed(0)} personas-día`}`, colSpan: 2, styles: { fontSize: 7, fontStyle: 'italic' as const } }]],
   });
   y = (doc.lastAutoTable?.finalY ?? y) + 10;
 
