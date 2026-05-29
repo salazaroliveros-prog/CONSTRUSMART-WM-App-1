@@ -630,7 +630,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // silent
     }
 
-    switch (table) {"}]}]}]},
+    switch (table) {
       case 'clientes':
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setClientes(prev => [dbToCliente(realPayload.new!), ...prev]);
