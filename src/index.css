@@ -831,6 +831,114 @@ body {
 }
 
 /* ============================================
+   LOADER 3D — 3 arcos girando (azul marino, amarillo, blanco)
+   Basado en loader.html del repo
+   ============================================ */
+.loader-circle-11 {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  transform-style: preserve-3d;
+  perspective: 400px;
+}
+
+.loader-circle-11 .arc {
+  position: absolute;
+  content: "";
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border-bottom: 5px solid #f00;
+}
+
+.loader-circle-11 .arc-1 {
+  border-bottom-color: #1e3a5f; /* Azul marino */
+  animation: rotate1 1.15s linear infinite;
+}
+
+.loader-circle-11 .arc-2 {
+  border-bottom-color: #fbbf24; /* Amarillo */
+  animation: rotate2 1.15s linear infinite;
+  animation-delay: -0.4s;
+}
+
+.loader-circle-11 .arc-3 {
+  border-bottom-color: #ffffff; /* Blanco */
+  animation: rotate3 1.15s linear infinite;
+  animation-delay: 0s;
+}
+
+@keyframes rotate1 {
+  from { transform: rotateX(35deg) rotateY(-45deg) rotateZ(0); }
+  to { transform: rotateX(35deg) rotateY(-45deg) rotateZ(1turn); }
+}
+
+@keyframes rotate2 {
+  from { transform: rotateX(50deg) rotateY(10deg) rotateZ(0); }
+  to { transform: rotateX(50deg) rotateY(10deg) rotateZ(1turn); }
+}
+
+@keyframes rotate3 {
+  from { transform: rotateX(35deg) rotateY(55deg) rotateZ(0); }
+  to { transform: rotateX(35deg) rotateY(55deg) rotateZ(1turn); }
+}
+
+/* ============================================
+   ANIMACIONES LOGIN — entrada y salida suave
+   ============================================ */
+@keyframes loginEnter {
+  0% { opacity: 0; transform: translateY(20px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes loginExit {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-20px) scale(0.98); }
+}
+
+@keyframes loginBgEnter {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes loginBgExit {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.animate-login-enter {
+  animation: loginEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-login-exit {
+  animation: loginExit 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-login-bg-enter {
+  animation: loginBgEnter 0.6s ease-out forwards;
+}
+
+.animate-login-bg-exit {
+  animation: loginBgExit 0.4s ease-in forwards;
+}
+
+/* Login card staggered children */
+.login-card {
+  animation: loginEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.login-child { opacity: 0; }
+.login-child:nth-child(1) { animation: fadeInUp 0.4s 0.05s ease-out forwards; }
+.login-child:nth-child(2) { animation: fadeInUp 0.4s 0.1s ease-out forwards; }
+.login-child:nth-child(3) { animation: fadeInUp 0.4s 0.15s ease-out forwards; }
+.login-child:nth-child(4) { animation: fadeInUp 0.4s 0.2s ease-out forwards; }
+.login-child:nth-child(5) { animation: fadeInUp 0.4s 0.25s ease-out forwards; }
+.login-child:nth-child(6) { animation: fadeInUp 0.4s 0.3s ease-out forwards; }
+.login-child:nth-child(7) { animation: fadeInUp 0.4s 0.35s ease-out forwards; }
+
+/* ============================================
    TRANSICIONES GLOBALES — solo opacity/color
    No transition-all para evitar repaints
    ============================================ */
