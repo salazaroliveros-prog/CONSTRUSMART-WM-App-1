@@ -632,18 +632,21 @@ export const tipologiaLabels: Record<Tipologia, string> = {
 };
 
 export function calcularAPU(linea: Renglon & { cantidad: number; baseTotalPersonas?: number }) {
-  const sub = linea.subrenglones;
-  const costoMaterial = sub.materiales.reduce((s, m) => s + m.cantidad * (1 + (m.desperdicio ?? 0) / 100) * m.costoUnitario, 0);
-  const costoManoObra = sub.manoObra.reduce((s, m) => s + m.cantidadPersonas * m.jornal / linea.rendimiento, 0);
-  const costoHerramienta = sub.equipos.reduce((s, e) => s + e.cantidad * e.costoHora, 0);
+  const sub = linea.subrenglones || { materiales: [], manoObra: [], equipos: [] };
+  const materiales = sub.materiales || [];
+  const manoObra = sub.manoObra || [];
+  const equipos = sub.equipos || [];
+  const costoMaterial = materiales.reduce((s, m) => s + m.cantidad * (1 + (m.desperdicio ?? 0) / 100) * m.costoUnitario, 0);
+  const costoManoObra = manoObra.reduce((s, m) => s + m.cantidadPersonas * m.jornal / (linea.rendimiento || 1), 0);
+  const costoHerramienta = equipos.reduce((s, e) => s + e.cantidad * e.costoHora, 0);
   const costoUnitario = costoMaterial + costoManoObra + costoHerramienta;
   const subtotal = costoUnitario * linea.cantidad;
-  const currentPersonas = sub.manoObra.reduce((s, m) => s + m.cantidadPersonas, 0);
+  const currentPersonas = manoObra.reduce((s, m) => s + m.cantidadPersonas, 0);
   const basePersonas = linea.baseTotalPersonas ?? currentPersonas;
   const adjustedRendimiento = basePersonas > 0 && currentPersonas > 0
-    ? linea.rendimiento * (currentPersonas / basePersonas)
-    : linea.rendimiento;
+    ? (linea.rendimiento || 1) * (currentPersonas / basePersonas)
+    : (linea.rendimiento || 1);
   const dias = adjustedRendimiento > 0 ? linea.cantidad / adjustedRendimiento : 0;
-  const totalPersonasDia = sub.manoObra.reduce((s, m) => s + m.cantidadPersonas * dias, 0);
+  const totalPersonasDia = manoObra.reduce((s, m) => s + m.cantidadPersonas * dias, 0);
   return { costoMaterial, costoManoObra, costoHerramienta, costoUnitario, subtotal, dias, totalPersonasDia };
 }

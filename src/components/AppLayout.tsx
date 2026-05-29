@@ -81,14 +81,16 @@ const AppLayout: React.FC = () => {
   const isNotLogin = view !== 'login' && session;
 
   return (
-    <div key={animKey.key} className={getAnimClass()} data-view={view}>
+    <div key={animKey.key} className={`flex h-screen overflow-hidden ${getAnimClass()}`} data-view={view}>
       {isNotLogin && <Sidebar />}
-      <CommandPalette />
-      <DevDiagnostics />
-      <Suspense fallback={<ScreenSkeleton />}>
-        {renderView()}
-      </Suspense>
-      <OfflineBanner />
+      <main className="flex-1 min-w-0 min-h-0 overflow-hidden">
+        <CommandPalette />
+        <DevDiagnostics />
+        <Suspense fallback={<ScreenSkeleton />}>
+          {renderView()}
+        </Suspense>
+        <OfflineBanner />
+      </main>
     </div>
   );
 };
