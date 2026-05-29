@@ -49,7 +49,6 @@
     --card-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03), 0 1px 6px -1px rgb(0 0 0 / 0.04);
     --card-shadow-hover: 0 4px 12px 0 rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.08);
     --card-border-radius: 0.625rem;
-    --table-header-height: 2.5rem;
     --input-height: 2.25rem;
 
     /* KPI Colors */
@@ -64,6 +63,11 @@
     /* Light backgrounds */
     --card-bg: 0 0% 100%;
     --card-border-light: 214.3 31.8% 91.4%;
+    
+    /* Glass tokens */
+    --glass-bg: 0 0% 100%;
+    --glass-border: 214.3 31.8% 91.4%;
+    --glass-blur: 12px;
   }
 
   .dark {
@@ -108,6 +112,11 @@
     --card-shadow-hover: 0 4px 12px 0 rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.25);
     --card-bg: 222.2 47.4% 11.2%;
     --card-border-light: 217.2 32.6% 17.5%;
+    
+    /* Glass tokens dark */
+    --glass-bg: 222.2 47.4% 11.2%;
+    --glass-border: 217.2 32.6% 17.5%;
+    --glass-blur: 16px;
   }
 }
 
@@ -158,7 +167,112 @@ body {
 }
 
 /* ============================================
-   CARD COMPONENT SYSTEM
+   GLASS COMPONENT SYSTEM — fondo con blur
+   ============================================ */
+@layer components {
+  /* Glass card principal — semitransparente con backdrop blur */
+  .glass-card {
+    @apply rounded-xl border relative overflow-hidden;
+    border-color: hsl(var(--glass-border) / 0.5);
+    background: hsl(var(--glass-bg) / 0.35);
+    backdrop-filter: blur(var(--glass-blur, 12px));
+    -webkit-backdrop-filter: blur(var(--glass-blur, 12px));
+    box-shadow: 0 1px 3px hsl(var(--foreground) / 0.04), 0 4px 16px hsl(var(--foreground) / 0.04);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.3s ease;
+  }
+  .glass-card:hover {
+    box-shadow: 0 4px 12px hsl(var(--foreground) / 0.06), 0 8px 32px hsl(var(--foreground) / 0.04);
+    border-color: hsl(var(--glass-border) / 0.7);
+  }
+
+  /* Glass card más fuerte — más opaco */
+  .glass-card-strong {
+    @apply rounded-xl border relative overflow-hidden;
+    border-color: hsl(var(--glass-border) / 0.4);
+    background: hsl(var(--glass-bg) / 0.55);
+    backdrop-filter: blur(var(--glass-blur, 12px));
+    -webkit-backdrop-filter: blur(var(--glass-blur, 12px));
+    box-shadow: 0 1px 3px hsl(var(--foreground) / 0.04), 0 4px 16px hsl(var(--foreground) / 0.06);
+  }
+
+  /* Glass card sólido — casi opaco con blur sutil */
+  .glass-card-solid {
+    @apply rounded-xl border relative overflow-hidden;
+    border-color: hsl(var(--glass-border) / 0.6);
+    background: hsl(var(--glass-bg) / 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 1px 3px hsl(var(--foreground) / 0.04), 0 4px 16px hsl(var(--foreground) / 0.06);
+  }
+
+  /* KPI en glass */
+  .kpi-glass {
+    @apply rounded-xl p-3 flex flex-col justify-center relative overflow-hidden;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* Sidebar con glass */
+  .sidebar-glass {
+    background: hsl(var(--glass-bg) / 0.5);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-right: 1px solid hsl(var(--glass-border) / 0.4);
+  }
+  .dark .sidebar-glass {
+    background: hsl(var(--glass-bg) / 0.45);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* Efecto de brillo superior en glass cards */
+  .glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(var(--glass-border) / 0.6), transparent);
+    opacity: 0.8;
+  }
+  .dark .glass-card::before {
+    background: linear-gradient(90deg, transparent, hsl(var(--glass-border) / 0.3), transparent);
+  }
+  
+  .glass-card-strong::before,
+  .glass-card-solid::before {
+    display: none;
+  }
+
+  /* Table con glass */
+  .table-glass {
+    @apply w-full text-xs;
+  }
+  .table-glass thead {
+    @apply bg-blue-800/70 text-white backdrop-blur-sm;
+  }
+  .table-glass th {
+    @apply p-2.5 text-left font-semibold;
+  }
+  .table-glass td {
+    @apply p-2.5;
+  }
+  .table-glass tbody tr {
+    @apply border-b;
+    border-color: hsl(var(--glass-border) / 0.3);
+    transition: background-color 0.15s ease;
+  }
+  .table-glass tbody tr:hover {
+    background: hsl(var(--glass-bg) / 0.15);
+  }
+  .table-glass tbody tr:last-child {
+    @apply border-b-0;
+  }
+}
+
+/* ============================================
+   CARD COMPONENT SYSTEM — Legacy (fallback)
    ============================================ */
 @layer components {
   .card-standard {
@@ -181,7 +295,11 @@ body {
   }
 
   .card-section {
-    @apply bg-white dark:bg-gray-800/40 rounded-lg border border-border/40 p-3;
+    background: hsl(var(--glass-bg) / 0.25);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    @apply rounded-lg border p-3;
+    border-color: hsl(var(--glass-border) / 0.3);
     transition: background-color 0.2s ease;
   }
 
@@ -214,7 +332,7 @@ body {
 }
 
 /* ============================================
-   TABLE COMPONENT SYSTEM
+   TABLE COMPONENT SYSTEM — Legacy
    ============================================ */
 @layer components {
   .table-standard {
@@ -263,7 +381,7 @@ body {
 }
 
 /* ============================================
-   KPI CARD SYSTEM — colores sólidos sin glass
+   KPI CARD SYSTEM
    ============================================ */
 @layer components {
   .kpi-card {
@@ -284,10 +402,9 @@ body {
 }
 
 /* ============================================
-   BUTTON SYSTEM v2 — transiciones + microinteracciones
+   BUTTON SYSTEM v2
    ============================================ */
 @layer components {
-  /* Base button mixin via shared classes */
   .btn-base {
     @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40 relative overflow-hidden;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -332,7 +449,6 @@ body {
     transform: scale(0.95);
   }
 
-  /* ===== Neumorphism ===== */
   .btn-neumorphic {
     @apply btn-base text-slate-700 dark:text-gray-200;
     background: #e8ecf1;
@@ -355,29 +471,28 @@ body {
     box-shadow: inset 2px 2px 4px #141c28, inset -2px -2px 4px #283647;
   }
 
-  /* ===== Glassmorphism Button ===== */
   .btn-glass {
     @apply btn-base;
-    background: rgba(255, 255, 255, 0.2);
+    background: hsl(var(--glass-bg) / 0.25);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white;
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--glass-border) / 0.4);
+    color: hsl(var(--foreground));
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   }
   .dark .btn-glass {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: hsl(var(--glass-bg) / 0.2);
+    border-color: hsl(var(--glass-border) / 0.2);
   }
   .btn-glass:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: rgba(255, 255, 255, 0.5);
+    background: hsl(var(--glass-bg) / 0.4);
+    border-color: hsl(var(--glass-border) / 0.6);
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
   }
   .dark .btn-glass:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.12);
+    background: hsl(var(--glass-bg) / 0.35);
   }
 
-  /* ===== Glow Effect Button ===== */
   .btn-glow {
     @apply btn-base bg-gradient-to-r from-primary to-blue-700 text-white;
     box-shadow: 0 2px 8px hsl(221, 83%, 53%, 0.25);
@@ -402,7 +517,6 @@ body {
     transform: translateY(-1px);
   }
 
-  /* ===== Ripple Effect ===== */
   .btn-ripple {
     position: relative;
     overflow: hidden;
@@ -425,7 +539,6 @@ body {
     transition: opacity 0.6s ease;
   }
 
-  /* ===== Floating Action Button (FAB) ===== */
   .btn-fab {
     @apply w-14 h-14 rounded-full flex items-center justify-center shadow-xl text-white;
     background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
@@ -440,7 +553,6 @@ body {
     transform: scale(0.95);
   }
 
-  /* ===== Animated Border Button ===== */
   .btn-border-glow {
     @apply btn-base bg-transparent border border-primary/30 text-primary relative;
     transition: all 0.3s ease;
@@ -466,11 +578,16 @@ body {
 }
 
 /* ============================================
-   FORM ELEMENTS — sin transition-all
+   FORM ELEMENTS
    ============================================ */
 @layer components {
   .input-standard {
-    @apply w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100 outline-none;
+    @apply w-full px-3 py-2 text-sm border rounded-lg;
+    background: hsl(var(--glass-bg) / 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-color: hsl(var(--glass-border) / 0.4);
+    @apply dark:text-gray-100 outline-none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .input-standard:focus {
@@ -478,7 +595,12 @@ body {
   }
 
   .select-standard {
-    @apply px-3 py-2 text-xs border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 dark:text-gray-100 outline-none;
+    @apply px-3 py-2 text-xs border rounded-lg;
+    background: hsl(var(--glass-bg) / 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-color: hsl(var(--glass-border) / 0.4);
+    @apply dark:text-gray-100 outline-none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .select-standard:focus {
@@ -507,10 +629,7 @@ body {
   }
 }
 
-/* ============================================
-   GLASS EFFECTS — sin backdrop-filter (causa parpadeo)
-   reemplazados por fondos semitransparentes sólidos
-   ============================================ */
+/* ======= LEGACY GLASS (mantenido por compatibilidad) ======= */
 .glass {
   @apply bg-white/80 dark:bg-gray-900/80 border border-border/40;
   box-shadow: 0 1px 3px hsl(var(--foreground) / 0.04);
@@ -523,16 +642,6 @@ body {
 
 .glass-dark {
   @apply bg-gray-900/10 dark:bg-white/5 border border-border/20;
-}
-
-.glass-card {
-  @apply bg-white/85 dark:bg-gray-900/80 border border-border/30 rounded-xl;
-  box-shadow: 0 1px 3px hsl(var(--foreground) / 0.04), 0 4px 16px hsl(var(--foreground) / 0.04);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
-}
-.glass-card:hover {
-  box-shadow: 0 4px 12px hsl(var(--foreground) / 0.06), 0 8px 32px hsl(var(--foreground) / 0.04);
-  border-color: hsl(var(--border) / 0.6);
 }
 
 /* ============================================
@@ -598,7 +707,7 @@ body {
   100% { background-position: 200% 0; }
 }
 
-/* ===== TRANSICIONES DE VISTA (MÓDULOS) — fade + slide combinados ===== */
+/* View transitions */
 @keyframes viewEnterRight {
   0% { opacity: 0; transform: translateX(40px); }
   100% { opacity: 1; transform: translateX(0); }
@@ -697,7 +806,7 @@ body {
   animation: shimmer 1.5s infinite;
 }
 
-/* ===== CARRUSEL / PAGINACIÓN ===== */
+/* Carrusel */
 @keyframes carouselSlideRight {
   0% { opacity: 0; transform: translateX(30px); }
   100% { opacity: 1; transform: translateX(0); }
@@ -716,7 +825,7 @@ body {
   animation: carouselSlideLeft 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* ===== TRANSICIÓN SIDEBAR ===== */
+/* Sidebar transition */
 .sidebar-transition {
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -725,7 +834,7 @@ body {
   animation: fadeIn 0.2s ease-out forwards;
 }
 
-/* Stagger delay utility classes */
+/* Stagger delay */
 .stagger-1 { animation-delay: 0.05s; }
 .stagger-2 { animation-delay: 0.1s; }
 .stagger-3 { animation-delay: 0.15s; }
@@ -735,7 +844,7 @@ body {
 .stagger-7 { animation-delay: 0.35s; }
 .stagger-8 { animation-delay: 0.4s; }
 
-/* Bar chart fill animation */
+/* Bar fill */
 .bar-fill-animate {
   position: relative;
   overflow: hidden;
@@ -752,9 +861,7 @@ body {
   width: 0;
 }
 
-/* ============================================
-   TEXT EFFECTS
-   ============================================ */
+/* Text effects */
 .text-gradient {
   background: linear-gradient(135deg, hsl(var(--primary)), hsl(221 83% 60%));
   -webkit-background-clip: text;
@@ -769,11 +876,11 @@ body {
   background-clip: text;
 }
 
-/* ============================================
-   SKELETON LOADING
-   ============================================ */
+/* Skeleton loading */
 .skeleton {
-  @apply bg-muted/70 rounded;
+  background: hsl(var(--glass-bg) / 0.3);
+  backdrop-filter: blur(4px);
+  @apply rounded;
   position: relative;
   overflow: hidden;
 }
@@ -786,9 +893,7 @@ body {
   animation: shimmer 1.5s infinite;
 }
 
-/* ============================================
-   RESPONSIVE TOUCH TARGETS
-   ============================================ */
+/* Responsive touch targets */
 @media (max-width: 639px) {
   .touch-min {
     min-height: 36px;
@@ -800,9 +905,7 @@ body {
   }
 }
 
-/* ============================================
-   RESPONSIVE PAGE LAYOUT
-   ============================================ */
+/* Responsive page layout */
 @media (max-width: 639px) {
   .page-content {
     @apply px-2 py-2;
@@ -830,10 +933,7 @@ body {
   }
 }
 
-/* ============================================
-   LOADER 3D — 3 arcos girando (azul marino, amarillo, blanco)
-   Basado en loader.html del repo
-   ============================================ */
+/* Loader 3D */
 .loader-circle-11 {
   position: relative;
   width: 70px;
@@ -854,18 +954,18 @@ body {
 }
 
 .loader-circle-11 .arc-1 {
-  border-bottom-color: #1e3a5f; /* Azul marino */
+  border-bottom-color: #1e3a5f;
   animation: rotate1 1.15s linear infinite;
 }
 
 .loader-circle-11 .arc-2 {
-  border-bottom-color: #fbbf24; /* Amarillo */
+  border-bottom-color: #fbbf24;
   animation: rotate2 1.15s linear infinite;
   animation-delay: -0.4s;
 }
 
 .loader-circle-11 .arc-3 {
-  border-bottom-color: #ffffff; /* Blanco */
+  border-bottom-color: #ffffff;
   animation: rotate3 1.15s linear infinite;
   animation-delay: 0s;
 }
@@ -885,9 +985,7 @@ body {
   to { transform: rotateX(35deg) rotateY(55deg) rotateZ(1turn); }
 }
 
-/* ============================================
-   ANIMACIONES LOGIN — entrada y salida suave
-   ============================================ */
+/* Login animations */
 @keyframes loginEnter {
   0% { opacity: 0; transform: translateY(20px) scale(0.98); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
@@ -924,7 +1022,6 @@ body {
   animation: loginBgExit 0.4s ease-in forwards;
 }
 
-/* Login card staggered children */
 .login-card {
   animation: loginEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -938,10 +1035,7 @@ body {
 .login-child:nth-child(6) { animation: fadeInUp 0.4s 0.3s ease-out forwards; }
 .login-child:nth-child(7) { animation: fadeInUp 0.4s 0.35s ease-out forwards; }
 
-/* ============================================
-   TRANSICIONES GLOBALES — solo opacity/color
-   No transition-all para evitar repaints
-   ============================================ */
+/* Theme transitions */
 .theme-transition,
 .theme-transition * {
   transition: background-color 0.3s ease !important;
