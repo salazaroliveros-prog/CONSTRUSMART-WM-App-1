@@ -17,13 +17,13 @@ import {
   Proveedor, OrdenCompra,
   CreateCliente, CreateProyecto, CreateTransaccion, CreateActividad, CreatePresupuesto, CreateEquipo, CreateEquipoMiembro,
   CreateProveedor, UpdateCliente, UpdateProyecto, UpdatePresupuesto, UpdateEquipo, UpdateEquipoMiembro,
-  UpdateProveedor,
+  UpdateProveedor, UpdateTransaccion, UpdateActividad, UpdateOrdenCompra,
   CreatePresupuestoInput,
   validateEquipo, validateEquipoMiembro, validateTransaccion,
   dbToCliente, clienteToDb, dbToProyecto, proyectoToDb,
   dbToTransaccion, dbToActividad, dbToPresupuesto, presupuestoToDb,
   dbToEquipo, equipoToDb, dbToEquipoMiembro, equipoMiembroToDb,
-  dbToProveedor, dbToOrdenCompra, proveedorToDb
+  dbToProveedor, dbToOrdenCompra, proveedorToDb, ordenCompraToDb, actividadToDb
 } from '@/types/supabase';
 import {
   loadCachedData, saveCachedData, clearUserCache,
@@ -80,6 +80,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, nombre: string) => Promise<boolean>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<boolean>;
   user: User;
   sidebarOpen: boolean;
   toggleSidebar: () => void;
@@ -99,11 +100,14 @@ interface DataContextType {
   proyectos: Proyecto[];
   addProyecto: (p: CreateProyecto) => Promise<void>;
   updateProyecto: (id: string, p: UpdateProyecto) => Promise<void>;
+  deleteProyecto: (id: string) => Promise<void>;
   transacciones: Transaccion[];
   addTransaccion: (t: CreateTransaccion) => Promise<void>;
+  updateTransaccion: (id: string, t: UpdateTransaccion) => Promise<void>;
   deleteTransaccion: (id: string) => Promise<void>;
   actividades: Actividad[];
   addActividad: (a: CreateActividad) => Promise<void>;
+  updateActividad: (id: string, a: UpdateActividad) => Promise<void>;
   deleteActividad: (id: string) => Promise<void>;
   presupuestos: Presupuesto[];
   addPresupuesto: (p: CreatePresupuestoInput) => Promise<string | null>;
@@ -124,6 +128,8 @@ interface DataContextType {
   deleteProveedor: (id: string) => Promise<void>;
   ordenesCompra: OrdenCompra[];
   refreshOrdenesCompra: () => Promise<void>;
+  updateOrdenCompra: (id: string, data: UpdateOrdenCompra) => Promise<void>;
+  deleteOrdenCompra: (id: string) => Promise<void>;
   notifications: AppNotification[];
   markNotificationAsRead: (id: string) => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
@@ -753,6 +759,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
   }, []);
 
+  const resetPassword = useCallback(async (email: string): Promise<boolean> => {
+    setAuthError(null);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) { setAuthError(error.message); return false; }
+    return true;
+  }, []);
+
   const signOut = useCallback(async () => {
     if (session?.user.id) {
       clearUserCache(session.user.id);
@@ -899,6 +914,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // ---------- deleteProyecto ----------
+  const deleteProyecto = async (id: string) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
+    if (!isOnline) {
+      addPendingMutation({ table: 'proyectos', action: 'DELETE', data: {}, filters: { id, user_id: userId }, userId });
+      setProyectos(prev => { const filtered = prev.filter(x => x.id !== id); saveCachedData('proyectos', userId, filtered); return filtered; });
+      setPendingCount(getPendingCount(userId));
+      toast.success('Eliminado localmente (sin conexión)');
+      return;
+    }
+    try {
+      await ProyectosService.deleteProyecto(id, userId);
+      setProyectos(prev => { const filtered = prev.filter(x => x.id !== id); saveCachedData('proyectos', userId, filtered); return filtered; });
+      toast.success('Proyecto eliminado');
+    } catch (error) {
+      toast.error('Error al eliminar proyecto');
+      throw error;
+    }
+  };
+
   const deletePresupuesto = async (id: string) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
     const userId = session.user.id;
@@ -956,6 +992,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // ---------- updateTransaccion ----------
+  const updateTransaccion = async (id: string, t: UpdateTransaccion) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
+    try {
+      if (!isOnline) {
+        const dbRecord: Record<string, unknown> = {};
+        if (t.tipo !== undefined) dbRecord.tipo = t.tipo;
+        if (t.descripcion !== undefined) dbRecord.descripcion = t.descripcion;
+        if (t.cantidad !== undefined) dbRecord.cantidad = t.cantidad;
+        if (t.costoUnitario !== undefined) dbRecord.costo_unitario = t.costoUnitario;
+        if (t.costoTotal !== undefined) dbRecord.costo_total = t.costoTotal;
+        if (t.fecha !== undefined) dbRecord.fecha = t.fecha;
+        if (t.categoria !== undefined) dbRecord.categoria = t.categoria;
+        addPendingMutation({ table: 'transacciones', action: 'UPDATE', data: dbRecord, filters: { id, user_id: userId }, userId });
+        setTransacciones(p => { const updated = p.map(x => x.id === id ? { ...x, ...t } : x); saveCachedData('transacciones', userId, updated); return updated; });
+        setPendingCount(getPendingCount(userId));
+        toast.success('Actualizado localmente (sin conexión)');
+        return;
+      }
+      const data = await FinancieroService.updateTransaccion(id, t, userId);
+      setTransacciones(p => { const updated = p.map(x => x.id === id ? dbToTransaccion(data) : x); saveCachedData('transacciones', userId, updated); return updated; });
+      toast.success('Transacción actualizada');
+    } catch (error) {
+      toast.error('Error al actualizar transacción');
+      throw error;
+    }
+  };
+
   const deleteTransaccion = async (id: string) => {
     if (!session) { toast.error('Sesión no encontrada'); return; }
     const userId = session.user.id;
@@ -1005,6 +1070,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (error) {
       console.error('Error al agregar actividad:', error);
       toast.error('Error al guardar actividad', { description: error instanceof Error ? error.message : 'Error desconocido' });
+      throw error;
+    }
+  };
+
+  // ---------- updateActividad ----------
+  const updateActividad = async (id: string, a: UpdateActividad) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
+    try {
+      if (!isOnline) {
+        addPendingMutation({ table: 'actividades', action: 'UPDATE', data: actividadToDb(a), filters: { id, user_id: userId }, userId });
+        setActividades(p => { const updated = p.map(x => x.id === id ? { ...x, ...a } : x); saveCachedData('actividades', userId, updated); return updated; });
+        setPendingCount(getPendingCount(userId));
+        toast.success('Actualizado localmente (sin conexión)');
+        return;
+      }
+      const updated = await ActividadesService.updateActividad(id, a, userId);
+      setActividades(p => { const next = p.map(x => x.id === id ? updated : x); saveCachedData('actividades', userId, next); return next; });
+      toast.success('Actividad actualizada');
+    } catch (error) {
+      toast.error('Error al actualizar actividad');
       throw error;
     }
   };
@@ -1092,6 +1178,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {
       toast.error('Error al eliminar proveedor');
       throw new Error('Error al eliminar proveedor');
+    }
+  };
+
+  const updateOrdenCompra = async (id: string, datos: UpdateOrdenCompra) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
+    try {
+      if (!isOnline) {
+        addPendingMutation({ table: 'ordenes_compra', action: 'UPDATE', data: ordenCompraToDb(datos), filters: { id, user_id: userId }, userId });
+        setOrdenesCompra(prev => { const updated = prev.map(x => x.id === id ? { ...x, ...datos } : x); saveCachedData('ordenes_compra', userId, updated); return updated; });
+        setPendingCount(getPendingCount(userId));
+        toast.success('OC actualizada localmente (sin conexión)');
+        return;
+      }
+      const updated = await OrdenesCompraService.actualizar(id, datos);
+      setOrdenesCompra(prev => { const next = prev.map(x => x.id === id ? updated : x); saveCachedData('ordenes_compra', userId, next); return next; });
+      toast.success('Orden de compra actualizada');
+    } catch (error) {
+      toast.error('Error al actualizar orden de compra');
+      throw error;
+    }
+  };
+
+  const deleteOrdenCompra = async (id: string) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
+    if (!isOnline) {
+      addPendingMutation({ table: 'ordenes_compra', action: 'DELETE', data: {}, filters: { id, user_id: userId }, userId });
+      setOrdenesCompra(prev => { const filtered = prev.filter(x => x.id !== id); saveCachedData('ordenes_compra', userId, filtered); return filtered; });
+      setPendingCount(getPendingCount(userId));
+      toast.success('OC eliminada localmente (sin conexión)');
+      return;
+    }
+    try {
+      await OrdenesCompraService.eliminar(id);
+      setOrdenesCompra(prev => { const filtered = prev.filter(x => x.id !== id); saveCachedData('ordenes_compra', userId, filtered); return filtered; });
+      toast.success('Orden de compra eliminada');
+    } catch {
+      toast.error('Error al eliminar orden de compra');
     }
   };
 
@@ -1408,14 +1533,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // NO incluye los arrays de datos CRUD
    
   const authContextValue = useMemo(() => ({
-    view, setView, session, loading, authError, signIn, signUp, signInWithGoogle, signOut, user,
+    view, setView, session, loading, authError, signIn, signUp, signInWithGoogle, signOut, resetPassword, user,
     sidebarOpen, toggleSidebar,
     darkMode, toggleDarkMode,
     isOnline, pendingCount,
   }), [
     view, session, loading, authError, user,
     sidebarOpen, toggleSidebar, darkMode, toggleDarkMode, isOnline, pendingCount,
-    signIn, signUp, signInWithGoogle, signOut,
+    signIn, signUp, signInWithGoogle, signOut, resetPassword,
   ]);
 
   // ===== DATA CONTEXT VALUE (DINÁMICO) =====
@@ -1427,14 +1552,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    
   const dataContextValue = useMemo(() => ({
     clientes, addCliente, updateCliente, deleteCliente,
-    proyectos, addProyecto, updateProyecto,
-    transacciones, addTransaccion, deleteTransaccion,
-    actividades, addActividad, deleteActividad,
+    proyectos, addProyecto, updateProyecto, deleteProyecto,
+    transacciones, addTransaccion, updateTransaccion, deleteTransaccion,
+    actividades, addActividad, updateActividad, deleteActividad,
     presupuestos, addPresupuesto, updatePresupuesto, deletePresupuesto, transicionFase,
     equipos, addEquipo, updateEquipo, deleteEquipo,
     equipoMiembros, addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
     proveedores, addProveedor, updateProveedor, deleteProveedor,
-    ordenesCompra, refreshOrdenesCompra,
+    ordenesCompra, refreshOrdenesCompra, updateOrdenCompra, deleteOrdenCompra,
     notifications, markNotificationAsRead, deleteNotification,
      
    
@@ -1442,14 +1567,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     clientes, proyectos, transacciones, actividades, presupuestos,
     equipos, equipoMiembros, proveedores, ordenesCompra, notifications,
     addCliente, updateCliente, deleteCliente,
-    addProyecto, updateProyecto,
-    addTransaccion, deleteTransaccion,
-    addActividad, deleteActividad,
+    addProyecto, updateProyecto, deleteProyecto,
+    addTransaccion, updateTransaccion, deleteTransaccion,
+    addActividad, updateActividad, deleteActividad,
     addPresupuesto, updatePresupuesto, deletePresupuesto, transicionFase,
     addEquipo, updateEquipo, deleteEquipo,
     addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
     addProveedor, updateProveedor, deleteProveedor,
-    refreshOrdenesCompra,
+    refreshOrdenesCompra, updateOrdenCompra, deleteOrdenCompra,
     markNotificationAsRead, deleteNotification,
   ]);
 

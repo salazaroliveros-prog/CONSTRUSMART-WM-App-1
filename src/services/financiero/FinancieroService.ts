@@ -52,6 +52,24 @@ export const FinancieroService = {
     if (error) throw error;
   },
 
+  async updateTransaccion(id: string, payload: Partial<Transaccion>, userId?: string) {
+    const dbRecord: Record<string, unknown> = {};
+    if (payload.tipo !== undefined) dbRecord.tipo = payload.tipo;
+    if (payload.descripcion !== undefined) dbRecord.descripcion = payload.descripcion;
+    if (payload.cantidad !== undefined) dbRecord.cantidad = payload.cantidad;
+    if (payload.unidad !== undefined) dbRecord.unidad = payload.unidad;
+    if (payload.categoria !== undefined) dbRecord.categoria = payload.categoria;
+    if (payload.costoUnitario !== undefined) dbRecord.costo_unitario = payload.costoUnitario;
+    if (payload.costoTotal !== undefined) dbRecord.costo_total = payload.costoTotal;
+    if (payload.fecha !== undefined) dbRecord.fecha = payload.fecha;
+    if (payload.proyectoId !== undefined) dbRecord.proyecto_id = payload.proyectoId;
+    let query = supabase.from('transacciones').update(dbRecord).eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+    const { data, error } = await (query as any).select().single();
+    if (error) throw error;
+    return data;
+  },
+
   /**
    * Registra una nueva transacción con validación empresarial
    */
