@@ -117,6 +117,7 @@ export async function processPendingMutations(
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
+    }
     onProgress?.(i + 1, pending.length);
   }
 
