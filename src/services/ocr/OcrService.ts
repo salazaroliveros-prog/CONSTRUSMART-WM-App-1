@@ -1,13 +1,23 @@
 // src/services/ocr/OcrService.ts
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { Database } from '@/types/supabase'; // Assuming Database type is available
 
-type OcrDoc = Database['public']['Tables']['ocr_documentos']['Row'];
-type CreateOcrDoc = Database['public']['Tables']['ocr_documentos']['Insert'];
+export interface OcrDoc {
+  id: string;
+  user_id: string;
+  proyecto_id?: string | null;
+  proveedor?: string | null;
+  monto?: number | null;
+  fecha_factura?: string | null;
+  notas?: string | null;
+  estado: 'pendiente' | 'aprobado' | 'rechazado';
+  revisado_por?: string | null;
+  created_at?: string;
+  [key: string]: unknown;
+}
 
 export const OcrService = {
-  async uploadDocument(docData: CreateOcrDoc) {
+  async uploadDocument(docData: Partial<OcrDoc> & { user_id: string }) {
     const { data, error } = await supabase
       .from('ocr_documentos')
       .insert(docData)

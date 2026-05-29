@@ -1,0 +1,4 @@
+CREATE POLICY srm_select ON public.subrenglon_materiales FOR SELECT USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid());
+CREATE POLICY srm_insert ON public.subrenglon_materiales FOR INSERT WITH CHECK (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid());
+CREATE POLICY srm_update ON public.subrenglon_materiales FOR UPDATE USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid());
+CREATE POLICY srm_delete ON public.subrenglon_materiales FOR DELETE USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid());

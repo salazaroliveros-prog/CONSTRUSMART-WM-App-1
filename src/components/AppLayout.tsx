@@ -1,30 +1,32 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, Suspense, lazy } from 'react';
 import { useAuthContext } from '@/contexts/AppContext';
+import { ScreenSkeleton } from '@/components/shared/Skeleton';
 import LoginScreen from '@/components/screens/LoginScreen';
-import Dashboard from '@/components/screens/Dashboard';
-import ClientesScreen from '@/features/clientes/components/ClientesScreen';
-import ProyectosScreen from '@/features/proyectos/components/ProyectosScreen';
-import PresupuestoScreen from '@/features/presupuestos/components/PresupuestoScreen';
-import FinancieroScreen from '@/features/financiero/components/FinancieroScreen';
-import SeguimientoScreen from '@/components/screens/SeguimientoScreen';
-import TeamsScreen from '@/components/screens/TeamsScreen';
-import BodegaScreen from '@/components/screens/BodegaScreen';
-import CotizacionScreen from '@/components/screens/CotizacionScreen';
-import ComprasScreen from '@/features/compras/components/ComprasScreen';
-import AprobacionScreen from '@/components/screens/AprobacionScreen';
+import { Loader2 } from 'lucide-react';
+
+// Lazy loading para reducir bundle inicial
+const Dashboard = lazy(() => import('@/components/screens/Dashboard'));
+const ClientesScreen = lazy(() => import('@/features/clientes/components/ClientesScreen'));
+const ProyectosScreen = lazy(() => import('@/features/proyectos/components/ProyectosScreen'));
+const PresupuestoScreen = lazy(() => import('@/features/presupuestos/components/PresupuestoScreen'));
+const FinancieroScreen = lazy(() => import('@/features/financiero/components/FinancieroScreen'));
+const SeguimientoScreen = lazy(() => import('@/components/screens/SeguimientoScreen'));
+const TeamsScreen = lazy(() => import('@/components/screens/TeamsScreen'));
+const BodegaScreen = lazy(() => import('@/components/screens/BodegaScreen'));
+const CotizacionScreen = lazy(() => import('@/components/screens/CotizacionScreen'));
+const ComprasScreen = lazy(() => import('@/features/compras/components/ComprasScreen'));
+const AprobacionScreen = lazy(() => import('@/components/screens/AprobacionScreen'));
+
 import CommandPalette from '@/components/shared/CommandPalette';
 import OfflineBanner from '@/components/shared/OfflineBanner';
 import DevDiagnostics from '@/dev/DevDiagnostics';
-import { Loader2 } from 'lucide-react';
 
 const viewOrder = ['login', 'dashboard', 'clientes', 'presupuesto', 'proyectos', 'seguimiento', 'financiero', 'equipos', 'bodega', 'cotizacion', 'compras', 'aprobacion'];
 
 const AppLayout: React.FC = () => {
   const { view, session, loading } = useAuthContext();
   const animKeyRef = useRef(view);
-  
-  // SOLO cambiar animKey cuando view realmente cambia (NO en cada re-render)
-  // Esto evita que la animación CSS de opacidad se re-ejecute en cada render
+
   const animKey = useMemo(() => {
     if (animKeyRef.current !== view) {
       const prev = animKeyRef.current;
@@ -49,7 +51,6 @@ const AppLayout: React.FC = () => {
     );
   }
 
-  // Sin sesión → siempre login
   if (!loading && !session) return <LoginScreen />;
 
   const renderView = () => {
@@ -65,20 +66,19 @@ const AppLayout: React.FC = () => {
       case 'cotizacion': return <CotizacionScreen />;
       case 'compras': return <ComprasScreen />;
       case 'aprobacion': return <AprobacionScreen />;
+      default: return null;
     }
   };
 
-  // Determinar clase de animación SOLO cuando cambia la vista
-  // El key único basado en animKey.key fuerza que la animación ocurra
-  // exactamente una vez por navegación, no en cada re-render
   const animClass = animKey.dir === 'none' ? '' : `animate-${animKey.dir === 'right' ? 'slide-right' : 'slide-left'}`;
 
   return (
-    // Stable root div - la animación solo se activa en cambio REAL de vista
     <div key={animKey.key} className={animClass} data-view={view}>
       <CommandPalette />
       <DevDiagnostics />
-      {renderView()}
+      <Suspense fallback={<ScreenSkeleton />}>
+        {renderView()}
+      </Suspense>
       <OfflineBanner />
     </div>
   );

@@ -60,7 +60,7 @@ const ComprasScreen: React.FC = () => {
   const [ocItems, setOcItems] = useState<(OrdenCompraItem & { materialId?: string })[]>([]);
   const [showOCForm, setShowOCForm] = useState(false);
   const [ocForm, setOcForm] = useState<CreateOrdenCompra>({
-    userId: '', folio: '', proveedorId: '', proyectoId: '', fechaEmision: DateUtils.todayISO(),
+    userId: '', folio: '', proveedorId: undefined, proyectoId: '', fechaEmision: DateUtils.todayISO(),
     fechaEntrega: '', estatus: 'pendiente', subtotal: 0, iva: 0, total: 0, notas: '',
   });
   const [ocItemForms, setOcItemForms] = useState<OCItemForm[]>([]);
@@ -180,7 +180,7 @@ const ComprasScreen: React.FC = () => {
   // ===== Órdenes de Compra =====
   const resetOCForm = () => {
     setOcForm({
-      userId: userId || '', folio: '', proveedorId: '', proyectoId: '', fechaEmision: new Date().toISOString().split('T')[0],
+      userId: userId || '', folio: '', proveedorId: undefined, proyectoId: '', fechaEmision: new Date().toISOString().split('T')[0],
       fechaEntrega: '', estatus: 'pendiente', subtotal: 0, iva: 0, total: 0, notas: '',
     });
     setOcItemForms([]);

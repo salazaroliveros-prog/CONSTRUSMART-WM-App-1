@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { addPendingMutation } from '@/services/offline';
 
 export type TipoNotificacion = 'info' | 'alerta' | 'exito' | 'warning';
 
@@ -8,18 +9,31 @@ export class NotificacionesService {
     tipo: TipoNotificacion,
     titulo: string,
     mensaje?: string,
-  ): Promise<void> {
+  ): Promise<Record<string, unknown>> {
+    const payload: Record<string, unknown> = {
+      user_id: userId,
+      tipo,
+      titulo,
+      mensaje: mensaje || null,
+      leido: false,
+    };
+
+    // Intentar insertar en el servidor; si falla y estamos offline, guardar pending
     try {
-      const { error } = await supabase.from('notificaciones').insert({
-        user_id: userId,
-        tipo,
-        titulo,
-        mensaje: mensaje || null,
-        leido: false,
-      } as any);
+      const { data, error } = await supabase.from('notificaciones').insert(payload).select().single();
       if (error) throw error;
+      return data as Record<string, unknown>;
     } catch (e) {
+      try {
+        if (typeof window !== 'undefined' && !navigator.onLine) {
+          addPendingMutation({ table: 'notificaciones', action: 'INSERT', data: payload, userId });
+          return { ...payload, id: crypto.randomUUID(), created_at: new Date().toISOString() };
+        }
+      } catch (ee) {
+        console.warn('Error guardando notificación en pending:', ee);
+      }
       console.warn('Error creando notificación:', e);
+      throw e;
     }
   }
 

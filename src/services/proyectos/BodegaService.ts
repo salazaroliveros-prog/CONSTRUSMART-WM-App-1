@@ -13,6 +13,7 @@ export const BodegaService = {
 
     const { error } = await supabase.from('movimientos_materiales').insert(payload);
     if (error) throw error;
+    return { success: true };
   },
 
   async registrarCompra(materialId: string, cantidad: number, referencia: string, userId?: string) {

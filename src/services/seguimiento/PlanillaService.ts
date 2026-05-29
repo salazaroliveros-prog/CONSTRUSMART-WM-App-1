@@ -9,11 +9,16 @@ export const PlanillaService = {
     notas: string,
     userId?: string,
   ) {
+    if (!userId) {
+      throw new Error('userId requerido para registrar pago');
+    }
+
     // Validar existencia de empleado
     const { data: empleado, error: eError } = await supabase
       .from('empleados')
       .select('id')
       .eq('id', empleadoId)
+      .eq('user_id', userId)
       .single();
 
     if (eError || !empleado) {
@@ -44,6 +49,7 @@ export const PlanillaService = {
         fecha: fecha,
         proyecto_id: presupuestoId,
         empleado_id: empleadoId,
+        user_id: userId,
       })
       .select()
       .single();

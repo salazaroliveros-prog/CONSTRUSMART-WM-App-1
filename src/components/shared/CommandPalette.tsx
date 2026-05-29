@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Command } from 'cmdk';
 import { useAppContext } from '@/contexts/AppContext';
 import type { ViewType } from '@/types/supabase';
-import { Search, Folder, Users, Calculator, LineChart, Wallet, LayoutDashboard, Plus, Shield, DollarSign, ShoppingCart, Package, FileText } from 'lucide-react';
+import { Search, Folder, Users, Calculator, LineChart, Wallet, LayoutDashboard, Plus, Shield, ShieldCheck, DollarSign, ShoppingCart, Package, FileText } from 'lucide-react';
 
 const views = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -15,6 +15,7 @@ const views = [
   { id: 'bodega', label: 'Bodega', icon: Package },
   { id: 'cotizacion', label: 'Cotización', icon: FileText },
   { id: 'compras', label: 'Compras', icon: ShoppingCart },
+  { id: 'aprobacion', label: 'Aprobación', icon: ShieldCheck },
 ];
 
 const CommandPaletteComponent: React.FC = () => {

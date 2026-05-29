@@ -7,23 +7,27 @@ import { ProyectosService } from '@/services/proyectos/ProyectosService';
 import { EquiposService } from '@/services/equipos/EquiposService';
 import { ClientesService } from '@/services/clientes/ClientesService';
 import { ActividadesService } from '@/services/ActividadesService';
+import { ProveedoresService } from '@/services/compras/ProveedoresService';
+import { OrdenesCompraService } from '@/services/compras/OrdenesCompraService';
+import { NotificacionesService } from '@/services/NotificacionesService';
 import type { Session, RealtimeChannel } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { 
   Cliente, Proyecto, Transaccion, Actividad, Presupuesto, Equipo, EquipoMiembro,
   Proveedor, OrdenCompra,
   CreateCliente, CreateProyecto, CreateTransaccion, CreateActividad, CreatePresupuesto, CreateEquipo, CreateEquipoMiembro,
-  UpdateCliente, UpdateProyecto, UpdatePresupuesto, UpdateEquipo, UpdateEquipoMiembro,
+  CreateProveedor, UpdateCliente, UpdateProyecto, UpdatePresupuesto, UpdateEquipo, UpdateEquipoMiembro,
+  UpdateProveedor,
   CreatePresupuestoInput,
   validateEquipo, validateEquipoMiembro, validateTransaccion,
   dbToCliente, clienteToDb, dbToProyecto, proyectoToDb,
   dbToTransaccion, dbToActividad, dbToPresupuesto, presupuestoToDb,
   dbToEquipo, equipoToDb, dbToEquipoMiembro, equipoMiembroToDb,
-  dbToProveedor, dbToOrdenCompra
+  dbToProveedor, dbToOrdenCompra, proveedorToDb
 } from '@/types/supabase';
 import {
   loadCachedData, saveCachedData, clearUserCache,
-  addPendingMutation, getPendingCount, processPendingMutations, clearPendingMutations,
+  addPendingMutation, getPendingCount, getPendingMutations, processPendingMutations, clearPendingMutations,
   type PendingMutation,
 } from '@/services/offline';
 import { crearNotificacion } from '@/utils/notificaciones';
@@ -44,6 +48,22 @@ type AppNotification = {
   created_at: string;
   accion_url?: string;
 }
+
+const dbToNotification = (row: Record<string, unknown>): AppNotification => {
+  const createdRaw = row.created_at as any;
+  const created_at = createdRaw
+    ? (typeof createdRaw === 'string' ? createdRaw : new Date(createdRaw).toISOString())
+    : new Date().toISOString();
+  return {
+    id: row.id as string,
+    titulo: (row.titulo as string) || 'Notificación',
+    mensaje: (row.mensaje as string) || '',
+    tipo: (row.tipo as AppNotification['tipo']) || 'info',
+    leido: Boolean(row.leido),
+    created_at,
+    accion_url: row.accion_url as string | undefined,
+  };
+};
 
 // ===================== AUTH CONTEXT =====================
 // Contiene SOLO lo que AppLayout necesita: view, session, loading
@@ -97,7 +117,11 @@ interface DataContextType {
   updateEquipoMiembro: (id: string, em: UpdateEquipoMiembro) => Promise<void>;
   deleteEquipoMiembro: (id: string) => Promise<void>;
   proveedores: Proveedor[];
+  addProveedor: (p: CreateProveedor) => Promise<void>;
+  updateProveedor: (id: string, p: UpdateProveedor) => Promise<void>;
+  deleteProveedor: (id: string) => Promise<void>;
   ordenesCompra: OrdenCompra[];
+  refreshOrdenesCompra: () => Promise<void>;
   notifications: AppNotification[];
   markNotificationAsRead: (id: string) => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
@@ -159,6 +183,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    const realtimeActividades = useRef<RealtimeChannel | null>(null);
    const realtimeEquipos = useRef<RealtimeChannel | null>(null);
    const realtimeEquipoMiembros = useRef<RealtimeChannel | null>(null);
+   const realtimeProveedores = useRef<RealtimeChannel | null>(null);
+   const realtimeOrdenesCompra = useRef<RealtimeChannel | null>(null);
    const realtimeRenglones = useRef<RealtimeChannel | null>(null);
    const realtimeRenglonUsage = useRef<RealtimeChannel | null>(null);
    const realtimeRenglonPrecios = useRef<RealtimeChannel | null>(null);
@@ -194,6 +220,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         { name: 'equipo_miembros', setter: setEquipoMiembros, mapper: dbToEquipoMiembro, },
         { name: 'proveedores', setter: setProveedores, mapper: dbToProveedor, },
         { name: 'ordenes_compra', setter: setOrdenesCompra, mapper: dbToOrdenCompra, },
+        { name: 'notificaciones', setter: setNotifications, mapper: dbToNotification, },
       ] as const;
 
       let anyOnline = false;
@@ -303,6 +330,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realtimePartidas.current) realtimePartidas.current.unsubscribe();
         if (realtimeChecklist.current) realtimeChecklist.current.unsubscribe();
         if (realtimeNotificaciones.current) realtimeNotificaciones.current.unsubscribe();
+        if (realtimeProveedores.current) realtimeProveedores.current.unsubscribe();
+        if (realtimeOrdenesCompra.current) realtimeOrdenesCompra.current.unsubscribe();
       };
     // eslint-disable-next-line react-hooks/exhaustive-deps
    }, []);
@@ -464,6 +493,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        })
        .subscribe();
 
+     if (realtimeProveedores.current) realtimeProveedores.current.unsubscribe();
+     realtimeProveedores.current = supabase
+       .channel('proveedores')
+       .on('postgres_changes', {
+         event: '*',
+         schema: 'public',
+         table: 'proveedores',
+         filter: `user_id=eq.${userId}`
+       }, (payload) => {
+         handleRealtimeChange('proveedores', payload);
+       })
+       .subscribe();
+
+     if (realtimeOrdenesCompra.current) realtimeOrdenesCompra.current.unsubscribe();
+     realtimeOrdenesCompra.current = supabase
+       .channel('ordenes_compra')
+       .on('postgres_changes', {
+         event: '*',
+         schema: 'public',
+         table: 'ordenes_compra',
+         filter: `user_id=eq.${userId}`
+       }, (payload) => {
+         handleRealtimeChange('ordenes_compra', payload);
+       })
+       .subscribe();
+
      if (realtimeRenglones.current) realtimeRenglones.current.unsubscribe();
      realtimeRenglones.current = supabase
        .channel('renglones')
@@ -546,7 +601,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        .on('postgres_changes', {
          event: '*', schema: 'public', table: 'notificaciones',
          filter: `user_id=eq.${userId}`
-       }, () => {})
+       }, (payload) => {
+         handleRealtimeChange('notificaciones', payload);
+       })
        .subscribe();
    };
 
@@ -557,7 +614,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       new?: Record<string, unknown>;
       old?: Record<string, unknown>;
     };
-    switch (table) {
+
+    // Si existe una mutación pendiente local para el mismo registro, ignorar el evento realtime
+    try {
+      const eventId = (realPayload.new?.id || realPayload.old?.id) as string | undefined;
+      if (eventId && session?.user?.id) {
+        const pending = getPendingMutations(session.user.id);
+        const conflict = pending.some(m => m.table === table && (
+          (m.data && (m.data as any).id === eventId) ||
+          (m.filters && (m.filters as any).id === eventId)
+        ));
+        if (conflict) return;
+      }
+    } catch (e) {
+      // silent
+    }
+
+    switch (table) {"}]}]}]},
       case 'clientes':
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
           setClientes(prev => [dbToCliente(realPayload.new!), ...prev]);
@@ -619,6 +692,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setEquipoMiembros(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToEquipoMiembro(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
           setEquipoMiembros(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
+        }
+        break;
+      case 'proveedores':
+        if (realPayload.eventType === 'INSERT' && realPayload.new) {
+          setProveedores(prev => [dbToProveedor(realPayload.new!), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          setProveedores(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToProveedor(realPayload.new!) : x));
+        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
+          setProveedores(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
+        }
+        break;
+      case 'ordenes_compra':
+        if (realPayload.eventType === 'INSERT' && realPayload.new) {
+          setOrdenesCompra(prev => [dbToOrdenCompra(realPayload.new!), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          setOrdenesCompra(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToOrdenCompra(realPayload.new!) : x));
+        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
+          setOrdenesCompra(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
+        }
+        break;
+      case 'notificaciones':
+        if (realPayload.eventType === 'INSERT' && realPayload.new) {
+          setNotifications(prev => [dbToNotification(realPayload.new!), ...prev]);
+        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
+          setNotifications(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToNotification(realPayload.new!) : x));
+        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
+          setNotifications(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
         }
         break;
     }
@@ -921,6 +1021,84 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const addProveedor = async (p: CreateProveedor) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
+    try {
+      const dbRecord = proveedorToDb(p);
+      if (!isOnline) {
+        addPendingMutation({ table: 'proveedores', action: 'INSERT', data: { ...dbRecord, user_id: userId }, userId });
+        const optimistic = dbToProveedor({ ...dbRecord, id: crypto.randomUUID(), user_id: userId, created_at: new Date().toISOString() });
+        setProveedores(prev => [optimistic, ...prev]);
+        saveCachedData('proveedores', userId, [optimistic, ...proveedores]);
+        setPendingCount(getPendingCount(userId));
+        toast.success('Proveedor guardado localmente (sin conexión)');
+        return;
+      }
+      const created = await ProveedoresService.crear(p, userId);
+      setProveedores(prev => [created, ...prev]);
+      saveCachedData('proveedores', userId, [created, ...proveedores]);
+      toast.success('Proveedor guardado');
+    } catch (error) {
+      console.error('Error al agregar proveedor:', error);
+      toast.error('Error al guardar proveedor');
+      throw error;
+    }
+  };
+
+  const updateProveedor = async (id: string, p: UpdateProveedor) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
+    try {
+      const dbRecord = proveedorToDb(p);
+      if (!isOnline) {
+        addPendingMutation({ table: 'proveedores', action: 'UPDATE', data: dbRecord, filters: { id, user_id: userId }, userId });
+        setProveedores(prev => { const updated = prev.map(x => x.id === id ? { ...x, ...p } : x); saveCachedData('proveedores', userId, updated); return updated; });
+        setPendingCount(getPendingCount(userId));
+        toast.success('Proveedor actualizado localmente (sin conexión)');
+        return;
+      }
+      const updated = await ProveedoresService.actualizar(id, p);
+      setProveedores(prev => { const next = prev.map(x => x.id === id ? updated : x); saveCachedData('proveedores', userId, next); return next; });
+      toast.success('Proveedor actualizado');
+    } catch (error) {
+      console.error('Error al actualizar proveedor:', error);
+      toast.error('Error al actualizar proveedor');
+      throw error;
+    }
+  };
+
+  const deleteProveedor = async (id: string) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
+    if (!isOnline) {
+      addPendingMutation({ table: 'proveedores', action: 'DELETE', data: {}, filters: { id, user_id: userId }, userId });
+      setProveedores(prev => { const filtered = prev.filter(x => x.id !== id); saveCachedData('proveedores', userId, filtered); return filtered; });
+      setPendingCount(getPendingCount(userId));
+      toast.success('Proveedor eliminado localmente (sin conexión)');
+      return;
+    }
+    try {
+      await ProveedoresService.eliminar(id);
+      setProveedores(prev => { const filtered = prev.filter(x => x.id !== id); saveCachedData('proveedores', userId, filtered); return filtered; });
+      toast.success('Proveedor eliminado');
+    } catch {
+      toast.error('Error al eliminar proveedor');
+      throw new Error('Error al eliminar proveedor');
+    }
+  };
+
+  const refreshOrdenesCompra = async () => {
+    if (!session) return;
+    try {
+      const data = await OrdenesCompraService.listar(session.user.id);
+      setOrdenesCompra(data);
+      saveCachedData('ordenes_compra', session.user.id, data);
+    } catch (error) {
+      console.error('Error al recargar órdenes de compra:', error);
+    }
+  };
+
   // ---------- CRUD Presupuestos (unificado con fase) ----------
   const cachePresupuestos = (userId: string) => {
     saveCachedData('presupuestos', userId, presupuestos);
@@ -1181,12 +1359,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const toggleSidebar = useCallback(() => setSidebarOpen(p => !p), []);
 
   const markNotificationAsRead = useCallback(async (id: string) => {
-    setNotifications(prev => prev.map(notification => notification.id === id ? { ...notification, leido: true } : notification));
-  }, []);
+    if (!session) return;
+    const userId = session.user.id;
+    try {
+      if (!isOnline) {
+        addPendingMutation({ table: 'notificaciones', action: 'UPDATE', data: { leido: true }, filters: { id, user_id: userId }, userId });
+        setNotifications(prev => prev.map(notification => notification.id === id ? { ...notification, leido: true } : notification));
+        setPendingCount(getPendingCount(userId));
+        toast.success('Notificación marcada localmente (sin conexión)');
+        return;
+      }
+      await NotificacionesService.marcarLeida(id);
+      setNotifications(prev => prev.map(notification => notification.id === id ? { ...notification, leido: true } : notification));
+    } catch (error) {
+      console.error('Error al marcar notificación como leída:', error);
+      toast.error('No se pudo marcar la notificación como leída');
+    }
+  }, [session?.user.id, isOnline]);
 
   const deleteNotification = useCallback(async (id: string) => {
-    setNotifications(prev => prev.filter(notification => notification.id !== id));
-  }, []);
+    if (!session) return;
+    const userId = session.user.id;
+    try {
+      if (!isOnline) {
+        addPendingMutation({ table: 'notificaciones', action: 'DELETE', data: {}, filters: { id, user_id: userId }, userId });
+        setNotifications(prev => prev.filter(notification => notification.id !== id));
+        setPendingCount(getPendingCount(userId));
+        toast.success('Notificación eliminada localmente (sin conexión)');
+        return;
+      }
+      await NotificacionesService.eliminar(id);
+      setNotifications(prev => prev.filter(notification => notification.id !== id));
+    } catch (error) {
+      console.error('Error al eliminar notificación:', error);
+      toast.error('No se pudo eliminar la notificación');
+    }
+  }, [session?.user.id, isOnline]);
 
   // ===== AUTH CONTEXT VALUE (ESTABLE) =====
   // Solo cambia cuando view, session o loading cambian
@@ -1218,7 +1426,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     presupuestos, addPresupuesto, updatePresupuesto, deletePresupuesto, transicionFase,
     equipos, addEquipo, updateEquipo, deleteEquipo,
     equipoMiembros, addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
-    proveedores, ordenesCompra,
+    proveedores, addProveedor, updateProveedor, deleteProveedor,
+    ordenesCompra, refreshOrdenesCompra,
     notifications, markNotificationAsRead, deleteNotification,
      
   }), [
@@ -1231,6 +1440,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addPresupuesto, updatePresupuesto, deletePresupuesto, transicionFase,
     addEquipo, updateEquipo, deleteEquipo,
     addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
+    addProveedor, updateProveedor, deleteProveedor,
+    refreshOrdenesCompra,
     markNotificationAsRead, deleteNotification,
   ]);
 

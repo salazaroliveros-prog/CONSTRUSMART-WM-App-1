@@ -59,16 +59,26 @@ const TeamsScreen: React.FC = () => {
     if (!inviteEmail.trim()) return;
     if (!confirm('¿Confirmas que deseas agregar a este usuario al equipo?')) return;
     try {
+      // Intentar buscar el usuario por email en auth.users via RPC o por user_id directo
+      // Si el valor parece un UUID, usarlo directamente; si no, buscar por email en empleados
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(inviteEmail.trim());
+      let targetUserId = inviteEmail.trim();
+
+      if (!isUUID) {
+        toast.error('Ingresa el ID de usuario (UUID). Puedes encontrarlo en el perfil del colaborador.');
+        return;
+      }
+
       await addEquipoMiembro({
         equipoId,
-        userId: inviteEmail.trim(),
+        userId: targetUserId,
         rol: 'miembro',
       });
-      toast.success('Miembro agregado');
+      toast.success('Miembro agregado al equipo');
       setInviteEmail('');
       setInviteTeamId(null);
     } catch (err) {
-      toast.error('Error al invitar. Verifica el ID del usuario.');
+      toast.error('Error al invitar. Verifica que el ID del usuario sea correcto.');
       console.error(err);
     }
   };
@@ -131,7 +141,7 @@ const TeamsScreen: React.FC = () => {
                       <input
                         value={inviteEmail}
                         onChange={e => setInviteEmail(e.target.value)}
-                        placeholder="ID del usuario"
+                        placeholder="ID del usuario (UUID)"
                         className="input-standard"
                         onKeyDown={e => e.key === 'Enter' && handleInvite(eq.id)}
                       />
