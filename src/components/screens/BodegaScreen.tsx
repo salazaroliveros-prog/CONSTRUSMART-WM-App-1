@@ -6,11 +6,9 @@ import { BodegaService } from '@/services/proyectos/BodegaService';
 import { OrdenesCompraService } from '@/services/compras/OrdenesCompraService';
 import { toast } from 'sonner';
 import type { CreateOrdenCompraItem, CreateOrdenCompra } from '@/types/supabase';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card } from '@/components/ui/card';
+import { Search, Plus, Minus, Package, ShoppingCart, AlertTriangle } from 'lucide-react';
 
 interface MaterialRow {
   id: string;
@@ -226,23 +224,19 @@ const BodegaScreen: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-end gap-2 h-10">
-                <Button
+                <button
                   onClick={generarOC}
                   disabled={saving || !selectedPresupuestoId}
-                  variant="success"
-                  size="sm"
-                  className="h-full"
+                  className="btn-success h-10 px-3"
                 >
                   <ShoppingCart className="w-3.5 h-3.5 mr-1.5" /> Generar OC
-                </Button>
-                <Button
+                </button>
+                <button
                   onClick={() => setView('compras')}
-                  variant="outline"
-                  size="sm"
-                  className="h-full border-primary/20 text-primary"
+                  className="btn-secondary h-10 px-3"
                 >
                   <ShoppingCart className="w-3.5 h-3.5 mr-1.5" /> Ver OC
-                </Button>
+                </button>
               </div>
             </div>
           </Card>
