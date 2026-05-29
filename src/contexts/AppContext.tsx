@@ -31,6 +31,7 @@ import {
   type PendingMutation,
 } from '@/services/offline';
 import { crearNotificacion } from '@/utils/notificaciones';
+/* eslint-disable react-hooks/exhaustive-deps */
 import type { ViewType } from '@/types/supabase';
 
 export interface User {
@@ -333,7 +334,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (realtimeProveedores.current) realtimeProveedores.current.unsubscribe();
         if (realtimeOrdenesCompra.current) realtimeOrdenesCompra.current.unsubscribe();
       };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
    }, []);
 
    useEffect(() => {
@@ -398,7 +399,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        syncingRef.current = false;
      };
      sync().catch(() => { syncingRef.current = false; });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     }, [isOnline, session?.user.id]);
 
  const setupRealtimeListeners = (userId: string) => {
@@ -1430,6 +1431,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ordenesCompra, refreshOrdenesCompra,
     notifications, markNotificationAsRead, deleteNotification,
      
+   
   }), [
     clientes, proyectos, transacciones, actividades, presupuestos,
     equipos, equipoMiembros, proveedores, ordenesCompra, notifications,
