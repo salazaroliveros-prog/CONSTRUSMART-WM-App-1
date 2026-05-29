@@ -83,7 +83,7 @@ const AppLayout: React.FC = () => {
   return (
     <div key={animKey.key} className={`flex h-screen overflow-hidden ${getAnimClass()}`} data-view={view}>
       {isNotLogin && <Sidebar />}
-      <main className="flex-1 min-w-0 min-h-0 overflow-hidden">
+      <main className="flex-1 min-w-0 min-h-0 overflow-y-auto">
         <CommandPalette />
         <DevDiagnostics />
         <Suspense fallback={<ScreenSkeleton />}>
