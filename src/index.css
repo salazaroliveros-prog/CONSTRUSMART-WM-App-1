@@ -284,44 +284,45 @@ body {
 }
 
 /* ============================================
-   BUTTON SYSTEM — transiciones específicas
+   BUTTON SYSTEM v2 — transiciones + microinteracciones
    ============================================ */
 @layer components {
-  .btn-primary {
-    @apply inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40;
-    transition: background-color 0.15s ease, transform 0.1s ease;
+  /* Base button mixin via shared classes */
+  .btn-base {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40 relative overflow-hidden;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .btn-primary:active {
-    transform: scale(0.97);
+  .btn-base:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+
+  .btn-primary {
+    @apply btn-base bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/20;
+  }
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 4px 16px hsl(221, 83%, 53%, 0.35);
   }
 
   .btn-secondary {
-    @apply inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-slate-700 dark:text-gray-200 px-3 py-1.5 rounded-lg text-xs font-semibold;
-    transition: background-color 0.15s ease, transform 0.1s ease;
-  }
-  .btn-secondary:active {
-    transform: scale(0.97);
+    @apply btn-base bg-slate-100 hover:bg-slate-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-slate-700 dark:text-gray-200;
   }
 
   .btn-success {
-    @apply inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold;
-    transition: background-color 0.15s ease, transform 0.1s ease;
+    @apply btn-base bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-500/20;
   }
-  .btn-success:active {
-    transform: scale(0.97);
+  .btn-success:hover:not(:disabled) {
+    box-shadow: 0 4px 16px hsl(160, 84%, 39%, 0.35);
   }
 
   .btn-danger {
-    @apply inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold;
-    transition: background-color 0.15s ease, transform 0.1s ease;
+    @apply btn-base bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-500/20;
   }
-  .btn-danger:active {
-    transform: scale(0.97);
+  .btn-danger:hover:not(:disabled) {
+    box-shadow: 0 4px 16px hsl(0, 84%, 60%, 0.35);
   }
 
   .btn-ghost {
-    @apply inline-flex items-center gap-1.5 text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-700 px-2 py-1 rounded-lg text-xs font-semibold;
-    transition: background-color 0.15s ease;
+    @apply btn-base text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-700;
   }
 
   .btn-press {
@@ -329,6 +330,138 @@ body {
   }
   .btn-press:active {
     transform: scale(0.95);
+  }
+
+  /* ===== Neumorphism ===== */
+  .btn-neumorphic {
+    @apply btn-base text-slate-700 dark:text-gray-200;
+    background: #e8ecf1;
+    box-shadow: 4px 4px 8px #c8ccd1, -4px -4px 8px #ffffff;
+  }
+  .dark .btn-neumorphic {
+    background: #1e293b;
+    box-shadow: 4px 4px 8px #141c28, -4px -4px 8px #283647;
+  }
+  .btn-neumorphic:hover:not(:disabled) {
+    box-shadow: 2px 2px 4px #c8ccd1, -2px -2px 4px #ffffff;
+  }
+  .dark .btn-neumorphic:hover:not(:disabled) {
+    box-shadow: 2px 2px 4px #141c28, -2px -2px 4px #283647;
+  }
+  .btn-neumorphic:active:not(:disabled) {
+    box-shadow: inset 2px 2px 4px #c8ccd1, inset -2px -2px 4px #ffffff;
+  }
+  .dark .btn-neumorphic:active:not(:disabled) {
+    box-shadow: inset 2px 2px 4px #141c28, inset -2px -2px 4px #283647;
+  }
+
+  /* ===== Glassmorphism Button ===== */
+  .btn-glass {
+    @apply btn-base;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  }
+  .dark .btn-glass {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  .btn-glass:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+  }
+  .dark .btn-glass:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  /* ===== Glow Effect Button ===== */
+  .btn-glow {
+    @apply btn-base bg-gradient-to-r from-primary to-blue-700 text-white;
+    box-shadow: 0 2px 8px hsl(221, 83%, 53%, 0.25);
+    position: relative;
+  }
+  .btn-glow::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: inherit;
+    opacity: 0;
+    filter: blur(12px);
+    transition: opacity 0.3s ease;
+    z-index: -1;
+  }
+  .btn-glow:hover:not(:disabled)::before {
+    opacity: 0.6;
+  }
+  .btn-glow:hover:not(:disabled) {
+    box-shadow: 0 4px 24px hsl(221, 83%, 53%, 0.45);
+    transform: translateY(-1px);
+  }
+
+  /* ===== Ripple Effect ===== */
+  .btn-ripple {
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-ripple::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%), rgba(255,255,255,0.3) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  .btn-ripple:active::after {
+    opacity: 1;
+    transition: opacity 0s;
+  }
+  .btn-ripple:not(:active)::after {
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+
+  /* ===== Floating Action Button (FAB) ===== */
+  .btn-fab {
+    @apply w-14 h-14 rounded-full flex items-center justify-center shadow-xl text-white;
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px hsl(var(--primary) / 0.3);
+  }
+  .btn-fab:hover {
+    transform: scale(1.1) translateY(-2px);
+    box-shadow: 0 8px 32px hsl(var(--primary) / 0.4);
+  }
+  .btn-fab:active {
+    transform: scale(0.95);
+  }
+
+  /* ===== Animated Border Button ===== */
+  .btn-border-glow {
+    @apply btn-base bg-transparent border border-primary/30 text-primary relative;
+    transition: all 0.3s ease;
+  }
+  .btn-border-glow::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    background: conic-gradient(from 0deg, transparent, hsl(var(--primary) / 0.3), transparent, hsl(var(--primary) / 0.3), transparent);
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    animation: spinSlow 3s linear infinite;
+  }
+  .btn-border-glow:hover:not(:disabled)::before {
+    opacity: 1;
+  }
+  .btn-border-glow:hover:not(:disabled) {
+    border-color: hsl(var(--primary) / 0.6);
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.15);
   }
 }
 
@@ -465,7 +598,57 @@ body {
   100% { background-position: 200% 0; }
 }
 
-/* Animation utility classes — SOLO para entrada inicial, nunca re-trigger */
+/* ============================================
+   VIEW TRANSITIONS — slide entre módulos
+   ============================================ */
+@keyframes viewSlideRight {
+  from { transform: translateX(30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes viewSlideLeft {
+  from { transform: translateX(-30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes viewEnter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes growBar {
+  from { transform: scaleY(0); transform-origin: bottom; }
+  to { transform: scaleY(1); transform-origin: bottom; }
+}
+
+@keyframes fillProgress {
+  from { width: 0; }
+  to { width: var(--fill-target, 100%); }
+}
+
+@keyframes staggerFadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Animation utility classes */
+.animate-view-slide-right {
+  animation: viewSlideRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-view-slide-left {
+  animation: viewSlideLeft 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-view-enter {
+  animation: viewEnter 0.25s ease-out forwards;
+}
+
 .animate-fadeIn {
   animation: fadeIn 0.35s ease-out forwards;
 }
@@ -514,6 +697,55 @@ body {
   background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--accent)) 50%, hsl(var(--muted)) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+}
+
+/* ===== Nuevas animaciones de entrada ===== */
+.animate-stagger-fade {
+  animation: staggerFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+.animate-grow-bar {
+  animation: growBar 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform: scaleY(0);
+  transform-origin: bottom;
+}
+
+.animate-fill-bar {
+  animation: fillProgress 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  width: 0;
+}
+
+.animate-count-up {
+  animation: countUp 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+/* Stagger delay utility classes */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+
+/* Bar chart fill animation */
+.bar-fill-animate {
+  position: relative;
+  overflow: hidden;
+}
+.bar-fill-animate::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  animation: fillProgress 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  background: inherit;
+  width: 0;
 }
 
 /* ============================================
