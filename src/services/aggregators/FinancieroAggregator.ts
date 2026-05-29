@@ -6,11 +6,12 @@ type Transaccion = Database['public']['Tables']['transacciones']['Row'];
 type Proyecto = Database['public']['Tables']['proyectos']['Row'];
 
 export const FinancieroAggregator = {
-  async getResumenGeneral() {
+  async getResumenGeneral(userId: string) {
     const { data: transacciones, error: transError } = await supabase
       .from('transacciones')
       .select('tipo, costo_total, fecha, categoria, proyecto_id')
-      .limit(1000); 
+      .eq('user_id', userId)
+      .limit(1000);
 
     if (transError) throw transError;
 
@@ -36,6 +37,7 @@ export const FinancieroAggregator = {
     const { data: proyectos, error: proyError } = await supabase
       .from('proyectos')
       .select('id, nombre, presupuesto_total, avance_financiero') // Correct column name
+      .eq('user_id', userId)
       .limit(20); // Limit projects fetched
 
     if (proyError) console.error("Error fetching projects for profitability:", proyError);
@@ -72,13 +74,11 @@ export const FinancieroAggregator = {
     };
   },
 
-  async getProyeccionCashFlow(days: number = 90) {
-    // Placeholder: Implement actual cash flow projection logic
-    // This would involve analyzing historical trends, known future income/expenses, etc.
-    // For now, just return dummy data based on recent monthly averages.
+  async getProyeccionCashFlow(userId: string, days: number = 90) {
     const { data: transacciones, error } = await supabase
       .from('transacciones')
       .select('tipo, costo_total, fecha')
+      .eq('user_id', userId)
       .limit(1000); // Limit for calculation
 
     if (error) throw error;

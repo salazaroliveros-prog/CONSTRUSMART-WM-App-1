@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS public.presupuestos (
   fecha_fin date,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
-  proyecto_id_uuid uuid,
+  proyecto_id_uuid uuid
 );
 
 -- TRIGGER updated_at para presupuestos
@@ -504,7 +504,6 @@ CREATE TABLE IF NOT EXISTS public.ocr_documentos (
   file_url text NOT NULL,
   ocr_data jsonb,
   status text DEFAULT 'pending',
-  revisado_por uuid REFERENCES auth.users(id),
   -- Campos para facturas OCR
   proyecto_id uuid REFERENCES public.presupuestos(id) ON DELETE SET NULL,
   proveedor text,
@@ -514,6 +513,9 @@ CREATE TABLE IF NOT EXISTS public.ocr_documentos (
   created_at timestamptz DEFAULT now(),
   estado text DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'aprobado', 'rechazado'))
 );
+
+-- Agregar columnas faltantes si la tabla ya existía
+ALTER TABLE IF EXISTS public.ocr_documentos ADD COLUMN IF NOT EXISTS revisado_por uuid REFERENCES auth.users(id);
 
 -- 4.28. caja_proyecto (caja chica por proyecto)
 CREATE TABLE IF NOT EXISTS public.caja_proyecto (
@@ -987,74 +989,69 @@ CREATE POLICY "mat_delete" ON public.materiales_proyecto
   USING (presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 
 -- 7.15. movimientos_materiales
+DROP POLICY IF EXISTS "mov_select" ON public.movimientos_materiales;
+DROP POLICY IF EXISTS "mov_insert" ON public.movimientos_materiales;
+DROP POLICY IF EXISTS "mov_update" ON public.movimientos_materiales;
+DROP POLICY IF EXISTS "mov_delete" ON public.movimientos_materiales;
+
 CREATE POLICY "mov_select" ON public.movimientos_materiales
   FOR SELECT TO authenticated
-  USING (material_id IN (SELECT id FROM public.materiales_proyecto WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+  USING (material_id IN (SELECT id FROM public.materiales_proyecto WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 CREATE POLICY "mov_insert" ON public.movimientos_materiales
   FOR INSERT TO authenticated
-  WITH CHECK (material_id IN (SELECT id FROM public.materiales_proyecto WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+  WITH CHECK (material_id IN (SELECT id FROM public.materiales_proyecto WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 CREATE POLICY "mov_update" ON public.movimientos_materiales
   FOR UPDATE TO authenticated
-  USING (material_id IN (SELECT id FROM public.materiales_proyecto WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+  USING (material_id IN (SELECT id FROM public.materiales_proyecto WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 CREATE POLICY "mov_delete" ON public.movimientos_materiales
   FOR DELETE TO authenticated
-  USING (material_id IN (SELECT id FROM public.materiales_proyecto WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
-
--- 7.XX. subrenglones (explosión de renglones por presupuesto)
-CREATE POLICY "sr_select" ON public.subrenglones
-  FOR SELECT TO authenticated
-  USING (presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
-CREATE POLICY "sr_insert" ON public.subrenglones
-  FOR INSERT TO authenticated
-  WITH CHECK (presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
-CREATE POLICY "sr_update" ON public.subrenglones
-  FOR UPDATE TO authenticated
-  USING (presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
-CREATE POLICY "sr_delete" ON public.subrenglones
-  FOR DELETE TO authenticated
-  USING (presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
+  USING (material_id IN (SELECT id FROM public.materiales_proyecto WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 
 -- 7.XX+1. subrenglon_materiales
+DROP POLICY IF EXISTS "srm_select" ON public.subrenglon_materiales;
+DROP POLICY IF EXISTS "srm_insert" ON public.subrenglon_materiales;
+DROP POLICY IF EXISTS "srm_update" ON public.subrenglon_materiales;
+DROP POLICY IF EXISTS "srm_delete" ON public.subrenglon_materiales;
+
 CREATE POLICY "srm_select" ON public.subrenglon_materiales
   FOR SELECT TO authenticated
-  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 CREATE POLICY "srm_insert" ON public.subrenglon_materiales
   FOR INSERT TO authenticated
-  WITH CHECK (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+  WITH CHECK (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 CREATE POLICY "srm_update" ON public.subrenglon_materiales
   FOR UPDATE TO authenticated
-  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 CREATE POLICY "srm_delete" ON public.subrenglon_materiales
   FOR DELETE TO authenticated
-  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
-
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 -- 7.XX+2. subrenglon_mano_obra
 CREATE POLICY "smo_select" ON public.subrenglon_mano_obra
   FOR SELECT TO authenticated
-  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 CREATE POLICY "smo_insert" ON public.subrenglon_mano_obra
   FOR INSERT TO authenticated
-  WITH CHECK (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+  WITH CHECK (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 CREATE POLICY "smo_update" ON public.subrenglon_mano_obra
   FOR UPDATE TO authenticated
-  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 CREATE POLICY "smo_delete" ON public.subrenglon_mano_obra
   FOR DELETE TO authenticated
-  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 
 -- 7.XX+3. subrenglon_equipos
 CREATE POLICY "sre_select" ON public.subrenglon_equipos
   FOR SELECT TO authenticated
-  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 CREATE POLICY "sre_insert" ON public.subrenglon_equipos
   FOR INSERT TO authenticated
-  WITH CHECK (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+  WITH CHECK (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 CREATE POLICY "sre_update" ON public.subrenglon_equipos
   FOR UPDATE TO authenticated
-  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 CREATE POLICY "sre_delete" ON public.subrenglon_equipos
   FOR DELETE TO authenticated
-  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())));
+  USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()));
 
 -- 7.16. conciliaciones
 CREATE POLICY "conc_select" ON public.conciliaciones

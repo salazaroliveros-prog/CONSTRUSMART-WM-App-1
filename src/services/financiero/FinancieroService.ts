@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { Transaccion } from '@/types/supabase';
+import type { Transaccion } from '@/types/supabase';
 import { toast } from 'sonner';
 
 /**
@@ -31,7 +31,6 @@ export const FinancieroService = {
       rentabilidadNeta: ingresos - gastosGenerales - gastosPersonal
     };
   },
-
 
   /**
    * Obtiene transacciones, opcionalmente filtradas por proyecto
@@ -81,6 +80,7 @@ export const FinancieroService = {
       return data;
     } catch (error) {
       console.error('Error en FinancieroService.registrarTransaccion:', error);
+      toast.error('Error al registrar transacción');
       throw error;
     }
   },

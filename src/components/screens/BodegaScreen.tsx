@@ -4,8 +4,7 @@ import PageShell from '@/components/shared/PageShell';
 import { MaterialesService } from '@/services/presupuestos/MaterialesService';
 import { BodegaService } from '@/services/proyectos/BodegaService';
 import { OrdenesCompraService } from '@/services/compras/OrdenesCompraService';
-import { toast } from 'sonner';
-import { Package, Plus, Minus, AlertTriangle, Search, ShoppingCart } from 'lucide-react';
+import { toast } from 'sonner';import type { CreateOrdenCompraItem, CreateOrdenCompra } from '@/types/supabase';import { Package, Plus, Minus, AlertTriangle, Search, ShoppingCart } from 'lucide-react';
 
 interface MaterialRow {
   id: string;
@@ -29,7 +28,7 @@ interface ProyectoSimple {
 
 const BodegaScreen: React.FC = () => {
   const { presupuestos, session, setView } = useAppContext();
-  const [selectedId, setSelectedId] = useState('');
+  const [selectedPresupuestoId, setSelectedPresupuestoId] = useState('');
   const [materiales, setMateriales] = useState<MaterialRow[]>([]);
   const [search, setSearch] = useState('');
   const [showCompra, setShowCompra] = useState<MaterialRow | null>(null);
@@ -38,9 +37,8 @@ const BodegaScreen: React.FC = () => {
   const [showUso, setShowUso] = useState<MaterialRow | null>(null);
   const [usoCantidad, setUsoCantidad] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [meta, setMeta] = useState({ proyectoId: '' });
 
-  const proyectos = useMemo<ProyectoSimple[]>(() => {
+  const presupuestosOptions = useMemo<ProyectoSimple[]>(() => {
     return presupuestos.map((p) => ({
       id: p.id,
       nombre: p.proyecto,
@@ -48,16 +46,23 @@ const BodegaScreen: React.FC = () => {
     }));
   }, [presupuestos]);
 
+  const selectedPresupuesto = useMemo(() => {
+    return presupuestos.find(p => p.id === selectedPresupuestoId);
+  }, [presupuestos, selectedPresupuestoId]);
+
   const loadMateriales = useCallback(async () => {
-    if (!selectedId) return;
+    if (!selectedPresupuestoId) {
+      setMateriales([]);
+      return;
+    }
     try {
       // 1. Obtener materiales registrados
-      const items = await MaterialesService.getMateriales(selectedId);
+      const items = await MaterialesService.getMateriales(selectedPresupuestoId);
       // 2. Obtener desglose desde renglones (si no hay materiales)
-      const desglosado = items.length === 0 ? await MaterialesService.getDesglosado(selectedId) : [];
+      const desglosado = items.length === 0 ? await MaterialesService.getDesglosado(selectedPresupuestoId) : [];
       const allItems = [...items, ...desglosado];
       
-      const movs = await BodegaService.getMovimientos(selectedId);
+      const movs = await BodegaService.getMovimientos(selectedPresupuestoId);
 
       const movMap: Record<string, { comprado: number; consumido: number }> = {};
       (movs || []).forEach((m: Record<string, unknown>) => {
@@ -88,7 +93,7 @@ const BodegaScreen: React.FC = () => {
     } catch {
       toast.error('Error al cargar materiales');
     }
-  }, [selectedId]);
+  }, [selectedPresupuestoId]);
 
   useEffect(() => { loadMateriales(); }, [loadMateriales]);
 
@@ -111,6 +116,10 @@ const BodegaScreen: React.FC = () => {
 
   const registrarUso = async () => {
     if (!showUso || usoCantidad <= 0) return;
+    if (usoCantidad > showUso.stock) {
+      toast.error('La cantidad de uso no puede ser mayor al stock disponible');
+      return;
+    }
     setSaving(true);
     try {
       await BodegaService.registrarUso(showUso.id, usoCantidad, `Uso manual`, undefined);
@@ -139,22 +148,33 @@ const BodegaScreen: React.FC = () => {
     setSaving(true);
     try {
       const folio = await OrdenesCompraService.generarFolio(session.user.id);
-      const oc = await OrdenesCompraService.crear({
+      const subtotal = sinComprar.reduce((sum, material) => sum + material.cantidad_estimada * material.costo_unitario, 0);
+      const iva = 0;
+      const total = subtotal + iva;
+      const ocPayload: CreateOrdenCompra = {
         folio,
-        proveedorId: '',
-        proyectoId: meta.proyectoId || undefined,
+        proveedorId: undefined,
+        proyectoId: selectedPresupuesto?.proyectoId || undefined,
         fechaEmision: new Date().toISOString().slice(0, 10),
         estatus: 'pendiente',
-      } as any, session.user.id);
+        subtotal,
+        iva,
+        total,
+        notas: '',
+        userId: session.user.id,
+      };
+      const oc = await OrdenesCompraService.crear(ocPayload, session.user.id);
       
-      const items = sinComprar.map(m => ({
+      const items: CreateOrdenCompraItem[] = sinComprar.map(m => ({
         ordenCompraId: oc.id,
         descripcion: m.nombre,
         cantidad: m.cantidad_estimada,
         unidad: m.unidad,
         precioUnitario: m.costo_unitario,
+        importe: m.cantidad_estimada * m.costo_unitario,
+        cantidadRecibida: 0,
       }));
-      await OrdenesCompraService.crearItems(items as any);
+      await OrdenesCompraService.crearItems(items);
       
       toast.success(`OC ${folio} creada con ${sinComprar.length} materiales`);
       loadMateriales();
@@ -172,17 +192,16 @@ const BodegaScreen: React.FC = () => {
         <div className="bg-card rounded-xl shadow-md p-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex-1 min-w-[200px]">
-              <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Seleccionar Proyecto</label>
+              <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Seleccionar Presupuesto</label>
               <select 
-                value={selectedId} 
+                value={selectedPresupuestoId} 
                 onChange={(e) => {
-                  setSelectedId(e.target.value);
-                  setMeta({ proyectoId: e.target.value });
+                  setSelectedPresupuestoId(e.target.value);
                 }}
                 className="w-full px-3 py-2 border rounded-lg text-sm bg-background dark:bg-muted dark:border-border"
               >
                 <option value="">Seleccione un proyecto...</option>
-                {proyectos.map((p) => (
+                {presupuestosOptions.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.nombre}
                     {p.cliente ? ` — ${p.cliente}` : ''}
@@ -205,7 +224,7 @@ const BodegaScreen: React.FC = () => {
             </div>
             <button
               onClick={generarOC}
-              disabled={saving || !selectedId}
+              disabled={saving || !selectedPresupuestoId}
               className="h-10 px-3 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 disabled:opacity-40 transition flex items-center gap-1"
               title="Generar OC con materiales sin comprar"
             >
@@ -221,7 +240,7 @@ const BodegaScreen: React.FC = () => {
           </div>
         </div>
 
-        {!selectedId ? (
+        {!selectedPresupuestoId ? (
           <div className="bg-card rounded-xl shadow-md p-12 text-center">
             <Package className="w-16 h-12 mx-auto mb-4 text-muted-foreground opacity-20" />
             <h3 className="text-lg font-semibold text-card-foreground">No se ha seleccionado proyecto</h3>

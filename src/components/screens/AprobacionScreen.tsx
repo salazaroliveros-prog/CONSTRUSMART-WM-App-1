@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { OcrService } from '@/services/ocr/OcrService';
 import { AprobacionService } from '@/services/ocr/AprobacionService';
-import { Database } from '@/types/supabase';
 import { toast } from 'sonner';
 import PageShell from '@/components/shared/PageShell';
 import { Button } from '@/components/ui/button';
@@ -11,26 +10,50 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Check, XCircle, Info, Search } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Loader2, Check, XCircle, Search } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
-type OcrDoc = Database['public']['Tables']['ocr_documentos']['Row'];
+// Tipo local para documentos OCR (la tabla ocr_documentos en Supabase)
+interface OcrDoc {
+  id: string;
+  user_id: string;
+  proyecto_id?: string | null;
+  proveedor?: string | null;
+  monto?: number | null;
+  fecha_factura?: string | null;
+  notas?: string | null;
+  estado: 'pendiente' | 'aprobado' | 'rechazado';
+  revisado_por?: string | null;
+  created_at?: string;
+  [key: string]: unknown;
+}
 
 const AprobacionScreen: React.FC = () => {
-  const { session, proyectos, selectedProyectoId } = useAppContext();
+  const { session, proyectos, presupuestos } = useAppContext();
   const [documents, setDocuments] = useState<OcrDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [rejectionNotes, setRejectionNotes] = useState<Record<string, string>>({});
   const [openDialog, setOpenDialog] = useState<'approve' | 'reject' | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [selectedProyectoId, setSelectedProyectoId] = useState<string | null>(null);
+
+  // Resuelve el nombre de un proyecto o presupuesto por ID (ocr_documentos.proyecto_id puede apuntar a ambos)
+  const resolverNombreProyecto = (id: string | null | undefined): string => {
+    if (!id) return 'Sin Proyecto';
+    const proy = proyectos.find(p => p.id === id);
+    if (proy) return proy.nombre;
+    const pres = presupuestos.find(p => p.id === id);
+    if (pres) return pres.proyecto;
+    return 'Sin Proyecto';
+  };
 
   const userId = session?.user?.id;
 
   const fetchDocuments = useCallback(async () => {
     setLoading(true);
     try {
-      const docs = await OcrService.getDocuments(selectedProyectoId);
+      const docs = await OcrService.getDocuments(selectedProyectoId || undefined);
       setDocuments(docs.filter(doc => doc.estado === 'pendiente')); // Only show pending
     } catch (error) {
       console.error("Error fetching documents:", error);
@@ -87,13 +110,35 @@ const AprobacionScreen: React.FC = () => {
   return (
     <PageShell title="Aprobación de Facturas" showTitle={true}>
       <div className="p-4 space-y-4">
-        <div className="flex justify-between items-center mb-4">
-          <Input
-            placeholder="Buscar por proveedor, proyecto o notas..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="max-w-sm border-border"
-          />
+<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="min-w-0">
+                <Select value={selectedProyectoId || ''} onValueChange={(value) => setSelectedProyectoId(value || null)}>
+                  <SelectTrigger className="min-w-[220px]">
+                    <SelectValue placeholder="Todos los proyectos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todos los proyectos</SelectItem>
+                    {proyectos.map((proyecto) => (
+                      <SelectItem key={proyecto.id} value={proyecto.id}>
+                        {proyecto.nombre}
+                      </SelectItem>
+                    ))}
+                    {presupuestos.map((pres) => (
+                      <SelectItem key={pres.id} value={pres.id}>
+                        {pres.proyecto} (Presupuesto)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Input
+                placeholder="Buscar por proveedor, proyecto o notas..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="max-w-sm border-border"
+              />
+            </div>
           <Button onClick={fetchDocuments} disabled={loading} className="btn-secondary">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
             Refrescar
@@ -121,7 +166,7 @@ const AprobacionScreen: React.FC = () => {
                 {filteredDocuments.map(doc => (
                   <TableRow key={doc.id}>
                     <TableCell>{doc.proveedor || 'N/A'}</TableCell>
-                    <TableCell>{proyectos.find(p => p.id === doc.proyecto_id)?.nombre || 'Sin Proyecto'}</TableCell>
+                    <TableCell>{resolverNombreProyecto(doc.proyecto_id)}</TableCell>
                     <TableCell>{doc.monto?.toLocaleString('es-GT', { style: 'currency', currency: 'GTQ' })}</TableCell>
                     <TableCell>{doc.fecha_factura ? new Date(doc.fecha_factura).toLocaleDateString('es-GT') : 'N/A'}</TableCell>
                     <TableCell className="max-w-xs truncate">{doc.notas || 'Sin notas'}</TableCell>

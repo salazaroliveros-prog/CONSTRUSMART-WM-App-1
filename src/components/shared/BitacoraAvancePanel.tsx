@@ -3,7 +3,6 @@ import { toast } from 'sonner';
 import { Plus, Trash2, TrendingUp } from 'lucide-react';
 import { Avance, AvanceSchema } from '@/lib/schemas';
 import { BitacoraAvanceService } from '@/services/seguimiento/BitacoraAvanceService';
-import { PresupuestosService } from '@/services/presupuestos/PresupuestosService';
 
 interface BitacoraAvancePanelProps {
   presupuestoId: string;
@@ -27,8 +26,8 @@ export const BitacoraAvancePanel: React.FC<BitacoraAvancePanelProps> = ({ presup
   useEffect(() => { fetchAvances(); }, [fetchAvances]);
 
   const handleAdd = async () => {
-    if (nuevoAvance.avance <= 0) {
-      toast.error('El avance debe ser mayor a 0');
+    if (nuevoAvance.avance <= 0 || nuevoAvance.avance > 100) {
+      toast.error('El avance debe estar entre 1 y 100');
       return;
     }
     setLoading(true);
@@ -40,13 +39,14 @@ export const BitacoraAvancePanel: React.FC<BitacoraAvancePanelProps> = ({ presup
         fecha: new Date().toISOString(),
       });
 
+      // Actualizar avance físico: usar callback externo si existe, sino el servicio directamente
       if (onAvanceChange) {
         await onAvanceChange(nuevoAvance.avance);
       } else {
-        await PresupuestosService.updateAvance(presupuestoId, { avance_fisico: nuevoAvance.avance });
+        await BitacoraAvanceService.actualizarAvanceFisico(presupuestoId, nuevoAvance.avance);
       }
 
-      toast.success('Avance registrado y presupuesto actualizado');
+      toast.success('Avance registrado');
       setNuevoAvance({ avance: 0, notas: '' });
       await fetchAvances();
     } catch (e) {

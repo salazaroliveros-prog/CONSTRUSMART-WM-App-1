@@ -52,10 +52,11 @@ export const ReportesAggregator = {
     };
   },
 
-  async getResumenGeneralFinanciero() {
+  async getResumenGeneralFinanciero(userId: string) {
     const { data: transacciones, error: errorTransacciones } = await supabase
       .from('transacciones')
       .select('tipo, costo_total, categoria, proyecto_id, fecha')
+      .eq('user_id', userId)
       .limit(1000);
 
     if (errorTransacciones) throw errorTransacciones;
@@ -80,7 +81,7 @@ export const ReportesAggregator = {
         return acc;
       }, {} as Record<string, number>);
 
-    const { data: proyectos, error: errorProyectos } = await supabase.from('proyectos').select('id, nombre');
+    const { data: proyectos, error: errorProyectos } = await supabase.from('proyectos').select('id, nombre').eq('user_id', userId);
     if (errorProyectos) console.error('Error fetching projects for income summary:', errorProyectos);
 
     const ingresosPorProyecto = Object.entries(ingresosPorProyectoMap || {}).map(([projectId, total]) => {

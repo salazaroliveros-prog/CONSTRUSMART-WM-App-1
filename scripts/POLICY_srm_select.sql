@@ -1,0 +1,2 @@
+-- subrenglon_materiales - srm_select (single line)
+DROP POLICY IF EXISTS srm_select ON public.subrenglon_materiales; CREATE POLICY srm_select ON public.subrenglon_materiales FOR SELECT TO authenticated USING (subrenglon_id IN (SELECT id FROM public.subrenglones WHERE presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())); SELECT 'srm_select created';
