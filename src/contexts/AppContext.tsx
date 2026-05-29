@@ -33,6 +33,7 @@ import {
 import { crearNotificacion } from '@/utils/notificaciones';
 /* eslint-disable react-hooks/exhaustive-deps */
 import type { ViewType } from '@/types/supabase';
+import { LoggerService } from '@/services/LoggerService';
 
 export interface User {
   nombre: string;
@@ -56,13 +57,13 @@ const dbToNotification = (row: Record<string, unknown>): AppNotification => {
     ? (typeof createdRaw === 'string' ? createdRaw : new Date(createdRaw).toISOString())
     : new Date().toISOString();
   return {
-    id: row.id as string,
-    titulo: (row.titulo as string) || 'Notificación',
-    mensaje: (row.mensaje as string) || '',
+    id: String(row.id || ''),
+    titulo: String(row.titulo || 'Notificación'),
+    mensaje: String(row.mensaje || ''),
     tipo: (row.tipo as AppNotification['tipo']) || 'info',
     leido: Boolean(row.leido),
     created_at,
-    accion_url: row.accion_url as string | undefined,
+    accion_url: row.accion_url ? String(row.accion_url) : undefined,
   };
 };
 
@@ -205,52 +206,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
      avatar: session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture || '',
    }), [session?.user?.user_metadata?.nombre, session?.user?.user_metadata?.avatar_url, session?.user?.user_metadata?.picture, session?.user?.email]);
 
-    const loadAll = useCallback(async (userId?: string) => {
-      if (!userId) return;
-      if (loadingRef.current) return;
-      loadingRef.current = true;
-
-      const PAGE_SIZE = 200;
-      const tables = [
-        { name: 'clientes', setter: setClientes, mapper: dbToCliente, },
-        { name: 'proyectos', setter: setProyectos, mapper: dbToProyecto, },
-        { name: 'presupuestos', setter: setPresupuestos, mapper: dbToPresupuesto, },
-        { name: 'transacciones', setter: setTransacciones, mapper: dbToTransaccion, },
-        { name: 'actividades', setter: setActividades, mapper: dbToActividad, },
-        { name: 'equipos', setter: setEquipos, mapper: dbToEquipo, },
-        { name: 'equipo_miembros', setter: setEquipoMiembros, mapper: dbToEquipoMiembro, },
-        { name: 'proveedores', setter: setProveedores, mapper: dbToProveedor, },
-        { name: 'ordenes_compra', setter: setOrdenesCompra, mapper: dbToOrdenCompra, },
-        { name: 'notificaciones', setter: setNotifications, mapper: dbToNotification, },
-      ] as const;
-
-      let anyOnline = false;
-
-      for (const t of tables) {
+     const loadAll = useCallback(async (userId?: string) => {
+        if (!userId) return;
+        if (loadingRef.current) return;
+        loadingRef.current = true;
         try {
-          const res = await (supabase.from(t.name) as any).select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE);
-          if (res.error) throw res.error;
-          anyOnline = true;
-          const data = (res.data || []).map((d: Record<string, unknown>) => t.mapper(d));
-          (t.setter as React.Dispatch<React.SetStateAction<any[]>>)(data);
-          saveCachedData(t.name, userId, data);
-        } catch {
-          const cached = loadCachedData(t.name, userId);
-          if (cached) {
-            (t.setter as React.Dispatch<React.SetStateAction<any[]>>)(cached);
+        const dataSvc = (await import('@/services/AppDataService')).default;
+        const data = await dataSvc.loadAll(userId);
+          // Mapear resultados a setters usando mapeadores existentes
+          const mapAndSet = (name: string, setter: React.Dispatch<React.SetStateAction<any[]>>, mapper?: (r: any) => any) => {
+            const rows = data[name] || [];
+            const mapped = mapper ? rows.map(mapper) : rows;
+            setter(mapped);
+            if (rows.length > 0) saveCachedData(name, userId, mapped);
+          };
+
+          mapAndSet('clientes', setClientes, dbToCliente);
+          mapAndSet('proyectos', setProyectos, dbToProyecto);
+          mapAndSet('presupuestos', setPresupuestos, dbToPresupuesto);
+          mapAndSet('transacciones', setTransacciones, dbToTransaccion);
+          mapAndSet('actividades', setActividades, dbToActividad);
+          mapAndSet('equipos', setEquipos, dbToEquipo);
+          mapAndSet('equipo_miembros', setEquipoMiembros, dbToEquipoMiembro);
+          mapAndSet('proveedores', setProveedores, dbToProveedor);
+          mapAndSet('ordenes_compra', setOrdenesCompra, dbToOrdenCompra);
+          mapAndSet('notificaciones', setNotifications, dbToNotification);
+
+        } catch (e) {
+          // cargar desde cache individualmente si falla la carga en línea
+          const tables = ['clientes','proyectos','presupuestos','transacciones','actividades','equipos','equipo_miembros','proveedores','ordenes_compra','notificaciones'];
+          let anyCache = false;
+          for (const t of tables) {
+            const cached = loadCachedData(t, userId);
+            if (cached) {
+              anyCache = true;
+              switch (t) {
+                case 'clientes': setClientes(cached as any); break;
+                case 'proyectos': setProyectos(cached as any); break;
+                case 'presupuestos': setPresupuestos(cached as any); break;
+                case 'transacciones': setTransacciones(cached as any); break;
+                case 'actividades': setActividades(cached as any); break;
+                case 'equipos': setEquipos(cached as any); break;
+                case 'equipo_miembros': setEquipoMiembros(cached as any); break;
+                case 'proveedores': setProveedores(cached as any); break;
+                case 'ordenes_compra': setOrdenesCompra(cached as any); break;
+                case 'notificaciones': setNotifications(cached as any); break;
+              }
+            }
           }
+          if (anyCache) toast.info('Modo offline — mostrando datos guardados');
+        } finally {
+          loadingRef.current = false;
         }
-      }
-
-      if (!anyOnline) {
-        const hasAnyCache = tables.some(t => loadCachedData(t.name, userId));
-        if (hasAnyCache) {
-          toast.info('Modo offline — mostrando datos guardados');
-        }
-      }
-
-      loadingRef.current = false;
-    }, []);
+      }, []);
 
   // Inicialización de sesión y realtime listeners
   useEffect(() => {
@@ -298,6 +306,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!mountedRef.current) return;
         setupRealtimeListeners(s.user.id);
         if (view === 'login') setView('dashboard');
+        
+        // Push notification subscription
+        if (import.meta.env.VITE_PUBLIC_VAPID_KEY) {
+          import('@/services/PushService').then(({ PushService }) => {
+            PushService.requestPermissionAndSubscribe().catch(e => console.info('Push subscription skipped/failed', e));
+          });
+        }
       } else {
         setClientes([]); setProyectos([]); setTransacciones([]); setActividades([]);
         setNotifications([]);
@@ -356,24 +371,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        const { ok, fail } = await processPendingMutations(
          session.user.id,
          async (m) => {
-            let q = supabase.from(m.table) as any;
-           if (m.action === 'INSERT') {
-             const { error } = await q.insert(m.data).select().single();
-             if (error) throw error;
-           } else if (m.action === 'UPDATE') {
-             q = q.update(m.data);
-             if (m.filters) {
-               Object.entries(m.filters).forEach(([k, v]) => { q = q.eq(k, v); });
-             }
-             const { error } = await q;
-             if (error) throw error;
-           } else if (m.action === 'DELETE') {
-             if (m.filters) {
-               Object.entries(m.filters).forEach(([k, v]) => { q = q.eq(k, v); });
-             }
-             const { error } = await q.delete();
-             if (error) throw error;
-           }
+            // Delegate mutation execution to AppDataService to centralize Supabase access and error handling
+            const svc = (await import('@/services/AppDataService')).default;
+            const resp = await svc.executeMutation({ table: m.table, action: m.action, data: m.data as any, filters: m.filters as any });
+            if (!resp.success) throw resp.error || new Error('Mutation failed');
          },
          (done, total) => {
            if (mountedRef.current) {
@@ -616,25 +617,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       old?: Record<string, unknown>;
     };
 
+    const eventId = (realPayload.new?.id || realPayload.old?.id) as string | undefined;
+    
     // Si existe una mutación pendiente local para el mismo registro, ignorar el evento realtime
+    // para evitar "saltos" en la UI (reconciliación optimista)
     try {
-      const eventId = (realPayload.new?.id || realPayload.old?.id) as string | undefined;
       if (eventId && session?.user?.id) {
         const pending = getPendingMutations(session.user.id);
-        const conflict = pending.some(m => m.table === table && (
+        const hasConflict = pending.some(m => m.table === table && (
           (m.data && (m.data as any).id === eventId) ||
           (m.filters && (m.filters as any).id === eventId)
         ));
-        if (conflict) return;
+        if (hasConflict) return;
       }
     } catch (e) {
-      // silent
+      LoggerService.warn('Error en reconciliación realtime:', e);
     }
+
+    // Evitar doble aplicación si el cambio ya está en el estado local (por id y timestamp/version si existiera)
+    const isDuplicate = (list: any[], id: string) => list.some(x => x.id === id && JSON.stringify(x) === JSON.stringify(realPayload.new));
 
     switch (table) {
       case 'clientes':
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setClientes(prev => [dbToCliente(realPayload.new!), ...prev]);
+          setClientes(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToCliente(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
           setClientes(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToCliente(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
@@ -643,7 +649,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       case 'proyectos':
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setProyectos(prev => [dbToProyecto(realPayload.new!), ...prev]);
+          setProyectos(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToProyecto(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
           setProyectos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToProyecto(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
@@ -652,7 +658,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       case 'transacciones':
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setTransacciones(prev => [dbToTransaccion(realPayload.new!), ...prev]);
+          setTransacciones(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToTransaccion(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
           setTransacciones(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToTransaccion(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
@@ -661,7 +667,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       case 'presupuestos':
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setPresupuestos(prev => [dbToPresupuesto(realPayload.new!), ...prev]);
+          setPresupuestos(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToPresupuesto(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
           setPresupuestos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToPresupuesto(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
@@ -670,7 +676,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       case 'actividades':
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setActividades(prev => [dbToActividad(realPayload.new!), ...prev]);
+          setActividades(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToActividad(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
           setActividades(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToActividad(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
@@ -679,7 +685,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       case 'equipos':
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setEquipos(prev => [dbToEquipo(realPayload.new!), ...prev]);
+          setEquipos(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToEquipo(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
           setEquipos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToEquipo(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
@@ -688,7 +694,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       case 'equipo_miembros':
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setEquipoMiembros(prev => [dbToEquipoMiembro(realPayload.new!), ...prev]);
+          setEquipoMiembros(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToEquipoMiembro(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
           setEquipoMiembros(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToEquipoMiembro(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
@@ -697,7 +703,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       case 'proveedores':
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setProveedores(prev => [dbToProveedor(realPayload.new!), ...prev]);
+          setProveedores(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToProveedor(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
           setProveedores(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToProveedor(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
@@ -706,7 +712,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       case 'ordenes_compra':
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setOrdenesCompra(prev => [dbToOrdenCompra(realPayload.new!), ...prev]);
+          setOrdenesCompra(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToOrdenCompra(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
           setOrdenesCompra(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToOrdenCompra(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
@@ -715,7 +721,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       case 'notificaciones':
         if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setNotifications(prev => [dbToNotification(realPayload.new!), ...prev]);
+          setNotifications(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToNotification(realPayload.new!), ...prev]);
         } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
           setNotifications(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToNotification(realPayload.new!) : x));
         } else if (realPayload.eventType === 'DELETE' && realPayload.old) {

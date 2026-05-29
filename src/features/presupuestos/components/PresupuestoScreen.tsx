@@ -14,6 +14,10 @@ import { validarFactores, sugerirFactores, detectarAnomalias } from '@/utils/val
 import type { Suggestion } from '@/utils/predictorAPU';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 
 export interface MemoriaCalculo {
   veces: number;
@@ -120,6 +124,8 @@ const PresupuestoScreen: React.FC = () => {
     factorAdministrativos: 8,
     factorImprevistos: 5,
     factorUtilidad: 15,
+    fechaInicio: new Date().toISOString().split('T')[0],
+    fechaFin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   });
   const [saving, setSaving] = useState(false);
   const [savedPresupuestoId, setSavedPresupuestoId] = useState<string | null>(null);
@@ -434,13 +440,22 @@ const PresupuestoScreen: React.FC = () => {
       return;
     }
 
-    if (typeof sugerencia.valor === 'number') {
-      toast(`${sugerencia.mensaje}`);
+    if (sugerencia.tipo === 'rentabilidad' && typeof sugerencia.valor === 'number') {
+      setMeta(m => ({ ...m, factorUtilidad: Number(sugerencia.valor) || m.factorUtilidad }));
+      toast.success(`Utilidad sugerida de ${sugerencia.valor}% aplicada`);
+      return;
+    }
+
+    if (sugerencia.tipo === 'duracion' && typeof sugerencia.valor === 'number') {
+      const start = new Date(meta.fechaInicio);
+      const end = new Date(start.getTime() + (Number(sugerencia.valor) * 24 * 60 * 60 * 1000));
+      setMeta(m => ({ ...m, fechaFin: end.toISOString().split('T')[0] }));
+      toast.success(`Duración estimada de ${sugerencia.valor} días aplicada`);
       return;
     }
 
     toast(sugerencia.mensaje);
-  }, []);
+  }, [meta.fechaInicio]);
 
   const handleExportCSV = () => {
     const rows: (string | number)[][] = [
@@ -548,6 +563,8 @@ const PresupuestoScreen: React.FC = () => {
         proyecto_id: meta.proyectoId || null,
         area_construccion: meta.areaConstruccion || 0,
         nivel_calidad: meta.nivelCalidad || 'basico',
+        fechaInicio: meta.fechaInicio,
+        fechaFin: meta.fechaFin,
       };
       if (savedPresupuestoId) {
         await updatePresupuesto(savedPresupuestoId, { ...payload, updated_at: new Date().toISOString() });
@@ -578,22 +595,32 @@ const PresupuestoScreen: React.FC = () => {
               </select>
               <input placeholder="Ubicación" value={meta.ubicacion} onChange={e => setMeta({ ...meta, ubicacion: e.target.value })} className="w-full px-2 py-1.5 text-xs border rounded bg-background dark:bg-muted dark:border-border dark:text-foreground" />
               <div>
-                <label className="text-[10px] font-semibold text-muted-foreground">Tipología</label>
+                <label className="text-tiny font-semibold text-muted-foreground">Tipología</label>
                 <select value={tipologia} onChange={e => setTipologia(e.target.value as Tipologia)} className="w-full px-2 py-1.5 text-xs border rounded bg-blue-50 dark:bg-blue-900/20 dark:text-blue-100">
                   {Object.entries(tipologiaLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-semibold text-muted-foreground">Área de construcción (m²)</label>
+                <label className="text-tiny font-semibold text-muted-foreground">Área de construcción (m²)</label>
                 <input type="number" min={0} value={meta.areaConstruccion} onChange={e => setMeta({ ...meta, areaConstruccion: Number(e.target.value) || 0 })} className="w-full px-2 py-1.5 text-xs border rounded bg-background dark:bg-muted dark:border-border dark:text-foreground" />
               </div>
               <div>
-                <label className="text-[10px] font-semibold text-muted-foreground">Nivel de calidad</label>
+                <label className="text-tiny font-semibold text-muted-foreground">Nivel de calidad</label>
                 <select value={meta.nivelCalidad} onChange={e => setMeta({ ...meta, nivelCalidad: e.target.value as CalidadNivel })} className="w-full px-2 py-1.5 text-xs border rounded bg-background dark:bg-muted dark:border-border dark:text-foreground">
                   <option value="basico">Básico (Q 3,000 - Q 3,500 /m²)</option>
                   <option value="moderado">Moderado (Q 3,500 - Q 4,000 /m²)</option>
                   <option value="premium">Premium (Q 4,000 - Q 5,000 /m²)</option>
                 </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-tiny font-semibold text-muted-foreground">Fecha Inicio</label>
+                  <input type="date" value={meta.fechaInicio} onChange={e => setMeta({ ...meta, fechaInicio: e.target.value })} className="w-full px-2 py-1.5 text-xs border rounded bg-background dark:bg-muted dark:border-border dark:text-foreground" />
+                </div>
+                <div>
+                  <label className="text-tiny font-semibold text-muted-foreground">Fecha Fin</label>
+                  <input type="date" value={meta.fechaFin} onChange={e => setMeta({ ...meta, fechaFin: e.target.value })} className="w-full px-2 py-1.5 text-xs border rounded bg-background dark:bg-muted dark:border-border dark:text-foreground" />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t dark:border-border">
                 {[

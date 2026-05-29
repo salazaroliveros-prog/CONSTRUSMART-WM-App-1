@@ -36,13 +36,18 @@ function createSyncWrapper(
 }
 
 // Real-time sync wrapper
+import AppDataService from '@/services/AppDataService';
+
 export async function realtimeSync<T>(table: string, userId: string): Promise<T[]> {
   if (!navigator.onLine) {
     const cached = localStorage.getItem(`offline_${table}_${userId}`);
     return cached ? JSON.parse(cached) : [];
   }
-  const { data, error } = await supabase.from(table).select('*').eq('user_id', userId);
-  if (error) throw error;
-  localStorage.setItem(`offline_${table}_${userId}`, JSON.stringify(data));
-  return data;
+  try {
+    const rows = await AppDataService.getTableByUser(table, userId, { limit: 1000 });
+    localStorage.setItem(`offline_${table}_${userId}`, JSON.stringify(rows));
+    return rows as T[];
+  } catch (e) {
+    throw e;
+  }
 }

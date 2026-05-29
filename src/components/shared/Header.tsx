@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import NotificationBell from '@/components/shared/NotificationBell';
-import { Home, LogOut, Search, Moon, Sun, User } from 'lucide-react';
+import { Home, LogOut, Search, Moon, Sun, User, BellRing } from 'lucide-react';
+import { PushService } from '@/services/PushService';
+import { toast } from 'sonner';
 
 type HeaderProps = { showHome?: boolean; title?: string };
 
@@ -9,6 +11,14 @@ const Header = React.memo(({ showHome = true, title }: HeaderProps) => {
   const { user, setView, signOut, darkMode, toggleDarkMode } = useAppContext();
   const [scrolled, setScrolled] = useState(false);
   const [now, setNow] = useState(new Date());
+
+  const handleSubscribePush = async () => {
+    try {
+      await PushService.requestPermissionAndSubscribe();
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -91,6 +101,15 @@ const Header = React.memo(({ showHome = true, title }: HeaderProps) => {
               <Moon className="w-3.5 h-3.5 text-blue-200 group-hover:scale-110 transition-transform" />
             )}
             <span className="absolute inset-0 rounded-lg bg-white/0 group-hover:bg-white/5 transition-colors" />
+          </button>
+
+          {/* Push Notifications btn */}
+          <button
+            onClick={handleSubscribePush}
+            className="p-1.5 rounded-lg hover:bg-white/10 transition-all duration-200 btn-press group"
+            title="Activar notificaciones en el navegador"
+          >
+            <BellRing className="w-3.5 h-3.5 text-emerald-400 group-hover:animate-ring" />
           </button>
 
           <NotificationBell />

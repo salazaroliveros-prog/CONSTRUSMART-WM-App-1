@@ -32,7 +32,7 @@ export const OrdenesCompraService = {
     const dbRecord = ordenCompraToDb(datos as UpdateOrdenCompra);
     const { data, error } = await supabase
       .from('ordenes_compra')
-      .insert({ ...dbRecord, user_id: userId } as any)
+      .insert({ ...dbRecord, user_id: userId })
       .select()
       .single();
     if (error) throw error;
@@ -43,7 +43,7 @@ export const OrdenesCompraService = {
     const dbRecord = ordenCompraToDb(datos);
     const { data, error } = await supabase
       .from('ordenes_compra')
-      .update(dbRecord as any)
+      .update(dbRecord)
       .eq('id', id)
       .select()
       .single();
@@ -86,7 +86,7 @@ export const OrdenesCompraService = {
     const dbRecord = ordenCompraItemToDb(datos as UpdateOrdenCompraItem);
     const { data, error } = await supabase
       .from('orden_compra_items')
-      .insert(dbRecord as any)
+      .insert(dbRecord)
       .select()
       .single();
     if (error) throw error;
@@ -97,7 +97,7 @@ export const OrdenesCompraService = {
     const dbRecords = items.map(i => ordenCompraItemToDb(i as UpdateOrdenCompraItem));
     const { data, error } = await supabase
       .from('orden_compra_items')
-      .insert(dbRecords as any)
+      .insert(dbRecords)
       .select();
     if (error) throw error;
     return (data || []).map(d => dbToOrdenCompraItem(d));
@@ -122,7 +122,7 @@ export const OrdenesCompraService = {
     const dbRecord = recepcionOCToDb(datos);
     const { data, error } = await supabase
       .from('recepcion_oc')
-      .insert({ ...dbRecord, user_id: userId } as any)
+      .insert({ ...dbRecord, user_id: userId })
       .select()
       .single();
     if (error) throw error;
@@ -140,14 +140,14 @@ export const OrdenesCompraService = {
   },
 
   async crearItemsRecepcion(items: CreateRecepcionOCItem[]): Promise<void> {
-    const { error } = await supabase.from('recepcion_oc_items').insert(items as any);
+    const { error } = await supabase.from('recepcion_oc_items').insert(items);
     if (error) throw error;
   },
 
   async actualizarCantidadRecibida(itemId: string, cantidad: number): Promise<void> {
     const { error } = await supabase
       .from('orden_compra_items')
-      .update({ cantidad_recibida: cantidad } as any)
+      .update({ cantidad_recibida: cantidad })
       .eq('id', itemId);
     if (error) throw error;
   },
@@ -155,7 +155,7 @@ export const OrdenesCompraService = {
   async actualizarEstatusOC(ocId: string, estatus: OrdenCompra['estatus']): Promise<void> {
     const { error } = await supabase
       .from('ordenes_compra')
-      .update({ estatus } as any)
+      .update({ estatus })
       .eq('id', ocId);
     if (error) throw error;
   },

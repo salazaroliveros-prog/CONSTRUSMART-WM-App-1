@@ -189,22 +189,37 @@ const ComprasScreen: React.FC = () => {
 
   const handleCreateOC = async () => {
     if (!userId) return;
-    if (!ocForm.proveedorId) { toast.error('Selecciona un proveedor'); return; }
+    const cleanProveedorId = ocForm.proveedorId && ocForm.proveedorId !== '' ? ocForm.proveedorId : undefined;
+    
+    if (!cleanProveedorId) { toast.error('Selecciona un proveedor válido'); return; }
     if (!ocForm.proyectoId) { toast.error('Selecciona un proyecto'); return; }
     if (ocItemForms.length === 0) { toast.error('Agrega al menos una partida'); return; }
+    
     setSaveLoading(true);
     try {
       const folio = await OrdenesCompraService.generarFolio(userId);
-      const itemsTotal = ocItemForms.reduce((s, i) => s + (i.cantidad * i.precioUnitario), 0);
-      const ivaAmount = itemsTotal * 0.16;
+      const itemsTotal = ocItemForms.reduce((s, i) => s + (Number(i.cantidad || 0) * Number(i.precioUnitario || 0)), 0);
+      if (itemsTotal <= 0) { toast.error('El total de la orden debe ser mayor a cero'); setSaveLoading(false); return; }
+      
+      const ivaAmount = itemsTotal * 0.12; 
+      const totalAmount = itemsTotal + ivaAmount;
+      
       const oc = await OrdenesCompraService.crear({
-        ...ocForm, folio, subtotal: itemsTotal, iva: ivaAmount, total: itemsTotal + ivaAmount,
+        ...ocForm, 
+        folio, 
+        subtotal: itemsTotal, 
+        iva: ivaAmount, 
+        total: totalAmount,
+        proveedorId: cleanProveedorId,
+        proyectoId: ocForm.proyectoId || undefined,
       }, userId);
+      
       await OrdenesCompraService.crearItems(
         ocItemForms.map(i => ({ ...i, ordenCompraId: oc.id }))
       );
+      
       setOrdenes(p => [oc, ...p]);
-      toast.success(`OC ${folio} creada`);
+      toast.success(`OC ${folio} creada con éxito`);
       resetOCForm();
     } catch (err) {
       toast.error('Error al crear orden de compra');

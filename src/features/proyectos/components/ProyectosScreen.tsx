@@ -2,7 +2,8 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import type { Presupuesto } from '@/types/supabase';
 import PageShell from '@/components/shared/PageShell';
-import { Play, PauseCircle, CheckCircle, Folder, Filter, Edit3, Save, Trash2, X, ChevronDown, ChevronRight, DollarSign, TrendingUp, TrendingDown, Ruler, Percent } from 'lucide-react';
+import { Play, PauseCircle, CheckCircle, Folder, Filter, Edit3, Save, Trash2, X, ChevronDown, ChevronRight, DollarSign, TrendingUp, TrendingDown, Ruler, Percent, AlertTriangle, Download } from 'lucide-react';
+import { downloadCSV } from '@/lib/exporters';
 import { toast } from 'sonner';
 
 type Fase = Presupuesto['fase'];
@@ -73,6 +74,8 @@ const ProyectosScreen: React.FC = () => {
     porFase: Object.fromEntries(FASES.map(f => [f, presupuestos.filter(p => p.fase === f).length])) as Record<Fase, number>,
   }), [presupuestos]);
 
+  const [confirmDeleteId, setConfirmDeleteId] = useState<{ id: string, name: string } | null>(null);
+
   const startEditing = (p: Presupuesto) => {
     setEditingId(p.id);
     setEditForm({
@@ -98,10 +101,16 @@ const ProyectosScreen: React.FC = () => {
   };
 
   const handleDelete = async (id: string, proyecto: string) => {
-    if (!window.confirm(`¿Eliminar el proyecto "${proyecto}"? Esta acción no se puede deshacer.`)) return;
+    setConfirmDeleteId({ id, name: proyecto });
+  };
+
+  const confirmDeleteAction = async () => {
+    if (!confirmDeleteId) return;
     setSaving(true);
     try {
-      await deletePresupuesto(id);
+      await deletePresupuesto(confirmDeleteId.id);
+      setConfirmDeleteId(null);
+      toast.success('Proyecto eliminado');
     } catch {
       toast.error('Error al eliminar proyecto');
     } finally {
@@ -148,6 +157,35 @@ const ProyectosScreen: React.FC = () => {
     finally { setSaving(false); }
   }, [renglonAvances, updatePresupuesto]);
 
+  const getSaludProyecto = (p: Presupuesto) => {
+    const fisico = p.avanceFisico || 0;
+    const financiero = p.avanceFinanciero || 0;
+    const diff = financiero - fisico;
+    if (diff > 15) return { label: 'Crítica', color: 'text-red-600 bg-red-50', icon: AlertTriangle };
+    if (diff > 5) return { label: 'Riesgo', color: 'text-amber-600 bg-amber-50', icon: AlertTriangle };
+    return { label: 'Saludable', color: 'text-emerald-600 bg-emerald-50', icon: CheckCircle };
+  };
+
+  const handleExportProyectos = () => {
+    const rows = [
+      ['CONSTRUCTORA WM/M&S - Listado de Proyectos'],
+      [`Fecha: ${new Date().toLocaleDateString()}`],
+      [],
+      ['Proyecto', 'Cliente', 'Fase', 'Total (Q)', 'Avance %', 'Ingresos (Q)', 'Gastos (Q)', 'Salud'],
+      ...filtrados.map(p => [
+        p.proyecto,
+        p.cliente || 'N/A',
+        p.fase,
+        p.total || 0,
+        p.avanceFisico || 0,
+        p.ingresos || 0,
+        p.gastos || 0,
+        getSaludProyecto(p).label
+      ])
+    ];
+    downloadCSV(`proyectos_${new Date().toISOString().slice(0,10)}.csv`, rows);
+  };
+
   return (
     <PageShell showHome={false} title="Proyectos por Fase">
       <div className="p-3 sm:p-5 max-w-[1600px] mx-auto space-y-4">
@@ -166,10 +204,19 @@ const ProyectosScreen: React.FC = () => {
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
-            <input placeholder="Buscar proyecto..." value={search} onChange={e => setSearch(e.target.value)}
-            className="input-standard" />
-          <Filter className="w-4 h-4 text-muted-foreground" />
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <input placeholder="Buscar proyecto o cliente..." value={search} onChange={e => setSearch(e.target.value)}
+              className="input-standard w-full" />
+          </div>
+          <button
+            onClick={handleExportProyectos}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-lg transition-colors shrink-0"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Exportar Proyectos</span>
+          </button>
+          <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
         </div>
 
         <div className="space-y-2">
@@ -197,7 +244,18 @@ const ProyectosScreen: React.FC = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-bold text-card-foreground text-sm">{p.proyecto}</h3>
+                          <div className="flex items-center gap-2">
                           <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${faseColors[p.fase]}`}>{faseLabels[p.fase]}</span>
+                          {(() => {
+                            const salud = getSaludProyecto(p);
+                            return (
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 font-semibold ${salud.color}`}>
+                                <salud.icon className="w-2.5 h-2.5" />
+                                {salud.label}
+                              </span>
+                            );
+                          })()}
+                        </div>
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">{p.cliente || 'Sin cliente'} · {p.tipologia || 'General'}</div>
 
@@ -427,6 +485,14 @@ const ProyectosScreen: React.FC = () => {
           })}
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        onOpenChange={o => { if (!o) setConfirmDeleteId(null); }}
+        onConfirm={confirmDeleteAction}
+        title="Eliminar proyecto"
+        description={`Esta acción no se puede deshacer. ¿Estás seguro de eliminar el proyecto "${confirmDeleteId?.name}"?`}
+        confirmText="Eliminar"
+      />
     </PageShell>
   );
 };

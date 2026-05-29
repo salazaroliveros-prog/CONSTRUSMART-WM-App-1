@@ -49,18 +49,28 @@ export class NotificacionesService {
   }
 
   static async marcarLeida(id: string) {
-    const { error } = await (supabase
-      .from('notificaciones') as any)
-      .update({ leido: true })
-      .eq('id', id);
-    if (error) throw error;
+    try {
+      const { error } = await (supabase
+        .from('notificaciones') as any)
+        .update({ leido: true, updated_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    } catch (e) {
+      console.error('Error al marcar notificación como leída:', e);
+      throw e;
+    }
   }
 
   static async eliminar(id: string) {
-    const { error } = await supabase
-      .from('notificaciones')
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
+    try {
+      const { error } = await supabase
+        .from('notificaciones')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    } catch (e) {
+      console.error('Error al eliminar notificación:', e);
+      throw e;
+    }
   }
 }

@@ -1,14 +1,15 @@
 import { supabase } from '@/lib/supabase';
+import { Actividad, CreateActividad, dbToActividad, actividadToDb } from '@/types/supabase';
 
 export const ActividadesService = {
-  async addActividad(payload: Record<string, unknown>) {
+  async addActividad(payload: CreateActividad): Promise<Actividad> {
     const { data, error } = await supabase
       .from('actividades')
-      .insert(payload as any)
+      .insert(actividadToDb(payload) as any)
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return dbToActividad(data);
   },
 
   async deleteActividad(id: string, userId?: string) {

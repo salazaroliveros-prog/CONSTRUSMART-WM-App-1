@@ -23,10 +23,20 @@ export const MovimientosMaterialesService = {
   },
 
   async listarPorPresupuesto(presupuestoId: string): Promise<MovimientoMaterial[]> {
+    // Primero obtener los IDs de materiales de este presupuesto
+    const { data: materiales, error: errMat } = await supabase
+      .from('materiales_proyecto')
+      .select('id')
+      .eq('presupuesto_id', presupuestoId);
+    if (errMat) throw errMat;
+    if (!materiales || materiales.length === 0) return [];
+
+    const materialIds = materiales.map(m => m.id);
+    
     const { data, error } = await supabase
       .from('movimientos_materiales')
-      .select('*, materiales_proyecto!inner(presupuesto_id)')
-      .eq('materiales_proyecto.presupuesto_id', presupuestoId)
+      .select('*')
+      .in('material_id', materialIds)
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data as MovimientoMaterial[];

@@ -143,39 +143,36 @@ export const PresupuestosService = {
           rendimiento: linea.rendimiento != null ? linea.rendimiento : null,
         };
 
-        const { data: subData, error: subErr } = await (supabase.from('subrenglones') as any).insert(subrPayload).select().single();
-        if (subErr || !subData) {
-          console.warn('Failed to insert subrenglon', subErr, subrPayload);
-          continue;
-        }
+          const { data: subData, error: subErr } = await (supabase.from('subrenglones') as any).insert(subrPayload).select().single();
+          if (subErr || !subData) {
+            console.warn('Failed to insert subrenglon', subErr, subrPayload);
+            continue;
+          }
 
-        const subrId = (subData as any).id;
+          const subrId = (subData as any).id;
 
-        // Insert materials
-        if (Array.isArray(linea.subrenglones?.materiales)) {
-          for (const mat of linea.subrenglones.materiales) {
-            try {
-              const matPayload = {
+          // Insert children inside a local try; if any child fails, delete the created subrenglon to avoid partial state
+          let childFailed = false;
+          try {
+            // Insert materials (bulk if possible)
+            if (Array.isArray(linea.subrenglones?.materiales) && linea.subrenglones.materiales.length > 0) {
+              const mats = linea.subrenglones.materiales.map((mat: any) => ({
                 subrenglon_id: subrId,
                 nombre: mat.nombre || mat.nombreMaterial || '',
                 unidad: mat.unidad || 'unidad',
                 cantidad: mat.cantidad != null ? mat.cantidad : 0,
                 costo_unitario: mat.costoUnitario != null ? mat.costoUnitario : (mat.costo_unitario != null ? mat.costo_unitario : 0),
                 created_at: new Date().toISOString(),
-              };
-               
-              await (supabase.from('subrenglon_materiales') as any).insert(matPayload);
-            } catch (e) {
-              console.warn('insert material failed', e);
+              }));
+              if (mats.length > 0) {
+                const { error: matErr } = await (supabase.from('subrenglon_materiales') as any).insert(mats);
+                if (matErr) throw matErr;
+              }
             }
-          }
-        }
 
-        // Insert mano de obra
-        if (Array.isArray(linea.subrenglones?.manoObra)) {
-          for (const mo of linea.subrenglones.manoObra) {
-            try {
-              const moPayload = {
+            // Insert mano de obra
+            if (Array.isArray(linea.subrenglones?.manoObra) && linea.subrenglones.manoObra.length > 0) {
+              const mos = linea.subrenglones.manoObra.map((mo: any) => ({
                 subrenglon_id: subrId,
                 descripcion: mo.descripcion || mo.descripcionMO || '',
                 cantidad_personas: mo.cantidadPersonas != null ? mo.cantidadPersonas : (mo.cantidad != null ? mo.cantidad : 1),
@@ -183,20 +180,16 @@ export const PresupuestosService = {
                 rendimiento_especifico: mo.rendimientoEspecifico != null ? mo.rendimientoEspecifico : null,
                 costo_unidad: 0,
                 created_at: new Date().toISOString(),
-              };
-               
-              await (supabase.from('subrenglon_mano_obra') as any).insert(moPayload);
-            } catch (e) {
-              console.warn('insert manoobra failed', e);
+              }));
+              if (mos.length > 0) {
+                const { error: moErr } = await (supabase.from('subrenglon_mano_obra') as any).insert(mos);
+                if (moErr) throw moErr;
+              }
             }
-          }
-        }
 
-        // Insert equipos
-        if (Array.isArray(linea.subrenglones?.equipos)) {
-          for (const eq of linea.subrenglones.equipos) {
-            try {
-              const eqPayload = {
+            // Insert equipos
+            if (Array.isArray(linea.subrenglones?.equipos) && linea.subrenglones.equipos.length > 0) {
+              const eqs = linea.subrenglones.equipos.map((eq: any) => ({
                 subrenglon_id: subrId,
                 descripcion: eq.descripcion || '',
                 cantidad: eq.cantidad != null ? eq.cantidad : 0,
@@ -204,14 +197,25 @@ export const PresupuestosService = {
                 horas_uso: eq.horasUso != null ? eq.horasUso : (eq.horas_uso != null ? eq.horas_uso : 0),
                 subtotal: (eq.cantidad || 0) * (eq.costoHora || eq.costo_hora || 0) * (eq.horasUso || eq.horas_uso || 1),
                 created_at: new Date().toISOString(),
-              };
-               
-              await (supabase.from('subrenglon_equipos') as any).insert(eqPayload);
-            } catch (e) {
-              console.warn('insert equipo failed', e);
+              }));
+              if (eqs.length > 0) {
+                const { error: eqErr } = await (supabase.from('subrenglon_equipos') as any).insert(eqs);
+                if (eqErr) throw eqErr;
+              }
+            }
+          } catch (childErr) {
+            childFailed = true;
+            console.warn('Failed inserting child rows for subrenglon', subrId, childErr);
+          }
+
+          if (childFailed) {
+            try {
+              await (supabase.from('subrenglones') as any).delete().eq('id', subrId);
+              console.warn('Rolled back subrenglon due to child insert failure', subrId);
+            } catch (delErr) {
+              console.error('Failed to rollback subrenglon after child failure', subrId, delErr);
             }
           }
-        }
       }
 
       return true;
