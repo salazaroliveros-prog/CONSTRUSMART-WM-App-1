@@ -72,3 +72,19 @@
 .main-content-fade {
   opacity: 0;
 }
+
+/* Carrusel - efecto fade suave desvaneciente para paginación */
+.animate-carousel-right,
+.animate-carousel-left {
+  animation: carouselFadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Transición suave para gráficas al cargar */
+.animate-chart-load {
+  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Transición de página suave para todas las paginaciones */
+.page-transition {
+  animation: carouselFadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

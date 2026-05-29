@@ -10,6 +10,7 @@ import { ActividadesService } from '@/services/ActividadesService';
 import { ProveedoresService } from '@/services/compras/ProveedoresService';
 import { OrdenesCompraService } from '@/services/compras/OrdenesCompraService';
 import { NotificacionesService } from '@/services/NotificacionesService';
+import { MaterialesService } from '@/services/presupuestos/MaterialesService';
 import type { Session, RealtimeChannel } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { 
@@ -1319,6 +1320,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!session) return;
     const userId = session.user.id;
     const original = presupuestos.find(p => p.id === id)?.fase;
+    // Solo enviar materiales a bodega si se está cambiando a ejecución (no desde ejecución)
+    const enviarABodega = nuevaFase === 'ejecución' && original !== 'ejecución';
     try {
       setPresupuestos(prev => prev.map(p => p.id === id ? { ...p, fase: nuevaFase } : p));
       if (!isOnline) {
@@ -1331,6 +1334,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const data = await PresupuestosService.updatePresupuesto(id, userId, { fase: nuevaFase, updated_at: new Date().toISOString() });
       setPresupuestos(prev => prev.map(p => p.id === id ? dbToPresupuesto(data) : p));
       cachePresupuestos(userId);
+
+      // 🔗 Enviar materiales del presupuesto a Bodega automáticamente al pasar a ejecución
+      if (enviarABodega) {
+        try {
+          const materiales = await MaterialesService.persistDesglosados(id);
+          if (materiales.length > 0) {
+            crearNotificacion(userId, 'exito', 'Materiales enviados a bodega', 
+              `${materiales.length} materiales del proyecto desglosados y almacenados en inventario`);
+          }
+        } catch (e) {
+          console.error('Error al persistir materiales en bodega:', e);
+          toast.warning('El proyecto pasó a ejecución, pero hubo un error al enviar materiales a bodega');
+        }
+      }
+
       const nombreProyecto = presupuestos.find(p => p.id === id)?.proyecto || 'Proyecto';
       crearNotificacion(userId, 'info', `Fase cambiada: ${nuevaFase}`, `"${nombreProyecto}" movido a ${nuevaFase}`);
       toast.success(`Proyecto movido a fase: ${nuevaFase}`);

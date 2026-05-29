@@ -7,9 +7,10 @@ import ChartCard from '@/components/shared/ChartCard';
 import { fmtQ } from '@/lib/exporters';
 import { CoreEngineService } from '@/services/CoreEngineService';
 import { AgenteInteligente } from '@/services/ai/AgenteInteligente';
-import { BarChart3, TrendingUp, TrendingDown, DollarSign, Percent, Shield, AlertTriangle, ArrowLeft, ArrowRight, FolderKanban, Wallet, ShoppingCart, PieChartIcon, LineChartIcon, Activity, Target, GitCompare, Download } from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, DollarSign, Percent, Shield, AlertTriangle, ArrowLeft, ArrowRight, FolderKanban, Wallet, ShoppingCart, PieChartIcon, LineChartIcon, Activity, Target, Download, Plus, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, RadialBarChart, RadialBar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { toast } from 'sonner';
 
 type KPIColor = 'emerald' | 'red' | 'blue' | 'indigo' | 'purple' | 'amber' | 'teal' | 'pink';
 
@@ -51,7 +52,7 @@ interface ChartDef {
 }
 
 const Dashboard: React.FC = () => {
-  const { presupuestos, transacciones, proveedores, ordenesCompra, setView, transicionFase } = useAppContext();
+  const { presupuestos, transacciones, proveedores, ordenesCompra, setView, addTransaccion, session } = useAppContext();
   const [pagina, setPagina] = useState(0);
   const [carouselDir, setCarouselDir] = useState<'left' | 'right'>('right');
   const [alertas, setAlertas] = useState<any[]>([]);
@@ -59,16 +60,36 @@ const Dashboard: React.FC = () => {
   const [chartOrder, setChartOrder] = useState<string[][]>(() => {
     try {
       const saved = localStorage.getItem('dash_charts');
-      return saved ? JSON.parse(saved) : [['kpi','curvas','gantt','fase','avance','tendencia'], ['flujo-caja','gastos-cat','comp-mensual','ingresos-proy','acumulado'], ['heatmap','alertas','balance-acum','radar-rent','gauge-rent']];
-    } catch { return [['kpi','curvas','gantt','fase','avance','tendencia'], ['flujo-caja','gastos-cat','comp-mensual','ingresos-proy','acumulado'], ['heatmap','alertas','balance-acum','radar-rent','gauge-rent']]; }
+      return saved ? JSON.parse(saved) : [
+        ['kpi','quick-entry','curvas','gantt','fase','avance'],
+        ['flujo-caja','gastos-cat','comp-mensual','ingresos-proy'],
+        ['heatmap','alertas','balance-acum','gauge-rent']
+      ];
+    } catch { return [
+      ['kpi','quick-entry','curvas','gantt','fase','avance'],
+      ['flujo-caja','gastos-cat','comp-mensual','ingresos-proy'],
+      ['heatmap','alertas','balance-acum','gauge-rent']
+    ]; }
   });
   const [hiddenCharts, setHiddenCharts] = useState<Set<string>>(new Set());
   const [expandedCharts, setExpandedCharts] = useState<Set<string>>(new Set());
 
-  // Save chart order to localStorage
+  // Quick entry form - campos extendidos
+  const [qeTipo, setQeTipo] = useState<'ingreso' | 'gasto'>('gasto');
+  const [qeCategoria, setQeCategoria] = useState('materiales');
+  const [qeDescripcion, setQeDescripcion] = useState('');
+  const [qeMonto, setQeMonto] = useState(0);
+  const [qeFecha, setQeFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [qeProyectoId, setQeProyectoId] = useState('');
+  const [qeMetodoPago, setQeMetodoPago] = useState('efectivo');
+  const [qeReferencia, setQeReferencia] = useState('');
+  const [qeNotas, setQeNotas] = useState('');
+  const [qeAplicarIVA, setQeAplicarIVA] = useState(false);
+  const [qeGuardando, setQeGuardando] = useState(false);
+  const [qeShowAdvanced, setQeShowAdvanced] = useState(false);
+
   useEffect(() => { localStorage.setItem('dash_charts', JSON.stringify(chartOrder)); }, [chartOrder]);
 
-  // --- Data computations ---
   const presupuestosFiltrados = useMemo(
     () => (filtroProyecto === 'todos' ? presupuestos : presupuestos.filter(p => p.id === filtroProyecto)),
     [filtroProyecto, presupuestos]
@@ -131,15 +152,6 @@ const Dashboard: React.FC = () => {
     return flujoMensual.map(d => { acum += d.ingresos - d.gastos; return { ...d, balance: acum }; });
   }, [flujoMensual]);
 
-  const rentabilidadPorProyecto = useMemo(() => {
-    return presupuestos.map(p => {
-      const ing = transacciones.filter(t => t.proyectoId === p.id && t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
-      const gas = transacciones.filter(t => t.proyectoId === p.id && t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
-      const margen = ing === 0 ? 0 : ((ing - gas) / ing) * 100;
-      return { name: p.proyecto.slice(0, 14), valor: Math.max(0, margen + 50), margen };
-    });
-  }, [presupuestos, transacciones]);
-
   useEffect(() => {
     let activo = true;
     const cargarAlertas = async () => {
@@ -152,11 +164,8 @@ const Dashboard: React.FC = () => {
 
   const currentPageCharts = useMemo(() => chartOrder[pagina] || [], [chartOrder, pagina]);
   const totalPaginas = chartOrder.length;
-
-  // Filter visible charts
   const visibleCharts = useMemo(() => currentPageCharts.filter(id => !hiddenCharts.has(id)), [currentPageCharts, hiddenCharts]);
 
-  // If all hidden on current page, auto-add them back
   useEffect(() => {
     if (visibleCharts.length === 0 && currentPageCharts.length > 0) {
       setHiddenCharts(prev => { const next = new Set(prev); currentPageCharts.forEach(id => next.delete(id)); return next; });
@@ -174,7 +183,6 @@ const Dashboard: React.FC = () => {
       const srcIdx = newOrder[pageIdx].indexOf(sourceId);
       const tgtIdx = newOrder[pageIdx].indexOf(targetId);
       if (srcIdx === -1 || tgtIdx === -1) return prev;
-      // Swap positions
       [newOrder[pageIdx][srcIdx], newOrder[pageIdx][tgtIdx]] = [newOrder[pageIdx][tgtIdx], newOrder[pageIdx][srcIdx]];
       return newOrder;
     });
@@ -183,6 +191,37 @@ const Dashboard: React.FC = () => {
   const handleRemove = useCallback((id: string) => {
     setHiddenCharts(prev => new Set(prev).add(id));
   }, []);
+
+  const handleQuickEntry = async () => {
+    if (!session?.user?.id || qeMonto <= 0) return;
+    setQeGuardando(true);
+    try {
+      const costoTotal = qeAplicarIVA ? qeMonto * 1.12 : qeMonto;
+      await addTransaccion({
+        tipo: qeTipo,
+        descripcion: qeDescripcion || `${qeTipo === 'ingreso' ? 'Ingreso' : 'Gasto'} rápido`,
+        cantidad: 1,
+        unidad: 'pza',
+        categoria: qeCategoria as any,
+        costoUnitario: qeMonto,
+        costoTotal,
+        fecha: qeFecha || new Date().toISOString().split('T')[0],
+        proyectoId: qeProyectoId || 'admin',
+      });
+      // También registrar en Seguimiento como costo (servicio de costos)
+      toast.success(`${qeTipo === 'ingreso' ? 'Ingreso' : 'Gasto'} de ${fmtQ(costoTotal)} registrado`);
+      // Reset form
+      setQeDescripcion('');
+      setQeMonto(0);
+      setQeReferencia('');
+      setQeNotas('');
+      setQeAplicarIVA(false);
+    } catch {
+      toast.error('Error al registrar');
+    } finally {
+      setQeGuardando(false);
+    }
+  };
 
   const handleExportDashboard = () => {
     const rows = [
@@ -203,6 +242,8 @@ const Dashboard: React.FC = () => {
     });
   };
 
+  const gastosCategorias = ['materiales', 'mano-obra', 'herramienta', 'sub-contrato', 'administrativo', 'personal', 'transporte', 'fijos'];
+
   const chartDefinitions = useMemo((): Record<string, ChartDef> => ({
     'kpi': {
       id: 'kpi', title: 'KPIs', icon: <TrendingUp className="w-3.5 h-3.5 text-blue-700" />,
@@ -215,6 +256,91 @@ const Dashboard: React.FC = () => {
           <KPI icon={FolderKanban} label="Proyectos" value={String(stats.activos)} color="indigo" onClick={() => setView('proyectos')} />
           <KPI icon={Percent} label="Rentab." value={`${stats.rentabilidad.toFixed(1)}%`} color={stats.rentabilidad >= 0 ? 'teal' : 'amber'} onClick={() => setView('financiero')} />
           <KPI icon={ShoppingCart} label="OC Pend." value={String(stats.ocPendientes)} color="purple" onClick={() => setView('compras')} />
+        </div>
+      ),
+    },
+    'quick-entry': {
+      id: 'quick-entry', title: 'Registro Rápido - Ingresos y Gastos', icon: <Plus className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12', height: 'min-h-[120px]',
+      render: () => (
+        <div className="p-2">
+          {/* Fila 1: Campos básicos */}
+          <div className="flex flex-wrap items-end gap-2 mb-2">
+            <div className="flex gap-1 bg-muted rounded-lg p-0.5">
+              <button onClick={() => setQeTipo('ingreso')} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${qeTipo === 'ingreso' ? 'bg-emerald-500 text-white shadow' : 'text-muted-foreground hover:text-foreground'}`}>
+                <TrendingUp className="w-3 h-3 inline mr-1" />Ingreso
+              </button>
+              <button onClick={() => setQeTipo('gasto')} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${qeTipo === 'gasto' ? 'bg-red-500 text-white shadow' : 'text-muted-foreground hover:text-foreground'}`}>
+                <TrendingDown className="w-3 h-3 inline mr-1" />Gasto
+              </button>
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[8px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Fecha</label>
+              <input type="date" value={qeFecha} onChange={e => setQeFecha(e.target.value)}
+                className="input-standard text-xs py-1.5 h-8 w-32" />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[8px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Categoría</label>
+              <select value={qeCategoria} onChange={e => setQeCategoria(e.target.value)} className="input-standard text-xs py-1.5 h-8 w-auto min-w-[110px]">
+                {gastosCategorias.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[8px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Descripción</label>
+              <input type="text" value={qeDescripcion} onChange={e => setQeDescripcion(e.target.value)} placeholder="Descripción..." className="input-standard text-xs py-1.5 h-8 w-36" />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[8px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Monto (Q)</label>
+              <input type="number" value={qeMonto || ''} onChange={e => setQeMonto(parseFloat(e.target.value) || 0)} placeholder="0.00" className="input-standard text-xs py-1.5 h-8 w-28" min={0} step={0.01} />
+            </div>
+            <button onClick={handleQuickEntry} disabled={qeGuardando || qeMonto <= 0} className="btn-primary h-8 px-3 text-xs">
+              <Save className="w-3 h-3 mr-1" />{qeGuardando ? 'Guardando...' : 'Registrar'}
+            </button>
+            <button onClick={() => setQeShowAdvanced(!qeShowAdvanced)} className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline px-1">
+              {qeShowAdvanced ? '▲ Menos' : '▼ Más'}
+            </button>
+          </div>
+          {/* Fila 2: Campos avanzados (colapsable) */}
+          {qeShowAdvanced && (
+            <div className="flex flex-wrap items-end gap-2 pt-2 border-t border-border animate-fade-in-up">
+              <div className="flex flex-col">
+                <label className="text-[8px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Proyecto</label>
+                <select value={qeProyectoId} onChange={e => setQeProyectoId(e.target.value)} className="input-standard text-xs py-1.5 h-8 w-auto min-w-[140px]">
+                  <option value="">Sin proyecto</option>
+                  {presupuestos.map(p => <option key={p.id} value={p.id}>{p.proyecto}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[8px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Método de Pago</label>
+                <select value={qeMetodoPago} onChange={e => setQeMetodoPago(e.target.value)} className="input-standard text-xs py-1.5 h-8 w-auto min-w-[110px]">
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="tarjeta">Tarjeta</option>
+                  <option value="cheque">Cheque</option>
+                </select>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[8px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Referencia / Factura</label>
+                <input type="text" value={qeReferencia} onChange={e => setQeReferencia(e.target.value)} placeholder="Factura #, OC #" className="input-standard text-xs py-1.5 h-8 w-32" />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[8px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Notas</label>
+                <input type="text" value={qeNotas} onChange={e => setQeNotas(e.target.value)} placeholder="Nota adicional" className="input-standard text-xs py-1.5 h-8 w-32" />
+              </div>
+              <div className="flex items-center gap-2 pb-1">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" checked={qeAplicarIVA} onChange={e => setQeAplicarIVA(e.target.checked)}
+                    className="w-3.5 h-3.5 accent-blue-600 cursor-pointer" />
+                  <span className="text-[10px] font-medium text-muted-foreground">+ IVA (12%)</span>
+                </label>
+                {qeAplicarIVA && (
+                  <span className="text-[9px] text-blue-600 font-semibold">
+                    Total: Q {fmtQ(qeMonto * 1.12)}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       ),
     },
@@ -256,7 +382,7 @@ const Dashboard: React.FC = () => {
       ),
     },
     'avance': {
-      id: 'avance', title: 'Avance Físico vs Financiero', icon: <GitCompare className="w-3.5 h-3.5 text-blue-700" />,
+      id: 'avance', title: 'Avance Físico vs Financiero', icon: <Target className="w-3.5 h-3.5 text-blue-700" />,
       span: 'col-span-12 sm:col-span-6 lg:col-span-3', height: 'min-h-[140px]',
       render: () => (
         <ResponsiveContainer width="100%" height="100%">
@@ -266,21 +392,6 @@ const Dashboard: React.FC = () => {
             <Bar dataKey="fisico" fill="#1E3A8A" name="Físico" radius={[2, 2, 0, 0]} />
             <Bar dataKey="financiero" fill="#10B981" name="Financiero" radius={[2, 2, 0, 0]} />
           </BarChart>
-        </ResponsiveContainer>
-      ),
-    },
-    'tendencia': {
-      id: 'tendencia', title: 'Tendencia Ingresos vs Gastos', icon: <LineChartIcon className="w-3.5 h-3.5 text-blue-700" />,
-      span: 'col-span-12 sm:col-span-6 lg:col-span-3', height: 'min-h-[140px]',
-      render: () => (
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={flujoMensual} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-            <XAxis dataKey="mes" tick={{ fontSize: 8 }} />
-            <YAxis tick={{ fontSize: 8 }} />
-            <Line type="monotone" dataKey="ingresos" stroke="#10B981" strokeWidth={2} name="Ingresos" dot={false} />
-            <Line type="monotone" dataKey="gastos" stroke="#EF4444" strokeWidth={2} name="Gastos" dot={false} />
-          </LineChart>
         </ResponsiveContainer>
       ),
     },
@@ -295,8 +406,8 @@ const Dashboard: React.FC = () => {
             <YAxis tick={{ fontSize: 9 }} />
             <Tooltip formatter={(v: number) => fmtQ(v)} />
             <Legend wrapperStyle={{ fontSize: 9 }} />
-            <Line type="monotone" dataKey="ingresos" stroke="#10B981" strokeWidth={2} name="Ingresos" />
-            <Line type="monotone" dataKey="gastos" stroke="#EF4444" strokeWidth={2} name="Gastos" />
+            <Line type="monotone" dataKey="ingresos" stroke="#10B981" strokeWidth={2} name="Ingresos" animationDuration={800} />
+            <Line type="monotone" dataKey="gastos" stroke="#EF4444" strokeWidth={2} name="Gastos" animationDuration={800} />
           </LineChart>
         </ResponsiveContainer>
       ),
@@ -324,8 +435,8 @@ const Dashboard: React.FC = () => {
             <XAxis dataKey="mes" tick={{ fontSize: 9 }} />
             <YAxis tick={{ fontSize: 9 }} />
             <Tooltip formatter={(v: number) => fmtQ(v)} />
-            <Bar dataKey="ingresos" fill="#10B981" name="Ingresos" radius={[2, 2, 0, 0]} />
-            <Bar dataKey="gastos" fill="#EF4444" name="Gastos" radius={[2, 2, 0, 0]} />
+            <Bar dataKey="ingresos" fill="#10B981" name="Ingresos" radius={[2, 2, 0, 0]} animationDuration={800} />
+            <Bar dataKey="gastos" fill="#EF4444" name="Gastos" radius={[2, 2, 0, 0]} animationDuration={800} />
           </BarChart>
         </ResponsiveContainer>
       ),
@@ -339,22 +450,22 @@ const Dashboard: React.FC = () => {
             <XAxis type="number" tick={{ fontSize: 8 }} />
             <YAxis type="category" dataKey="name" tick={{ fontSize: 8 }} width={70} />
             <Tooltip formatter={(v: number) => fmtQ(v)} />
-            <Bar dataKey="value" fill="#1E3A8A" radius={[0, 3, 3, 0]} name="Ingresos" />
+            <Bar dataKey="value" fill="#1E3A8A" radius={[0, 3, 3, 0]} name="Ingresos" animationDuration={800} />
           </BarChart>
         </ResponsiveContainer>
       ),
     },
-    'acumulado': {
-      id: 'acumulado', title: 'Acumulado Ingresos vs Gastos', icon: <Target className="w-3.5 h-3.5 text-blue-700" />,
-      span: 'col-span-12 sm:col-span-6 lg:col-span-4', height: 'min-h-[140px]',
+    'balance-acum': {
+      id: 'balance-acum', title: 'Evolución del Balance', icon: <TrendingUp className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12 sm:col-span-6 lg:col-span-4', height: 'min-h-[160px]',
       render: () => (
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={balanceAcumulado} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+          <LineChart data={balanceAcumulado} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="mes" tick={{ fontSize: 8 }} />
             <YAxis tick={{ fontSize: 8 }} />
-            <Area type="monotone" dataKey="balance" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.3} name="Balance Acum." />
-          </AreaChart>
+            <Line type="monotone" dataKey="balance" stroke="#8B5CF6" strokeWidth={2} name="Balance" dot={false} animationDuration={800} />
+          </LineChart>
         </ResponsiveContainer>
       ),
     },
@@ -388,31 +499,6 @@ const Dashboard: React.FC = () => {
         </div>
       ),
     },
-    'balance-acum': {
-      id: 'balance-acum', title: 'Evolución del Balance', icon: <TrendingUp className="w-3.5 h-3.5 text-blue-700" />,
-      span: 'col-span-12 sm:col-span-6 lg:col-span-4', height: 'min-h-[160px]',
-      render: () => (
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={balanceAcumulado} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-            <XAxis dataKey="mes" tick={{ fontSize: 8 }} />
-            <YAxis tick={{ fontSize: 8 }} />
-            <Line type="monotone" dataKey="balance" stroke="#8B5CF6" strokeWidth={2} name="Balance" dot={false} />
-          </LineChart>
-        </ResponsiveContainer>
-      ),
-    },
-    'radar-rent': {
-      id: 'radar-rent', title: 'Rentabilidad por Proyecto', icon: <Target className="w-3.5 h-3.5 text-blue-700" />,
-      span: 'col-span-12 sm:col-span-6 lg:col-span-4', height: 'min-h-[160px]',
-      render: () => (
-        <ResponsiveContainer width="100%" height="100%">
-          <RadialBarChart cx="50%" cy="50%" innerRadius="20%" outerRadius="80%" barSize={10} data={rentabilidadPorProyecto}>
-            <RadialBar min={15} background dataKey="valor" fill="#1E3A8A" label={{ fontSize: 8, position: 'insideStart' }} />
-          </RadialBarChart>
-        </ResponsiveContainer>
-      ),
-    },
     'gauge-rent': {
       id: 'gauge-rent', title: 'Rentabilidad General', icon: <Percent className="w-3.5 h-3.5 text-blue-700" />,
       span: 'col-span-12 sm:col-span-6 lg:col-span-4', height: 'min-h-[160px]',
@@ -434,7 +520,7 @@ const Dashboard: React.FC = () => {
         );
       },
     },
-  }), [curvaSData, flujoMensual, gastosPorCategoria, ingresosPorProyecto, faseDistribucion, avanceData, balanceAcumulado, rentabilidadPorProyecto, stats, alertas, presupuestos, setView, transicionFase]);
+  }), [curvaSData, flujoMensual, gastosPorCategoria, ingresosPorProyecto, faseDistribucion, avanceData, balanceAcumulado, stats, alertas, presupuestos, setView, transicionFase]);
 
 const layoutClass = "h-dvh flex flex-col p-0.5 sm:p-2 md:p-3 overflow-hidden";
 const pageClass = "flex-1 grid grid-cols-12 gap-1 sm:gap-2 overflow-hidden";
@@ -446,13 +532,14 @@ const pageClass = "flex-1 grid grid-cols-12 gap-1 sm:gap-2 overflow-hidden";
         <div className="flex items-center justify-between mb-1.5 shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Página {pagina + 1} / {totalPaginas}</span>
-            <button onClick={prevPage} className="p-1.5 rounded hover:bg-accent text-muted-foreground"><ArrowLeft className="w-4 h-4" /></button>
+            <button onClick={prevPage} className="p-1.5 rounded hover:bg-accent text-muted-foreground transition-colors"><ArrowLeft className="w-4 h-4" /></button>
             <div className="flex gap-1">
               {Array.from({ length: totalPaginas }).map((_, i) => (
-                <button key={i} onClick={() => setPagina(i)} className={`w-2.5 h-2.5 rounded-full transition-all ${i === pagina ? 'bg-blue-700 dark:bg-blue-400 scale-125' : 'bg-muted dark:bg-muted'}`} />
+                <button key={i} onClick={() => { setCarouselDir(i > pagina ? 'right' : 'left'); setPagina(i); }}
+                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${i === pagina ? 'bg-blue-700 dark:bg-blue-400 scale-125' : 'bg-muted dark:bg-muted hover:scale-110'}`} />
               ))}
             </div>
-            <button onClick={nextPage} className="p-1.5 rounded hover:bg-accent text-muted-foreground"><ArrowRight className="w-4 h-4" /></button>
+            <button onClick={nextPage} className="p-1.5 rounded hover:bg-accent text-muted-foreground transition-colors"><ArrowRight className="w-4 h-4" /></button>
           </div>
           <div className="flex items-center gap-2">
             <Button 
@@ -462,7 +549,7 @@ const pageClass = "flex-1 grid grid-cols-12 gap-1 sm:gap-2 overflow-hidden";
               className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
             >
               <Download className="w-3 h-3 mr-1.5" />
-              EXPORTAR RESUMEN
+              EXPORTAR
             </Button>
             <select value={filtroProyecto} onChange={e => setFiltroProyecto(e.target.value)} className="input-standard text-tiny py-1 h-8 w-auto min-w-[180px]">
               <option value="todos">Todos los proyectos</option>
@@ -471,8 +558,8 @@ const pageClass = "flex-1 grid grid-cols-12 gap-1 sm:gap-2 overflow-hidden";
           </div>
         </div>
 
-        {/* Charts grid - 0 scroll */}
-        <div key={pagina} className={`${pageClass} ${carouselDir === 'right' ? 'animate-carousel-right' : 'animate-carousel-left'}`}>
+        {/* Charts grid - efecto fade suave */}
+        <div key={pagina} className={`${pageClass} animate-carousel-right`}>
           {visibleCharts.length > 0 ? (
             visibleCharts.map((chartId, idx) => {
               const def = chartDefinitions[chartId];
@@ -489,7 +576,9 @@ const pageClass = "flex-1 grid grid-cols-12 gap-1 sm:gap-2 overflow-hidden";
                   onRemove={handleRemove}
                   delay={idx * 50}
                 >
-                  {def.render()}
+                  <div className="animate-chart-load" style={{ animationDelay: `${idx * 60}ms` }}>
+                    {def.render()}
+                  </div>
                 </ChartCard>
               );
             })
