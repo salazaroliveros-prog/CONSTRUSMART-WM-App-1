@@ -27,23 +27,23 @@ export const ProveedoresService = {
     const dbRecord = proveedorToDb(datos as UpdateProveedor);
     const { data, error } = await supabase
       .from('proveedores')
-      .insert({ ...dbRecord, user_id: userId } as any)
+      .insert({ ...dbRecord, user_id: userId })
       .select()
       .single();
     if (error) throw error;
-    return dbToProveedor(data as any);
+    return dbToProveedor(data);
   },
 
   async actualizar(id: string, datos: UpdateProveedor): Promise<Proveedor> {
     const dbRecord = proveedorToDb(datos);
     const { data, error } = await supabase
       .from('proveedores')
-      .update(dbRecord as any)
+      .update(dbRecord)
       .eq('id', id)
       .select()
       .single();
     if (error) throw error;
-    return dbToProveedor(data as any);
+    return dbToProveedor(data);
   },
 
   async eliminar(id: string): Promise<void> {

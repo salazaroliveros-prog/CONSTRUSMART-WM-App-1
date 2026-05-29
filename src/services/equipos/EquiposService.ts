@@ -1,31 +1,36 @@
 import { supabase } from '@/lib/supabase';
+import { 
+  Equipo, CreateEquipo, UpdateEquipo, 
+  EquipoMiembro, CreateEquipoMiembro, UpdateEquipoMiembro,
+  dbToEquipo, equipoToDb, dbToEquipoMiembro, equipoMiembroToDb 
+} from '@/types/supabase';
 
 export const EquiposService = {
-  async getEquipos(userId: string) {
+  async getEquipos(userId: string): Promise<Equipo[]> {
     const { data, error } = await supabase
       .from('equipos')
       .select('*, equipo_miembros(*)')
       .eq('user_id', userId);
     if (error) throw error;
-    return data;
+    return (data || []).map(dbToEquipo);
   },
 
-  async addEquipo(payload: Record<string, unknown>) {
+  async addEquipo(payload: CreateEquipo): Promise<Equipo> {
     const { data, error } = await supabase
       .from('equipos')
-      .insert(payload)
+      .insert(equipoToDb(payload))
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return dbToEquipo(data);
   },
 
-  async updateEquipo(id: string, payload: Record<string, unknown>, userId?: string) {
-    let query = supabase.from('equipos').update(payload).eq('id', id);
+  async updateEquipo(id: string, payload: UpdateEquipo, userId?: string): Promise<Equipo> {
+    let query = supabase.from('equipos').update(equipoToDb(payload as CreateEquipo)).eq('id', id);
     if (userId) query = query.eq('user_id', userId);
     const { data, error } = await query.select().single();
     if (error) throw error;
-    return data;
+    return dbToEquipo(data);
   },
 
   async deleteEquipo(id: string, userId?: string) {
@@ -35,25 +40,25 @@ export const EquiposService = {
     if (error) throw error;
   },
 
-  async addMiembro(payload: Record<string, unknown>) {
+  async addMiembro(payload: CreateEquipoMiembro): Promise<EquipoMiembro> {
     const { data, error } = await supabase
       .from('equipo_miembros')
-      .insert(payload)
+      .insert(equipoMiembroToDb(payload))
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return dbToEquipoMiembro(data);
   },
 
-  async updateMiembro(id: string, payload: Record<string, unknown>) {
+  async updateMiembro(id: string, payload: UpdateEquipoMiembro): Promise<EquipoMiembro> {
     const { data, error } = await supabase
       .from('equipo_miembros')
-      .update(payload)
+      .update(equipoMiembroToDb(payload as CreateEquipoMiembro))
       .eq('id', id)
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return dbToEquipoMiembro(data);
   },
 
   async deleteMiembro(id: string, userId?: string) {

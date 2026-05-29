@@ -42,7 +42,34 @@ export const AgenteInteligente = {
       });
     }
 
-    // 3. Salud Financiera Global (Solo se agrega si hay transacciones relevantes)
+    // 3. Alerta de Tiempo / Cronograma
+    if (presupuesto.fechaFin) {
+      const hoy = new Date();
+      const fin = new Date(presupuesto.fechaFin);
+      const diasRestantes = Math.ceil((fin.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (diasRestantes < 7 && (presupuesto.avanceFisico || 0) < 90 && presupuesto.fase === 'ejecución') {
+        alertas.push({
+          tipo: 'alerta',
+          proyecto: presupuesto.proyecto,
+          mensaje: `Quedan solo ${diasRestantes} días para la fecha final y el avance es del ${(presupuesto.avanceFisico || 0)}%.`
+        });
+      }
+    }
+
+    // 4. Alerta de Eficiencia de Costos (Basado en transacciones vs presupuesto)
+    const margenEsperado = presupuesto.factor_utilidad || 0;
+    const margenReal = gastosReal > 0 ? ((presupuesto.total - gastosReal) / presupuesto.total) * 100 : margenEsperado;
+    
+    if (margenReal < margenEsperado * 0.7) {
+      alertas.push({
+        tipo: 'alerta',
+        proyecto: presupuesto.proyecto,
+        mensaje: `Rentabilidad comprometida: El margen real (${margenReal.toFixed(1)}%) es significativamente menor al esperado (${margenEsperado}%).`
+      });
+    }
+
+    // 5. Salud Financiera Global (Solo se agrega si hay transacciones relevantes)
     const salud = CoreEngineService.analizarSaludFinanciera(transacciones);
     if (salud.estado !== 'buena') {
       salud.alertas.forEach((msg: string) => {

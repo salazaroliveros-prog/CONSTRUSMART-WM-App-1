@@ -4,7 +4,13 @@ import PageShell from '@/components/shared/PageShell';
 import { MaterialesService } from '@/services/presupuestos/MaterialesService';
 import { BodegaService } from '@/services/proyectos/BodegaService';
 import { OrdenesCompraService } from '@/services/compras/OrdenesCompraService';
-import { toast } from 'sonner';import type { CreateOrdenCompraItem, CreateOrdenCompra } from '@/types/supabase';import { Package, Plus, Minus, AlertTriangle, Search, ShoppingCart } from 'lucide-react';
+import { toast } from 'sonner';
+import type { CreateOrdenCompraItem, CreateOrdenCompra } from '@/types/supabase';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface MaterialRow {
   id: string;
@@ -149,7 +155,7 @@ const BodegaScreen: React.FC = () => {
     try {
       const folio = await OrdenesCompraService.generarFolio(session.user.id);
       const subtotal = sinComprar.reduce((sum, material) => sum + material.cantidad_estimada * material.costo_unitario, 0);
-      const iva = 0;
+      const iva = subtotal * 0.12; // Estandarizar a 12% o IVA local
       const total = subtotal + iva;
       const ocPayload: CreateOrdenCompra = {
         folio,
@@ -160,7 +166,7 @@ const BodegaScreen: React.FC = () => {
         subtotal,
         iva,
         total,
-        notas: '',
+        notas: `Generada automáticamente desde Bodega para presupuesto: ${selectedPresupuesto?.proyecto}`,
         userId: session.user.id,
       };
       const oc = await OrdenesCompraService.crear(ocPayload, session.user.id);
@@ -189,56 +195,57 @@ const BodegaScreen: React.FC = () => {
   return (
     <PageShell title="Gestión de Bodega e Inventario">
       <div className="flex flex-col p-3 sm:p-5 max-w-7xl mx-auto space-y-4 animate-fadeIn">
-        <div className="bg-card rounded-xl shadow-md p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Seleccionar Presupuesto</label>
-              <select 
-                value={selectedPresupuestoId} 
-                onChange={(e) => {
-                  setSelectedPresupuestoId(e.target.value);
-                }}
-                className="w-full px-3 py-2 border rounded-lg text-sm bg-background dark:bg-muted dark:border-border"
-              >
-                <option value="">Seleccione un proyecto...</option>
-                {presupuestosOptions.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nombre}
-                    {p.cliente ? ` — ${p.cliente}` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Buscar Material</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
-                <input 
-                  type="text" 
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Nombre o código..."
-                  className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm bg-background dark:bg-muted dark:border-border"
-                />
+          <Card className="p-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex-1 min-w-[240px]">
+                <label className="text-tiny font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">Seleccionar Presupuesto</label>
+                <select 
+                  value={selectedPresupuestoId} 
+                  onChange={(e) => setSelectedPresupuestoId(e.target.value)}
+                  className="input-standard h-10"
+                >
+                  <option value="">Seleccione un proyecto...</option>
+                  {presupuestosOptions.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre} {p.cliente ? ` — ${p.cliente}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1 min-w-[240px]">
+                <label className="text-tiny font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">Buscar Material</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    type="text" 
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Nombre o código..."
+                    className="pl-9 h-10"
+                  />
+                </div>
+              </div>
+              <div className="flex items-end gap-2 h-10">
+                <Button
+                  onClick={generarOC}
+                  disabled={saving || !selectedPresupuestoId}
+                  variant="success"
+                  size="sm"
+                  className="h-full"
+                >
+                  <ShoppingCart className="w-3.5 h-3.5 mr-1.5" /> Generar OC
+                </Button>
+                <Button
+                  onClick={() => setView('compras')}
+                  variant="outline"
+                  size="sm"
+                  className="h-full border-primary/20 text-primary"
+                >
+                  <ShoppingCart className="w-3.5 h-3.5 mr-1.5" /> Ver OC
+                </Button>
               </div>
             </div>
-            <button
-              onClick={generarOC}
-              disabled={saving || !selectedPresupuestoId}
-              className="h-10 px-3 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 disabled:opacity-40 transition flex items-center gap-1"
-              title="Generar OC con materiales sin comprar"
-            >
-              <ShoppingCart className="w-3.5 h-3.5" /> Generar OC
-            </button>
-            <button
-              onClick={() => setView('compras')}
-              className="h-10 px-3 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition flex items-center gap-1"
-              title="Ver órdenes de compra"
-            >
-              <ShoppingCart className="w-3.5 h-3.5" /> Ver OC
-            </button>
-          </div>
-        </div>
+          </Card>
 
         {!selectedPresupuestoId ? (
           <div className="bg-card rounded-xl shadow-md p-12 text-center">
@@ -362,8 +369,8 @@ const BodegaScreen: React.FC = () => {
             <p className="text-xs text-muted-foreground mb-4">{showCompra.nombre}</p>
             <input
               type="number"
-              value={compraCantidad}
-              onChange={(e) => setCompraCantidad(Number(e.target.value))}
+              value={compraCantidad || ''}
+              onChange={(e) => setCompraCantidad(parseFloat(e.target.value) || 0)}
               placeholder="Cantidad"
               className="w-full px-3 py-2 border rounded-lg text-sm mb-2 bg-background dark:bg-muted dark:border-border"
               min={0}

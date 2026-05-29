@@ -8,7 +8,9 @@ import { fmtQ } from '@/lib/exporters';
 import { CoreEngineService } from '@/services/CoreEngineService';
 import { AgenteInteligente } from '@/services/ai/AgenteInteligente';
 import { BarChart3, TrendingUp, TrendingDown, DollarSign, Percent, Shield, AlertTriangle, ArrowLeft, ArrowRight, FolderKanban, Wallet, Users, ShoppingCart, PieChartIcon, LineChartIcon, Activity, Target, GitCompare } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid, AreaChart, Area, Legend, RadialBarChart, RadialBar } from 'recharts';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type KPIColor = 'emerald' | 'red' | 'blue' | 'indigo' | 'purple' | 'amber' | 'teal' | 'pink';
 
@@ -31,7 +33,7 @@ const KPI: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: 
       <div className="flex items-center justify-between mb-1">
         <div className="p-1.5 rounded-lg bg-white/20"><Icon className="w-3.5 h-3.5" /></div>
       </div>
-      <div className="text-[10px] uppercase tracking-wider opacity-80 font-semibold">{label}</div>
+      <div className="text-tiny uppercase tracking-wider opacity-80 font-semibold">{label}</div>
       <div className="text-sm sm:text-base font-bold leading-tight mt-0.5">{value}</div>
     </button>
   );
@@ -183,17 +185,36 @@ const Dashboard: React.FC = () => {
     setHiddenCharts(prev => new Set(prev).add(id));
   }, []);
 
+  const handleExportDashboard = () => {
+    const rows = [
+      ['CONSTRUCTORA WM/M&S - Resumen Ejecutivo'],
+      [`Fecha: ${new Date().toLocaleDateString()}`],
+      [],
+      ['KPIs Principales'],
+      ['Métrica', 'Valor'],
+      ['Ingresos Totales', fmtQ(stats.ingresos)],
+      ['Gastos Totales', fmtQ(stats.gastos)],
+      ['Balance Neto', fmtQ(stats.balance)],
+      ['Rentabilidad Promedio', `${stats.rentabilidad.toFixed(1)}%`],
+      ['Proyectos Activos', stats.activos],
+      ['OC Pendientes', stats.ocPendientes],
+    ];
+    import('@/lib/exporters').then(({ downloadCSV }) => {
+      downloadCSV(`resumen_ejecutivo_${new Date().toISOString().slice(0,10)}.csv`, rows);
+    });
+  };
+
   const chartDefinitions = useMemo((): Record<string, ChartDef> => ({
     'kpi': {
       id: 'kpi', title: 'KPIs', icon: <TrendingUp className="w-3.5 h-3.5 text-blue-700" />,
       span: 'col-span-12', height: 'min-h-[90px]',
       render: () => (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 p-2">
-          <KPI icon={TrendingUp} label="Ingresos" value={fmtQ(stats.ingresos)} color="emerald" />
-          <KPI icon={TrendingDown} label="Gastos" value={fmtQ(stats.gastos)} color="red" />
-          <KPI icon={Wallet} label="Balance" value={fmtQ(stats.balance)} color={stats.balance >= 0 ? 'blue' : 'red'} />
-          <KPI icon={FolderKanban} label="Proyectos" value={String(stats.activos)} color="indigo" />
-          <KPI icon={Percent} label="Rentab." value={`${stats.rentabilidad.toFixed(1)}%`} color={stats.rentabilidad >= 0 ? 'teal' : 'amber'} />
+          <KPI icon={TrendingUp} label="Ingresos" value={fmtQ(stats.ingresos)} color="emerald" onClick={() => setView('financiero')} />
+          <KPI icon={TrendingDown} label="Gastos" value={fmtQ(stats.gastos)} color="red" onClick={() => setView('financiero')} />
+          <KPI icon={Wallet} label="Balance" value={fmtQ(stats.balance)} color={stats.balance >= 0 ? 'blue' : 'red'} onClick={() => setView('financiero')} />
+          <KPI icon={FolderKanban} label="Proyectos" value={String(stats.activos)} color="indigo" onClick={() => setView('proyectos')} />
+          <KPI icon={Percent} label="Rentab." value={`${stats.rentabilidad.toFixed(1)}%`} color={stats.rentabilidad >= 0 ? 'teal' : 'amber'} onClick={() => setView('financiero')} />
           <KPI icon={ShoppingCart} label="OC Pend." value={String(stats.ocPendientes)} color="purple" onClick={() => setView('compras')} />
         </div>
       ),
@@ -434,10 +455,21 @@ const pageClass = "flex-1 grid grid-cols-12 gap-1 sm:gap-2 overflow-hidden";
             </div>
             <button onClick={nextPage} className="p-1.5 rounded hover:bg-accent text-muted-foreground"><ArrowRight className="w-4 h-4" /></button>
           </div>
-          <select value={filtroProyecto} onChange={e => setFiltroProyecto(e.target.value)} className="select-standard text-[10px] py-1">
-            <option value="todos">Todos los proyectos</option>
-            {presupuestos.map(p => <option key={p.id} value={p.id}>{p.proyecto}</option>)}
-          </select>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={handleExportDashboard}
+              className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+            >
+              <Download className="w-3 h-3 mr-1.5" />
+              EXPORTAR RESUMEN
+            </Button>
+            <select value={filtroProyecto} onChange={e => setFiltroProyecto(e.target.value)} className="input-standard text-tiny py-1 h-8 w-auto min-w-[180px]">
+              <option value="todos">Todos los proyectos</option>
+              {presupuestos.map(p => <option key={p.id} value={p.id}>{p.proyecto}</option>)}
+            </select>
+          </div>
         </div>
 
         {/* Charts grid - 0 scroll */}

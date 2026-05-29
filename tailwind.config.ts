@@ -87,6 +87,10 @@ export default {
         mono: ['JetBrains Mono', 'monospace'],
         sans: ['Inter', 'sans-serif'],
       },
+      fontSize: {
+        'tiny': 'var(--text-tiny)',
+        'micro': 'var(--text-micro)',
+      },
       borderRadius: {
         lg: 'calc(var(--radius) + 2px)',
         md: 'var(--radius)',
@@ -160,6 +164,10 @@ export default {
         'slideInRight': 'slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         'slideInLeft': 'slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         'bounceIn': 'bounceIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+      },
+      transitionDuration: {
+        '1500': '1500ms',
+        '2000': '2000ms',
       },
       typography: {
         DEFAULT: {

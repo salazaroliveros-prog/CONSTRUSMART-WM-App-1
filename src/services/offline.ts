@@ -94,16 +94,29 @@ export async function processPendingMutations(
 
   let ok = 0;
   let fail = 0;
+  const MAX_ATTEMPTS = 3;
 
   for (let i = 0; i < pending.length; i++) {
     const m = pending[i];
-    try {
-      await exec(m);
-      removePendingMutation(userId, m.id);
-      ok++;
-    } catch {
-      fail++;
-    }
+    let success = false;
+    let attempt = 0;
+
+    while (attempt < MAX_ATTEMPTS && !success) {
+      try {
+        await exec(m);
+        success = true;
+        ok++;
+        removePendingMutation(userId, m.id);
+      } catch (e) {
+        attempt++;
+        if (attempt >= MAX_ATTEMPTS) {
+          fail++;
+          console.error(`Final failure for mutation ${m.id} on table ${m.table} after ${MAX_ATTEMPTS} attempts:`, e);
+        } else {
+          const delay = Math.pow(2, attempt) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
     onProgress?.(i + 1, pending.length);
   }
 
