@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import type { Presupuesto } from '@/types/supabase';
 import PageShell from '@/components/shared/PageShell';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Play, PauseCircle, CheckCircle, Folder, Filter, Edit3, Save, Trash2, X, ChevronDown, ChevronRight, DollarSign, TrendingUp, TrendingDown, Ruler, Percent, AlertTriangle, Download } from 'lucide-react';
 import { downloadCSV } from '@/lib/exporters';
 import { toast } from 'sonner';
