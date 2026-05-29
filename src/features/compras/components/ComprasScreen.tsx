@@ -7,9 +7,9 @@ import {
   Truck, CheckCircle, AlertCircle, Clock,
 } from 'lucide-react';
 import type {
-  Proveedor, CreateProveedor, UpdateProveedor,
+  Proveedor, CreateProveedor,
   OrdenCompra, CreateOrdenCompra, OrdenCompraItem, CreateOrdenCompraItem,
-  RecepcionOC, CreateRecepcionOC, RecepcionOCItem, CreateRecepcionOCItem,
+  CreateRecepcionOC, CreateRecepcionOCItem,
 } from '@/types/supabase';
 import { ProveedoresService } from '@/services/compras/ProveedoresService';
 import { OrdenesCompraService } from '@/services/compras/OrdenesCompraService';
@@ -40,7 +40,7 @@ const estatusIcon: Record<string, React.ComponentType<{ className?: string }>> =
 };
 
 const ComprasScreen: React.FC = () => {
-  const { session, proveedores, setView, proyectos, presupuestos } = useAppContext();
+  const { session, proveedores, proyectos, presupuestos } = useAppContext();
   const userId = session?.user?.id;
 
   const [tab, setTab] = useState<Tab>('proveedores');
@@ -303,11 +303,11 @@ const ComprasScreen: React.FC = () => {
     setOcItemForms([...ocItemForms, { descripcion: '', cantidad: 1, unidad: 'pza', precioUnitario: 0, importe: 0, cantidadRecibida: 0, materialId: undefined }]);
   };
 
-  const updateItemRow = (idx: number, field: keyof OCItemForm, value: string | number) => {
+      const updateItemRow = (idx: number, field: keyof OCItemForm, value: string | number) => {
     setOcItemForms(prev => {
       const next = [...prev];
-      const current = { ...next[idx] };
-      current[field] = value as any;
+      const current = { ...next[idx] } as Record<string, any>;
+      current[field] = value;
 
       if (field === 'materialId' && typeof value === 'string') {
         const material = materialOptions.find(m => m.id === value);

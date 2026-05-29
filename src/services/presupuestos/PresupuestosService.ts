@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase';
 import { Presupuesto, validatePresupuesto } from '@/types/supabase';
-import { toast } from 'sonner';
 
 /**
  * Servicio para lógica de presupuestos y sus renglones.
@@ -75,8 +74,8 @@ export const PresupuestosService = {
   },
 
   async addPresupuesto(payload: Record<string, unknown>) {
-    const { data, error } = await supabase
-      .from('presupuestos')
+    const { data, error } = await (supabase
+      .from('presupuestos') as any)
       .insert(payload)
       .select()
       .single();
@@ -97,8 +96,8 @@ export const PresupuestosService = {
   },
 
   async updatePresupuesto(id: string, userId: string, payload: Record<string, unknown>) {
-    const { data, error } = await supabase
-      .from('presupuestos')
+    const { data, error } = await (supabase
+      .from('presupuestos') as any)
       .update(payload)
       .eq('id', id)
       .eq('user_id', userId)
@@ -126,7 +125,7 @@ export const PresupuestosService = {
   async syncPresupuestoToTables(presupuestoId: string, lineas: any[]): Promise<boolean> {
     try {
       // 1) Delete existing subrenglones and their child rows (ON DELETE CASCADE exists)
-      const { error: delError } = await supabase.from('subrenglones').delete().eq('presupuesto_id', presupuestoId);
+      const { error: delError } = await (supabase.from('subrenglones') as any).delete().eq('presupuesto_id', presupuestoId);
       if (delError) {
         console.warn('Error deleting old subrenglones', delError);
         // continue to attempt insertions
@@ -144,7 +143,7 @@ export const PresupuestosService = {
           rendimiento: linea.rendimiento != null ? linea.rendimiento : null,
         };
 
-        const { data: subData, error: subErr } = await supabase.from('subrenglones').insert(subrPayload).select().single();
+        const { data: subData, error: subErr } = await (supabase.from('subrenglones') as any).insert(subrPayload).select().single();
         if (subErr || !subData) {
           console.warn('Failed to insert subrenglon', subErr, subrPayload);
           continue;
@@ -165,7 +164,7 @@ export const PresupuestosService = {
                 created_at: new Date().toISOString(),
               };
                
-              await supabase.from('subrenglon_materiales').insert(matPayload);
+              await (supabase.from('subrenglon_materiales') as any).insert(matPayload);
             } catch (e) {
               console.warn('insert material failed', e);
             }
@@ -186,7 +185,7 @@ export const PresupuestosService = {
                 created_at: new Date().toISOString(),
               };
                
-              await supabase.from('subrenglon_mano_obra').insert(moPayload);
+              await (supabase.from('subrenglon_mano_obra') as any).insert(moPayload);
             } catch (e) {
               console.warn('insert manoobra failed', e);
             }
@@ -207,7 +206,7 @@ export const PresupuestosService = {
                 created_at: new Date().toISOString(),
               };
                
-              await supabase.from('subrenglon_equipos').insert(eqPayload);
+              await (supabase.from('subrenglon_equipos') as any).insert(eqPayload);
             } catch (e) {
               console.warn('insert equipo failed', e);
             }
@@ -223,7 +222,7 @@ export const PresupuestosService = {
   },
 
   async deletePresupuesto(id: string, userId?: string) {
-    let query = supabase.from('presupuestos').delete().eq('id', id);
+    let query = (supabase.from('presupuestos') as any).delete().eq('id', id);
     if (userId) query = query.eq('user_id', userId);
     const { error } = await query;
     if (error) throw error;
@@ -249,8 +248,8 @@ export const PresupuestosService = {
       if (payload.lineas !== undefined) dbPayload.lineas = payload.lineas;
       if (payload.fase !== undefined) dbPayload.fase = payload.fase;
 
-      const { data, error } = await supabase
-        .from('presupuestos')
+      const { data, error } = await (supabase
+        .from('presupuestos') as any)
         .update(dbPayload)
         .eq('id', presupuestoId)
         .select()

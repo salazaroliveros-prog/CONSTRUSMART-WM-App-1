@@ -52,6 +52,7 @@ interface ChartDef {
 const Dashboard: React.FC = () => {
   const { presupuestos, transacciones, proveedores, ordenesCompra, setView, transicionFase } = useAppContext();
   const [pagina, setPagina] = useState(0);
+  const [carouselDir, setCarouselDir] = useState<'left' | 'right'>('right');
   const [alertas, setAlertas] = useState<any[]>([]);
   const [filtroProyecto, setFiltroProyecto] = useState('todos');
   const [chartOrder, setChartOrder] = useState<string[][]>(() => {
@@ -161,8 +162,8 @@ const Dashboard: React.FC = () => {
     }
   }, [visibleCharts.length, currentPageCharts]);
 
-  const nextPage = useCallback(() => setPagina(p => (p + 1) % totalPaginas), [totalPaginas]);
-  const prevPage = useCallback(() => setPagina(p => (p - 1 + totalPaginas) % totalPaginas), [totalPaginas]);
+  const nextPage = useCallback(() => { setCarouselDir('right'); setPagina(p => (p + 1) % totalPaginas); }, [totalPaginas]);
+  const prevPage = useCallback(() => { setCarouselDir('left'); setPagina(p => (p - 1 + totalPaginas) % totalPaginas); }, [totalPaginas]);
 
   const handleDrop = useCallback((sourceId: string, targetId: string) => {
     setChartOrder(prev => {
@@ -440,7 +441,7 @@ const pageClass = "flex-1 grid grid-cols-12 gap-1 sm:gap-2 overflow-hidden";
         </div>
 
         {/* Charts grid - 0 scroll */}
-        <div className={pageClass}>
+        <div key={pagina} className={`${pageClass} ${carouselDir === 'right' ? 'animate-carousel-right' : 'animate-carousel-left'}`}>
           {visibleCharts.length > 0 ? (
             visibleCharts.map((chartId, idx) => {
               const def = chartDefinitions[chartId];

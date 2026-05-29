@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import PageShell from '@/components/shared/PageShell';
 import { renglonesPorTipologia, Tipologia, tipologiaLabels, Renglon, SubMaterial, SubManoObra, SubEquipo, calcularAPU } from '@/data/renglones';
@@ -291,10 +291,6 @@ const PresupuestoScreen: React.FC = () => {
       if (n.has(id)) n.delete(id); else n.add(id);
       return n;
     });
-  }, []);
-
-  const handleMetaChange = useCallback((key: string, value: string | number) => {
-    setMeta(prev => ({ ...prev, [key]: value }));
   }, []);
 
   const calidadReferencial = useMemo(() => {
@@ -767,7 +763,7 @@ const PresupuestoScreen: React.FC = () => {
                 </select>
                 <button onClick={handleSave} disabled={saving} className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 px-2.5 py-1 rounded text-[11px] font-semibold text-white disabled:opacity-40"><Save className="w-3 h-3" />{saving ? 'Guardando...' : 'Guardar'}</button>
                 <button onClick={handleExportCSV} disabled={!lineas.length} className="flex items-center gap-1 bg-white/20 hover:bg-white/30 px-2.5 py-1 rounded text-[11px] font-semibold disabled:opacity-40"><Download className="w-3 h-3" />CSV</button>
-                <button onClick={handleExportPDF} disabled={!lineas.length} className="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 px-2.5 py-1 rounded text-[11px] font-semibold disabled:opacity-40"><FileText className="w-3 h-3" />PDF</button>
+                <button onClick={() => handleExportPDF()} disabled={!lineas.length} className="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 px-2.5 py-1 rounded text-[11px] font-semibold disabled:opacity-40"><FileText className="w-3 h-3" />PDF</button>
               </div>
             </div>
 
@@ -1121,13 +1117,6 @@ function areEqualRenglonCardProps(prev: React.ComponentProps<typeof RenglonCard>
     prev.onToggle === next.onToggle
   );
 }
-
-const Field = React.memo<{ label: string; value: number; onChange: (v: number) => void }>(({ label, value, onChange }) => (
-  <div>
-    <label className="text-[10px] text-muted-foreground font-semibold">{label}</label>
-    <input type="number" value={value} onChange={e => onChange(parseFloat(e.target.value) || 0)} className="w-full px-2 py-1 text-xs border rounded" />
-  </div>
-));
 
 const Stat = React.memo<{ label: string; value: string; highlight?: boolean }>(({ label, value, highlight }) => (
   <div className={`p-2 rounded ${highlight ? 'bg-emerald-500 col-span-2 md:col-span-1' : 'bg-white/10'}`}>

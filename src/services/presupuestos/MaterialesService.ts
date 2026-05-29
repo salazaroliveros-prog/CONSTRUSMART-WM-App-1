@@ -50,8 +50,8 @@ export const MaterialesService = {
   },
 
   async addMaterial(material: any) {
-    const { data, error } = await supabase
-      .from('materiales_proyecto')
+    const { data, error } = await (supabase
+      .from('materiales_proyecto') as any)
       .insert(material)
       .select()
       .single();
@@ -63,8 +63,8 @@ export const MaterialesService = {
     const criterio = nombre.trim();
     if (!criterio) return null;
 
-    const { data, error } = await supabase
-      .from('materiales_proyecto')
+    const { data, error } = await (supabase
+      .from('materiales_proyecto') as any)
       .select('*')
       .eq('presupuesto_id', presupuestoId)
       .ilike('nombre', `%${criterio}%`)
@@ -75,8 +75,8 @@ export const MaterialesService = {
   },
 
   async registrarUso(materialId: string, cantidad: number) {
-    const { data, error } = await supabase
-      .from('movimientos_materiales')
+    const { data, error } = await (supabase
+      .from('movimientos_materiales') as any)
       .insert({ material_id: materialId, tipo: 'salida', cantidad })
       .select()
       .single();
