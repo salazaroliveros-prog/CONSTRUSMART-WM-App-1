@@ -7,10 +7,9 @@ import ChartCard from '@/components/shared/ChartCard';
 import { fmtQ } from '@/lib/exporters';
 import { CoreEngineService } from '@/services/CoreEngineService';
 import { AgenteInteligente } from '@/services/ai/AgenteInteligente';
-import { BarChart3, TrendingUp, TrendingDown, DollarSign, Percent, Shield, AlertTriangle, ArrowLeft, ArrowRight, FolderKanban, Wallet, Users, ShoppingCart, PieChartIcon, LineChartIcon, Activity, Target, GitCompare } from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, DollarSign, Percent, Shield, AlertTriangle, ArrowLeft, ArrowRight, FolderKanban, Wallet, ShoppingCart, PieChartIcon, LineChartIcon, Activity, Target, GitCompare, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, RadialBarChart, RadialBar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 type KPIColor = 'emerald' | 'red' | 'blue' | 'indigo' | 'purple' | 'amber' | 'teal' | 'pink';
 
