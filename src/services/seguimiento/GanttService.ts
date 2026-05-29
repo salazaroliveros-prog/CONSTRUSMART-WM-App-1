@@ -16,7 +16,7 @@ export interface RenglonCPM {
 }
 
 interface RenglonConLinea extends Renglon {
-  id?: string;
+  id: string;
   codigo: string;
   descripcion: string;
   cantidad: number;
@@ -135,4 +135,3 @@ export const GanttService = {
   },
 };
 
-export type { Dependencia };

@@ -227,7 +227,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       for (const t of tables) {
         try {
-          const res = await supabase.from(t.name).select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE);
+          const res = await (supabase.from(t.name) as any).select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(PAGE_SIZE);
           if (res.error) throw res.error;
           anyOnline = true;
           const data = (res.data || []).map((d: Record<string, unknown>) => t.mapper(d));
@@ -355,7 +355,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        const { ok, fail } = await processPendingMutations(
          session.user.id,
          async (m) => {
-           let q = supabase.from(m.table);
+            let q = supabase.from(m.table) as any;
            if (m.action === 'INSERT') {
              const { error } = await q.insert(m.data).select().single();
              if (error) throw error;

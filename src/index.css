@@ -536,7 +536,7 @@ body {
 }
 
 /* ============================================
-   ANIMATIONS — solo para carga inicial, sin backwards
+   ANIMATIONS
    ============================================ */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
@@ -598,22 +598,20 @@ body {
   100% { background-position: 200% 0; }
 }
 
-/* ============================================
-   VIEW TRANSITIONS — slide entre módulos
-   ============================================ */
-@keyframes viewSlideRight {
-  from { transform: translateX(30px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+/* ===== TRANSICIONES DE VISTA (MÓDULOS) — fade + slide combinados ===== */
+@keyframes viewEnterRight {
+  0% { opacity: 0; transform: translateX(40px); }
+  100% { opacity: 1; transform: translateX(0); }
 }
 
-@keyframes viewSlideLeft {
-  from { transform: translateX(-30px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+@keyframes viewEnterLeft {
+  0% { opacity: 0; transform: translateX(-40px); }
+  100% { opacity: 1; transform: translateX(0); }
 }
 
-@keyframes viewEnter {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@keyframes viewFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 @keyframes growBar {
@@ -638,15 +636,15 @@ body {
 
 /* Animation utility classes */
 .animate-view-slide-right {
-  animation: viewSlideRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: viewEnterRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-view-slide-left {
-  animation: viewSlideLeft 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: viewEnterLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-view-enter {
-  animation: viewEnter 0.25s ease-out forwards;
+  animation: viewFadeIn 0.35s ease-out forwards;
 }
 
 .animate-fadeIn {
@@ -699,26 +697,32 @@ body {
   animation: shimmer 1.5s infinite;
 }
 
-/* ===== Nuevas animaciones de entrada ===== */
-.animate-stagger-fade {
-  animation: staggerFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  opacity: 0;
+/* ===== CARRUSEL / PAGINACIÓN ===== */
+@keyframes carouselSlideRight {
+  0% { opacity: 0; transform: translateX(30px); }
+  100% { opacity: 1; transform: translateX(0); }
 }
 
-.animate-grow-bar {
-  animation: growBar 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transform: scaleY(0);
-  transform-origin: bottom;
+@keyframes carouselSlideLeft {
+  0% { opacity: 0; transform: translateX(-30px); }
+  100% { opacity: 1; transform: translateX(0); }
 }
 
-.animate-fill-bar {
-  animation: fillProgress 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  width: 0;
+.animate-carousel-right {
+  animation: carouselSlideRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.animate-count-up {
-  animation: countUp 0.4s ease-out forwards;
-  opacity: 0;
+.animate-carousel-left {
+  animation: carouselSlideLeft 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ===== TRANSICIÓN SIDEBAR ===== */
+.sidebar-transition {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-item-enter {
+  animation: fadeIn 0.2s ease-out forwards;
 }
 
 /* Stagger delay utility classes */

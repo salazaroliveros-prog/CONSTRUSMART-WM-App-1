@@ -39,8 +39,8 @@ export const PlanillaService = {
       throw new Error(`Ya existe un registro de pago para este empleado en la fecha ${fecha}`);
     }
 
-    const { data, error } = await supabase
-      .from('transacciones')
+    const { data, error } = await (supabase
+      .from('transacciones') as any)
       .insert({
         tipo: 'gasto',
         categoria: 'mano-obra',

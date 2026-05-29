@@ -20,7 +20,7 @@ export class NotificacionesService {
 
     // Intentar insertar en el servidor; si falla y estamos offline, guardar pending
     try {
-      const { data, error } = await supabase.from('notificaciones').insert(payload).select().single();
+      const { data, error } = await (supabase.from('notificaciones') as any).insert(payload).select().single();
       if (error) throw error;
       return data as Record<string, unknown>;
     } catch (e) {
@@ -49,8 +49,8 @@ export class NotificacionesService {
   }
 
   static async marcarLeida(id: string) {
-    const { error } = await supabase
-      .from('notificaciones')
+    const { error } = await (supabase
+      .from('notificaciones') as any)
       .update({ leido: true })
       .eq('id', id);
     if (error) throw error;

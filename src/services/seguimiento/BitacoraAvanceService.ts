@@ -20,8 +20,8 @@ export const BitacoraAvanceService = {
     fecha: string;
   }) {
     const { data: { user } } = await supabase.auth.getUser();
-    const { data, error } = await supabase
-      .from('bitacora_avance')
+    const { data, error } = await (supabase
+      .from('bitacora_avance') as any)
       .insert({ ...payload, user_id: user?.id })
       .select()
       .single();
@@ -44,8 +44,8 @@ export const BitacoraAvanceService = {
    * Encapsula la llamada a la tabla presupuestos para que el panel no acceda a supabase directamente.
    */
   async actualizarAvanceFisico(presupuestoId: string, avanceFisico: number) {
-    const { error } = await supabase
-      .from('presupuestos')
+    const { error } = await (supabase
+      .from('presupuestos') as any)
       .update({ avance_fisico: Math.min(100, Math.max(0, avanceFisico)) })
       .eq('id', presupuestoId);
     if (error) throw error;
