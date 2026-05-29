@@ -1,7 +1,8 @@
-import React, { useRef, useMemo, Suspense, lazy } from 'react';
+import React, { useRef, useMemo, Suspense, lazy, useState, useEffect } from 'react';
 import { useAuthContext } from '@/contexts/AppContext';
 import { ScreenSkeleton } from '@/components/shared/Skeleton';
 import LoginScreen from '@/components/screens/LoginScreen';
+import Sidebar from '@/components/shared/Sidebar';
 import { Loader2 } from 'lucide-react';
 
 // Lazy loading para reducir bundle inicial
@@ -70,10 +71,18 @@ const AppLayout: React.FC = () => {
     }
   };
 
-  const animClass = animKey.dir === 'none' ? '' : `animate-${animKey.dir === 'right' ? 'slide-right' : 'slide-left'}`;
+  // Improved slide animation based on direction
+  const getAnimClass = () => {
+    if (animKey.dir === 'none') return 'animate-view-enter';
+    if (animKey.dir === 'right') return 'animate-view-slide-right';
+    return 'animate-view-slide-left';
+  };
+
+  const isNotLogin = view !== 'login' && session;
 
   return (
-    <div key={animKey.key} className={animClass} data-view={view}>
+    <div key={animKey.key} className={getAnimClass()} data-view={view}>
+      {isNotLogin && <Sidebar />}
       <CommandPalette />
       <DevDiagnostics />
       <Suspense fallback={<ScreenSkeleton />}>

@@ -62,7 +62,7 @@ const TeamsScreen: React.FC = () => {
       // Intentar buscar el usuario por email en auth.users via RPC o por user_id directo
       // Si el valor parece un UUID, usarlo directamente; si no, buscar por email en empleados
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(inviteEmail.trim());
-      let targetUserId = inviteEmail.trim();
+      const targetUserId = inviteEmail.trim();
 
       if (!isUUID) {
         toast.error('Ingresa el ID de usuario (UUID). Puedes encontrarlo en el perfil del colaborador.');

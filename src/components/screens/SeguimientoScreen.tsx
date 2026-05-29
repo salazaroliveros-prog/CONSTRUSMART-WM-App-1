@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { GanttService } from '@/services/seguimiento/GanttService';
 import type { RenglonCPM } from '@/services/seguimiento/GanttService';
@@ -6,13 +6,12 @@ import type { Renglon } from '@/data/renglones';
 import PageShell from '@/components/shared/PageShell';
 import GanttView from '@/components/shared/GanttView';
 import { BitacoraAvancePanel } from '@/components/shared/BitacoraAvancePanel';
-import { SeguimientoAvanceScreen } from '@/components/SeguimientoAvanceScreen';
-import { fmtQ, downloadCSV, printPDF } from '@/lib/exporters';
-import { Download, FileText, Play, Users, Clock, Filter, TrendingUp, TrendingDown, BarChart3, PieChartIcon, Wallet, FolderKanban, Percent, ArrowLeft, ArrowRight, Eye, DollarSign, Calendar } from 'lucide-react';
-import type { Presupuesto } from '@/types/supabase';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import ChartCard from '@/components/shared/ChartCard';
+import { fmtQ } from '@/lib/exporters';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, Legend } from 'recharts';
+import { TrendingUp, TrendingDown, Wallet, FolderKanban, Percent, ArrowLeft, ArrowRight, BarChart3, PieChartIcon, LineChartIcon, Activity, DollarSign, Users, Calendar, Clock, ShieldCheck, Target } from 'lucide-react';
 
-const PIE_COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
+const PIE_COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#84CC16'];
 const KPIColorMap: Record<string, string> = {
   emerald: 'from-emerald-500/90 to-emerald-600/90',
   blue: 'from-blue-600/90 to-blue-700/90',
@@ -20,38 +19,42 @@ const KPIColorMap: Record<string, string> = {
   amber: 'from-amber-500/90 to-amber-600/90',
   red: 'from-red-500/90 to-red-600/90',
   teal: 'from-teal-500/90 to-teal-600/90',
+  purple: 'from-purple-600/90 to-purple-700/90',
 };
 
-const KPI: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: string; value: string; color: string; delay?: number }> = ({ icon: Icon, label, value, color, delay }) => (
-  <div className={`bg-gradient-to-br ${KPIColorMap[color]} text-white rounded-xl p-3 shadow-md flex flex-col justify-center animate-fade-in-up`} style={delay ? { animationDelay: `${delay}ms` } : undefined}>
-    <div className="flex items-center justify-between mb-1">
-      <div className="p-1.5 rounded-lg bg-white/20"><Icon className="w-3.5 h-3.5" /></div>
-    </div>
-    <div className="text-[10px] uppercase tracking-wider opacity-80 font-semibold">{label}</div>
-    <div className="text-sm sm:text-base font-bold leading-tight mt-0.5">{value}</div>
-  </div>
-);
+interface ChartDef {
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  span: string;
+  height: string;
+  render: () => React.ReactNode;
+}
 
 const SeguimientoScreen: React.FC = () => {
   const { presupuestos, transacciones, transicionFase } = useAppContext();
   const [selectedProyecto, setSelectedProyecto] = useState<string | null>(null);
   const [pagina, setPagina] = useState(0);
-  const totalPaginas = 3;
+  const [hiddenCharts, setHiddenCharts] = useState<Set<string>>(new Set());
+  const [chartOrder, setChartOrder] = useState<string[][]>(() => {
+    try {
+      const saved = localStorage.getItem('seg_charts');
+      return saved ? JSON.parse(saved) : [
+        ['kpi', 'avance-bar', 'fase-donut', 'presup-vs-real', 'evo-avance', 'costos-acum'],
+        ['flujo-caja', 'gastos-cat', 'comp-mensual', 'ingresos-proy', 'margen-mensual'],
+        ['gantt', 'ruta-critica', 'planilla', 'presup-vs-planilla', 'avance-semanal'],
+      ];
+    } catch { return [
+      ['kpi', 'avance-bar', 'fase-donut', 'presup-vs-real', 'evo-avance', 'costos-acum'],
+      ['flujo-caja', 'gastos-cat', 'comp-mensual', 'ingresos-proy', 'margen-mensual'],
+      ['gantt', 'ruta-critica', 'planilla', 'presup-vs-planilla', 'avance-semanal'],
+    ]; }
+  });
 
-  const rutaCritica = useMemo(() => {
-    if (!selectedProyecto) return [];
-    const p = presupuestos.find(pr => pr.id === selectedProyecto);
-    if (!p) return [];
-    const lineas = (p.lineas || []) as (Renglon & { cantidad: number })[];
-    return GanttService.calcularRutaCritica(lineas);
-  }, [selectedProyecto, presupuestos]);
+  // Save chart order
+  useEffect(() => { localStorage.setItem('seg_charts', JSON.stringify(chartOrder)); }, [chartOrder]);
 
-  const gastosPersonal = useMemo(() => {
-    if (!selectedProyecto) return 0;
-    return transacciones.filter(t => t.proyectoId === selectedProyecto && t.categoria === 'mano-obra')
-                        .reduce((acc, t) => acc + t.costoTotal, 0);
-  }, [selectedProyecto, transacciones]);
-
+  // Data computations
   const ejecucion = presupuestos.filter(p => p.fase === 'ejecución');
   const planeacion = presupuestos.filter(p => p.fase === 'planeación');
   const pausa = presupuestos.filter(p => p.fase === 'pausa');
@@ -60,9 +63,8 @@ const SeguimientoScreen: React.FC = () => {
   const stats = useMemo(() => {
     const ingresos = transacciones.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
     const gastos = transacciones.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
-    const totalPresupuestado = presupuestos.reduce((s, p) => s + (p.total || 0), 0);
     const avancePromedio = ejecucion.length > 0 ? ejecucion.reduce((s, p) => s + (p.avanceFisico || 0), 0) / ejecucion.length : 0;
-    return { ingresos, gastos, totalPresupuestado, avancePromedio, activos: ejecucion.length + planeacion.length, balance: ingresos - gastos };
+    return { ingresos, gastos, totalPresupuestado: presupuestos.reduce((s, p) => s + (p.total || 0), 0), avancePromedio, activos: ejecucion.length + planeacion.length, balance: ingresos - gastos };
   }, [presupuestos, transacciones, ejecucion, planeacion.length]);
 
   const flujoMensual = useMemo(() => {
@@ -76,20 +78,16 @@ const SeguimientoScreen: React.FC = () => {
     return Object.values(data).sort((a, b) => a.mes.localeCompare(b.mes));
   }, [transacciones]);
 
-  const avanceData = useMemo(() => {
+  const avanceProyectos = useMemo(() => {
     if (ejecucion.length === 0) return [{ name: 'Sin datos', fisico: 0, financiero: 0 }];
     return ejecucion.slice(0, 10).map(p => ({
-      name: p.proyecto.slice(0, 14),
-      fisico: p.avanceFisico ?? 0,
-      financiero: p.avanceFinanciero ?? 0,
+      name: p.proyecto.slice(0, 14), fisico: p.avanceFisico ?? 0, financiero: p.avanceFinanciero ?? 0,
     }));
   }, [ejecucion]);
 
   const gastosPorCategoria = useMemo(() => {
     const cats: Record<string, number> = {};
-    transacciones.filter(t => t.tipo === 'gasto').forEach(t => {
-      cats[t.categoria] = (cats[t.categoria] || 0) + t.costoTotal;
-    });
+    transacciones.filter(t => t.tipo === 'gasto').forEach(t => { cats[t.categoria] = (cats[t.categoria] || 0) + t.costoTotal; });
     return Object.entries(cats).map(([name, value]) => ({ name, value }));
   }, [transacciones]);
 
@@ -99,297 +97,420 @@ const SeguimientoScreen: React.FC = () => {
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [presupuestos]);
 
-  const nextPage = useCallback(() => setPagina(p => (p + 1) % totalPaginas), []);
-  const prevPage = useCallback(() => setPagina(p => (p - 1 + totalPaginas) % totalPaginas), []);
+  // Presupuesto vs Real por proyecto
+  const presupuestoVsReal = useMemo(() => {
+    return presupuestos.slice(0, 10).map(p => {
+      const real = transacciones.filter(t => t.proyectoId === p.id && t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
+      return { name: p.proyecto.slice(0, 12), presupuesto: p.total || 0, real };
+    });
+  }, [presupuestos, transacciones]);
 
-  const handleExportCSV = () => {
-    const rows: (string | number)[][] = [
-      ['Seguimiento de Proyectos - CONSTRUCTORA WM/M&S'],
-      [`Fecha: ${new Date().toLocaleDateString('es-GT')}`],
-      [],
-      ['Proyecto', 'Cliente', 'Tipo', 'Fase', 'Presupuesto', 'Avance Físico %', 'Avance Financiero %', 'Ingresos', 'Gastos', 'Pendiente'],
-      ...presupuestos.map(p => [p.proyecto, p.cliente || '', p.tipologia || '', p.fase, p.total || 0, p.avanceFisico ?? 0, p.avanceFinanciero ?? 0, p.ingresos ?? 0, p.gastos ?? 0, p.pendienteAportar ?? 0]),
-    ];
-    downloadCSV(`seguimiento_proyectos_${new Date().toISOString().split('T')[0]}.csv`, rows);
-  };
+  // Ingresos por proyecto
+  const ingresosPorProyecto = useMemo(() => {
+    const map: Record<string, number> = {};
+    transacciones.filter(t => t.tipo === 'ingreso').forEach(t => {
+      const key = presupuestos.find(p => p.id === t.proyectoId)?.proyecto || 'Admin';
+      map[key] = (map[key] || 0) + t.costoTotal;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  }, [presupuestos, transacciones]);
 
-  const handleExportPDF = () => {
-    const body = `
-      <h2>Proyectos en Ejecución</h2>
-      <table>
-        <thead><tr><th>Proyecto</th><th>Cliente</th><th class="num">Presupuesto</th><th class="num">A. Físico</th><th class="num">A. Financ.</th><th class="num">Ingresos</th><th class="num">Gastos</th></tr></thead>
-        <tbody>${ejecucion.map(p => `<tr><td>${p.proyecto}</td><td>${p.cliente}</td><td class="num">${fmtQ(p.total)}</td><td class="num">${p.avanceFisico}%</td><td class="num">${p.avanceFinanciero}%</td><td class="num">${fmtQ(p.ingresos)}</td><td class="num">${fmtQ(p.gastos)}</td></tr>`).join('')}</tbody>
-      </table>
-      <h2>Proyectos en Planeación</h2>
-      <table>
-        <thead><tr><th>Proyecto</th><th>Cliente</th><th>Tipo</th><th class="num">Presupuesto</th></tr></thead>
-        <tbody>${planeacion.map(p => `<tr><td>${p.proyecto}</td><td>${p.cliente}</td><td>${p.tipologia}</td><td class="num">${fmtQ(p.total)}</td></tr>`).join('')}</tbody>
-      </table>
-    `;
-    printPDF('Informe de Seguimiento de Proyectos', body);
-  };
+  // Margen mensual
+  const margenMensual = useMemo(() => {
+    return flujoMensual.map(d => ({ ...d, margen: ((d.ingresos - d.gastos) / (d.ingresos || 1)) * 100 }));
+  }, [flujoMensual]);
+
+  // Costos acumulados
+  const costosAcumulados = useMemo(() => {
+    let acum = 0; let acumi = 0;
+    return flujoMensual.map(d => {
+      acum += d.gastos;
+      acumi += d.ingresos;
+      return { ...d, gastoAcum: acum, ingresoAcum: acumi };
+    });
+  }, [flujoMensual]);
+
+  // Ruta crítica
+  const rutaCritica = useMemo(() => {
+    if (!selectedProyecto) return [];
+    const p = presupuestos.find(pr => pr.id === selectedProyecto);
+    if (!p) return [];
+    const lineas = (p.lineas || []) as (Renglon & { cantidad: number })[];
+    return GanttService.calcularRutaCritica(lineas);
+  }, [selectedProyecto, presupuestos]);
+
+  // Gastos de planilla
+  const gastosPersonal = useMemo(() => {
+    if (!selectedProyecto) return 0;
+    return transacciones.filter(t => t.proyectoId === selectedProyecto && t.categoria === 'mano-obra').reduce((acc, t) => acc + t.costoTotal, 0);
+  }, [selectedProyecto, transacciones]);
+
+  // Presupuesto total del proyecto seleccionado
+  const presupuestoSeleccionado = useMemo(() => {
+    if (!selectedProyecto) return 0;
+    return presupuestos.find(p => p.id === selectedProyecto)?.total || 0;
+  }, [selectedProyecto, presupuestos]);
+
+  // Avance semanal simulado
+  const avanceSemanal = useMemo(() => {
+    const semanas = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6'];
+    return semanas.map((s, i) => ({
+      name: s,
+      avance: Math.min(100, (i + 1) * (stats.avancePromedio / 6)),
+      plan: Math.min(100, (i + 1) * 16.67),
+    }));
+  }, [stats.avancePromedio]);
+
+  const currentPageCharts = useMemo(() => chartOrder[pagina] || [], [chartOrder, pagina]);
+  const totalPaginas = chartOrder.length;
+  const visibleCharts = useMemo(() => currentPageCharts.filter(id => !hiddenCharts.has(id)), [currentPageCharts, hiddenCharts]);
+
+  // Auto-restore if all hidden
+  useEffect(() => {
+    if (visibleCharts.length === 0 && currentPageCharts.length > 0) {
+      setHiddenCharts(prev => { const next = new Set(prev); currentPageCharts.forEach(id => next.delete(id)); return next; });
+    }
+  }, [visibleCharts.length, currentPageCharts]);
+
+  const nextPage = useCallback(() => setPagina(p => (p + 1) % totalPaginas), [totalPaginas]);
+  const prevPage = useCallback(() => setPagina(p => (p - 1 + totalPaginas) % totalPaginas), [totalPaginas]);
+
+  const handleDrop = useCallback((sourceId: string, targetId: string) => {
+    setChartOrder(prev => {
+      const newOrder = prev.map(page => [...page]);
+      const pageIdx = newOrder.findIndex(page => page.includes(sourceId));
+      if (pageIdx === -1) return prev;
+      const srcIdx = newOrder[pageIdx].indexOf(sourceId);
+      const tgtIdx = newOrder[pageIdx].indexOf(targetId);
+      if (srcIdx === -1 || tgtIdx === -1) return prev;
+      [newOrder[pageIdx][srcIdx], newOrder[pageIdx][tgtIdx]] = [newOrder[pageIdx][tgtIdx], newOrder[pageIdx][srcIdx]];
+      return newOrder;
+    });
+  }, []);
+
+  const handleRemove = useCallback((id: string) => { setHiddenCharts(prev => new Set(prev).add(id)); }, []);
+
+  const chartDefinitions = useMemo((): Record<string, ChartDef> => ({
+    'kpi': {
+      id: 'kpi', title: 'KPIs', icon: <FolderKanban className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12', height: 'min-h-[90px]',
+      render: () => (
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-2">
+          <div className={`bg-gradient-to-br ${KPIColorMap.indigo} text-white rounded-xl p-3 shadow-md flex flex-col justify-center`}>
+            <div className="flex items-center justify-between mb-1"><div className="p-1.5 rounded-lg bg-white/20"><FolderKanban className="w-3.5 h-3.5" /></div></div>
+            <div className="text-[10px] uppercase tracking-wider opacity-80 font-semibold">Activos</div>
+            <div className="text-sm sm:text-base font-bold leading-tight mt-0.5">{String(stats.activos)}</div>
+          </div>
+          <div className={`bg-gradient-to-br ${KPIColorMap.blue} text-white rounded-xl p-3 shadow-md flex flex-col justify-center`}>
+            <div className="flex items-center justify-between mb-1"><div className="p-1.5 rounded-lg bg-white/20"><TrendingUp className="w-3.5 h-3.5" /></div></div>
+            <div className="text-[10px] uppercase tracking-wider opacity-80 font-semibold">Avance Prom.</div>
+            <div className="text-sm sm:text-base font-bold leading-tight mt-0.5">{stats.avancePromedio.toFixed(1)}%</div>
+          </div>
+          <div className={`bg-gradient-to-br ${KPIColorMap.emerald} text-white rounded-xl p-3 shadow-md flex flex-col justify-center`}>
+            <div className="flex items-center justify-between mb-1"><div className="p-1.5 rounded-lg bg-white/20"><Wallet className="w-3.5 h-3.5" /></div></div>
+            <div className="text-[10px] uppercase tracking-wider opacity-80 font-semibold">Presupuestado</div>
+            <div className="text-sm sm:text-base font-bold leading-tight mt-0.5">{fmtQ(stats.totalPresupuestado)}</div>
+          </div>
+          <div className={`bg-gradient-to-br ${KPIColorMap.red} text-white rounded-xl p-3 shadow-md flex flex-col justify-center`}>
+            <div className="flex items-center justify-between mb-1"><div className="p-1.5 rounded-lg bg-white/20"><TrendingDown className="w-3.5 h-3.5" /></div></div>
+            <div className="text-[10px] uppercase tracking-wider opacity-80 font-semibold">Gastos</div>
+            <div className="text-sm sm:text-base font-bold leading-tight mt-0.5">{fmtQ(stats.gastos)}</div>
+          </div>
+          <div className={`bg-gradient-to-br ${stats.balance >= 0 ? KPIColorMap.teal : KPIColorMap.amber} text-white rounded-xl p-3 shadow-md flex flex-col justify-center`}>
+            <div className="flex items-center justify-between mb-1"><div className="p-1.5 rounded-lg bg-white/20"><Percent className="w-3.5 h-3.5" /></div></div>
+            <div className="text-[10px] uppercase tracking-wider opacity-80 font-semibold">Balance</div>
+            <div className="text-sm sm:text-base font-bold leading-tight mt-0.5">{fmtQ(stats.balance)}</div>
+          </div>
+        </div>
+      ),
+    },
+    'avance-bar': {
+      id: 'avance-bar', title: 'Avance Físico vs Financiero', icon: <BarChart3 className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12 lg:col-span-7', height: 'min-h-[180px]',
+      render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={avanceProyectos} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+            <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} />
+            <Tooltip contentStyle={{ fontSize: 10, backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))' }} />
+            <Legend wrapperStyle={{ fontSize: 9 }} />
+            <Bar dataKey="fisico" fill="#1E3A8A" name="Físico %" radius={[2, 2, 0, 0]} />
+            <Bar dataKey="financiero" fill="#10B981" name="Financiero %" radius={[2, 2, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      ),
+    },
+    'fase-donut': {
+      id: 'fase-donut', title: 'Distribución por Fase', icon: <PieChartIcon className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12 sm:col-span-6 lg:col-span-5', height: 'min-h-[180px]',
+      render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={faseDistribucion} cx="50%" cy="50%" innerRadius={45} outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+              {faseDistribucion.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      ),
+    },
+    'presup-vs-real': {
+      id: 'presup-vs-real', title: 'Presupuesto vs Real', icon: <Target className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12 sm:col-span-6 lg:col-span-4', height: 'min-h-[160px]',
+      render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={presupuestoVsReal} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+            <XAxis dataKey="name" tick={{ fontSize: 8 }} />
+            <YAxis tick={{ fontSize: 8 }} />
+            <Tooltip formatter={(v: number) => fmtQ(v)} />
+            <Legend wrapperStyle={{ fontSize: 8 }} />
+            <Bar dataKey="presupuesto" fill="#3B82F6" name="Presup." radius={[2, 2, 0, 0]} />
+            <Bar dataKey="real" fill="#F59E0B" name="Real" radius={[2, 2, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      ),
+    },
+    'evo-avance': {
+      id: 'evo-avance', title: 'Evolución del Avance', icon: <LineChartIcon className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12 sm:col-span-6 lg:col-span-4', height: 'min-h-[160px]',
+      render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={avanceSemanal} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+            <XAxis dataKey="name" tick={{ fontSize: 8 }} />
+            <YAxis domain={[0, 100]} tick={{ fontSize: 8 }} />
+            <Line type="monotone" dataKey="avance" stroke="#10B981" strokeWidth={2} name="Real" dot={false} />
+            <Line type="monotone" dataKey="plan" stroke="#3B82F6" strokeWidth={2} name="Plan" strokeDasharray="4 4" dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      ),
+    },
+    'costos-acum': {
+      id: 'costos-acum', title: 'Costos Acumulados', icon: <Activity className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12 sm:col-span-6 lg:col-span-4', height: 'min-h-[160px]',
+      render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={costosAcumulados} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+            <XAxis dataKey="mes" tick={{ fontSize: 8 }} />
+            <YAxis tick={{ fontSize: 8 }} />
+            <Area type="monotone" dataKey="ingresoAcum" stroke="#10B981" fill="#10B981" fillOpacity={0.2} name="Ingresos Acum." />
+            <Area type="monotone" dataKey="gastoAcum" stroke="#EF4444" fill="#EF4444" fillOpacity={0.2} name="Gastos Acum." />
+          </AreaChart>
+        </ResponsiveContainer>
+      ),
+    },
+    'flujo-caja': {
+      id: 'flujo-caja', title: 'Flujo de Caja Mensual', icon: <TrendingUp className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12 lg:col-span-7', height: 'min-h-[180px]',
+      render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={flujoMensual} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+            <XAxis dataKey="mes" tick={{ fontSize: 9 }} />
+            <YAxis tick={{ fontSize: 9 }} />
+            <Tooltip formatter={(v: number) => fmtQ(v)} />
+            <Legend wrapperStyle={{ fontSize: 9 }} />
+            <Line type="monotone" dataKey="ingresos" stroke="#10B981" strokeWidth={2} name="Ingresos" />
+            <Line type="monotone" dataKey="gastos" stroke="#EF4444" strokeWidth={2} name="Gastos" />
+          </LineChart>
+        </ResponsiveContainer>
+      ),
+    },
+    'gastos-cat': {
+      id: 'gastos-cat', title: 'Gastos por Categoría', icon: <PieChartIcon className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12 sm:col-span-6 lg:col-span-5', height: 'min-h-[180px]',
+      render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={gastosPorCategoria} cx="50%" cy="50%" innerRadius={40} outerRadius={75} dataKey="value" label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`} labelLine={false}>
+              {gastosPorCategoria.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+            </Pie>
+            <Tooltip formatter={(v: number) => fmtQ(v)} />
+          </PieChart>
+        </ResponsiveContainer>
+      ),
+    },
+    'comp-mensual': {
+      id: 'comp-mensual', title: 'Comparativa Mensual', icon: <BarChart3 className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12', height: 'min-h-[120px]',
+      render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={flujoMensual} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+            <XAxis dataKey="mes" tick={{ fontSize: 9 }} />
+            <YAxis tick={{ fontSize: 9 }} />
+            <Tooltip formatter={(v: number) => fmtQ(v)} />
+            <Bar dataKey="ingresos" fill="#10B981" name="Ingresos" radius={[2, 2, 0, 0]} />
+            <Bar dataKey="gastos" fill="#EF4444" name="Gastos" radius={[2, 2, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      ),
+    },
+    'ingresos-proy': {
+      id: 'ingresos-proy', title: 'Ingresos por Proyecto', icon: <DollarSign className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12 sm:col-span-6 lg:col-span-5', height: 'min-h-[140px]',
+      render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={ingresosPorProyecto} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+            <XAxis type="number" tick={{ fontSize: 8 }} />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: 8 }} width={70} />
+            <Tooltip formatter={(v: number) => fmtQ(v)} />
+            <Bar dataKey="value" fill="#1E3A8A" radius={[0, 3, 3, 0]} name="Ingresos" />
+          </BarChart>
+        </ResponsiveContainer>
+      ),
+    },
+    'margen-mensual': {
+      id: 'margen-mensual', title: 'Margen Neto Mensual', icon: <Percent className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12 sm:col-span-6 lg:col-span-4', height: 'min-h-[140px]',
+      render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={margenMensual} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+            <XAxis dataKey="mes" tick={{ fontSize: 8 }} />
+            <YAxis domain={[-100, 100]} tick={{ fontSize: 8 }} />
+            <Line type="monotone" dataKey="margen" stroke="#8B5CF6" strokeWidth={2} name="Margen %" dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      ),
+    },
+    'gantt': {
+      id: 'gantt', title: 'Gantt del Proyecto', icon: <Calendar className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12 lg:col-span-7', height: 'min-h-[200px]',
+      render: () => (
+        <div className="h-full overflow-hidden">
+          {selectedProyecto ? (
+            <GanttView proyectoId={selectedProyecto} />
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted-foreground text-xs">Seleccione un proyecto arriba</div>
+          )}
+        </div>
+      ),
+    },
+    'ruta-critica': {
+      id: 'ruta-critica', title: 'Ruta Crítica', icon: <Clock className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12 sm:col-span-6 lg:col-span-5', height: 'min-h-[200px]',
+      render: () => (
+        <div className="overflow-y-auto h-full p-2 space-y-1.5">
+          {rutaCritica.length > 0 ? (
+            rutaCritica.filter(r => r.esRutaCritica).map((r: RenglonCPM) => (
+              <div key={r.id} className="flex justify-between p-2 border-b dark:border-border text-[11px]">
+                <span className="font-medium text-red-700 dark:text-red-400 truncate">{r.descripcion}</span>
+                <span className="text-red-600 dark:text-red-400 font-bold shrink-0 ml-2">{r.duracionDias}d</span>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-muted-foreground text-xs">Seleccione un proyecto para ver su ruta crítica</div>
+          )}
+        </div>
+      ),
+    },
+    'planilla': {
+      id: 'planilla', title: 'Control de Planilla', icon: <Users className="w-3.5 h-3.5 text-emerald-600" />,
+      span: 'col-span-12 sm:col-span-6 lg:col-span-5', height: 'min-h-[200px]',
+      render: () => (
+        <div className="p-2 space-y-2 overflow-y-auto h-full">
+          {selectedProyecto ? (
+            <>
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-center">
+                <div className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-semibold">Total Invertido</div>
+                <div className="text-xl font-bold text-blue-900 dark:text-blue-100">{fmtQ(gastosPersonal)}</div>
+              </div>
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Últimos Pagos</div>
+              {transacciones.filter(t => t.proyectoId === selectedProyecto && t.categoria === 'mano-obra').slice(0, 4).map(t => (
+                <div key={t.id} className="flex justify-between items-center py-1.5 border-b dark:border-border text-[11px]">
+                  <div><div className="text-card-foreground">{t.descripcion || 'Pago'}</div><div className="text-muted-foreground">{t.fecha}</div></div>
+                  <div className="font-semibold text-emerald-700 dark:text-emerald-400">{fmtQ(t.costoTotal)}</div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground text-xs">Seleccione un proyecto arriba</div>
+          )}
+        </div>
+      ),
+    },
+    'presup-vs-planilla': {
+      id: 'presup-vs-planilla', title: 'Planilla vs Presupuesto', icon: <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12 sm:col-span-6 lg:col-span-4', height: 'min-h-[160px]',
+      render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={[{ name: selectedProyecto ? presupuestos.find(p => p.id === selectedProyecto)?.proyecto.slice(0, 12) || 'Proyecto' : 'N/A', presupuesto: presupuestoSeleccionado, planilla: gastosPersonal }]} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+            <YAxis tick={{ fontSize: 9 }} />
+            <Tooltip formatter={(v: number) => fmtQ(v)} />
+            <Legend wrapperStyle={{ fontSize: 9 }} />
+            <Bar dataKey="presupuesto" fill="#3B82F6" name="Presupuesto" radius={[2, 2, 0, 0]} />
+            <Bar dataKey="planilla" fill="#10B981" name="Planilla" radius={[2, 2, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      ),
+    },
+    'avance-semanal': {
+      id: 'avance-semanal', title: 'Avance Semanal Estimado', icon: <Activity className="w-3.5 h-3.5 text-blue-700" />,
+      span: 'col-span-12 sm:col-span-6 lg:col-span-4', height: 'min-h-[160px]',
+      render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={avanceSemanal} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+            <XAxis dataKey="name" tick={{ fontSize: 8 }} />
+            <YAxis domain={[0, 100]} tick={{ fontSize: 8 }} />
+            <Area type="monotone" dataKey="avance" stroke="#10B981" fill="#10B981" fillOpacity={0.3} name="Real" />
+            <Area type="monotone" dataKey="plan" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.1} name="Plan" />
+          </AreaChart>
+        </ResponsiveContainer>
+      ),
+    },
+  }), [avanceProyectos, faseDistribucion, presupuestoVsReal, avanceSemanal, costosAcumulados, flujoMensual, gastosPorCategoria, ingresosPorProyecto, margenMensual, rutaCritica, gastosPersonal, presupuestoSeleccionado, stats, selectedProyecto, presupuestos, transacciones]);
 
   return (
     <PageShell showHome={false} title="Seguimiento de Proyectos">
-      <div className="min-h-dvh flex flex-col p-2 sm:p-3 animate-fadeIn">
-        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+      <div className="h-dvh flex flex-col p-0.5 sm:p-2 md:p-3 overflow-hidden">
+        {/* Navbar */}
+        <div className="flex items-center justify-between mb-1 shrink-0 flex-wrap gap-1">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Página {pagina + 1} / {totalPaginas}</span>
-            <button onClick={prevPage} className="p-1 rounded hover:bg-accent dark:hover:bg-accent text-muted-foreground"><ArrowLeft className="w-4 h-4" /></button>
+            <button onClick={prevPage} className="p-1.5 rounded hover:bg-accent text-muted-foreground"><ArrowLeft className="w-4 h-4" /></button>
             <div className="flex gap-1">
               {Array.from({ length: totalPaginas }).map((_, i) => (
-                <button key={i} onClick={() => setPagina(i)} className={`w-2 h-2 rounded-full transition ${i === pagina ? 'bg-blue-700 dark:bg-blue-400' : 'bg-muted dark:bg-muted'}`} />
+                <button key={i} onClick={() => setPagina(i)} className={`w-2.5 h-2.5 rounded-full transition-all ${i === pagina ? 'bg-blue-700 dark:bg-blue-400 scale-125' : 'bg-muted dark:bg-muted'}`} />
               ))}
             </div>
-            <button onClick={nextPage} className="p-1 rounded hover:bg-accent dark:hover:bg-accent text-muted-foreground"><ArrowRight className="w-4 h-4" /></button>
+            <button onClick={nextPage} className="p-1.5 rounded hover:bg-accent text-muted-foreground"><ArrowRight className="w-4 h-4" /></button>
           </div>
           <div className="flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-            <select onChange={(e) => setSelectedProyecto(e.target.value)} className="text-[10px] px-2 py-1 border rounded bg-card dark:bg-card" value={selectedProyecto || ''}>
+            <select
+              onChange={e => setSelectedProyecto(e.target.value || null)}
+              className="text-[10px] px-2 py-1 border rounded bg-card dark:bg-card select-standard"
+              value={selectedProyecto || ''}
+            >
               <option value="">Seleccione un proyecto...</option>
               {presupuestos.map(p => <option key={p.id} value={p.id}>{p.proyecto}</option>)}
             </select>
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 animate-slide-right" key={pagina}>
-          {pagina === 0 && (
-            <div className="grid grid-cols-12 gap-3 h-full">
-              <div className="col-span-12 grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-2">
-                <KPI icon={FolderKanban} label="Activos" value={String(stats.activos)} color="indigo" delay={100} />
-                <KPI icon={TrendingUp} label="Avance Prom." value={`${stats.avancePromedio.toFixed(1)}%`} color="blue" delay={200} />
-                <KPI icon={Wallet} label="Presupuestado" value={fmtQ(stats.totalPresupuestado)} color="emerald" delay={300} />
-                <KPI icon={TrendingDown} label="Gastos" value={fmtQ(stats.gastos)} color="red" delay={400} />
-                <KPI icon={Percent} label="Balance" value={fmtQ(stats.balance)} color={stats.balance >= 0 ? 'teal' : 'amber'} delay={500} />
-              </div>
-              <div className="col-span-12 lg:col-span-7 bg-card rounded-xl shadow-md p-3 flex flex-col">
-                <h3 className="font-bold text-xs text-card-foreground mb-1 flex items-center gap-1.5"><BarChart3 className="w-3.5 h-3.5 text-blue-700" />Avance Físico vs Financiero</h3>
-                <div className="flex-1 min-h-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={avanceData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                      <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                      <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} />
-                      <Tooltip contentStyle={{ fontSize: 10, backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))' }} />
-                      <Bar dataKey="fisico" fill="#1E3A8A" name="Físico %" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="financiero" fill="#10B981" name="Financiero %" radius={[2, 2, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              <div className="col-span-12 lg:col-span-5 bg-card rounded-xl shadow-md p-3 flex flex-col">
-                <h3 className="font-bold text-xs text-card-foreground mb-1 flex items-center gap-1.5"><PieChartIcon className="w-3.5 h-3.5 text-blue-700" />Distribución por Fase</h3>
-                <div className="flex-1 min-h-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={faseDistribucion} cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-                        {faseDistribucion.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip contentStyle={{ fontSize: 10, backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {pagina === 1 && (
-            <div className="grid grid-cols-12 gap-3 h-full">
-              <div className="col-span-12 lg:col-span-7 bg-card rounded-xl shadow-md p-3 flex flex-col">
-                <h3 className="font-bold text-xs text-card-foreground mb-1 flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5 text-blue-700" />Flujo de Caja Mensual</h3>
-                <div className="flex-1 min-h-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={flujoMensual} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                      <XAxis dataKey="mes" tick={{ fontSize: 9 }} />
-                      <YAxis tick={{ fontSize: 9 }} />
-                      <Tooltip contentStyle={{ fontSize: 10, backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))' }} formatter={(v: number) => fmtQ(v)} />
-                      <Line type="monotone" dataKey="ingresos" stroke="#10B981" strokeWidth={2} name="Ingresos" />
-                      <Line type="monotone" dataKey="gastos" stroke="#EF4444" strokeWidth={2} name="Gastos" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              <div className="col-span-12 lg:col-span-5 bg-card rounded-xl shadow-md p-3 flex flex-col">
-                <h3 className="font-bold text-xs text-card-foreground mb-1 flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5 text-blue-700" />Gastos por Categoría</h3>
-                <div className="flex-1 min-h-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={gastosPorCategoria} cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-                        {gastosPorCategoria.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip contentStyle={{ fontSize: 10, backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))' }} formatter={(v: number) => fmtQ(v)} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              <div className="col-span-12 bg-card rounded-xl shadow-md p-3">
-                <h3 className="font-bold text-xs text-card-foreground mb-1 flex items-center gap-1.5"><BarChart3 className="w-3.5 h-3.5 text-blue-700" />Comparativa Mensual Ingresos vs Gastos</h3>
-                <div className="h-24">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={flujoMensual} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                      <XAxis dataKey="mes" tick={{ fontSize: 9 }} />
-                      <YAxis tick={{ fontSize: 9 }} />
-                      <Tooltip contentStyle={{ fontSize: 10, backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))' }} formatter={(v: number) => fmtQ(v)} />
-                      <Bar dataKey="ingresos" fill="#10B981" name="Ingresos" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="gastos" fill="#EF4444" name="Gastos" radius={[2, 2, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {pagina === 2 && (
-            <div className="grid grid-cols-12 gap-3 h-full">
-              <div className="col-span-12 lg:col-span-4 bg-card rounded-xl shadow-md p-3 flex flex-col overflow-y-auto">
-                <h3 className="font-bold text-xs text-card-foreground mb-2 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-blue-700" />Ruta Crítica</h3>
-                <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
-                  {rutaCritica.length > 0 ? rutaCritica.filter(r => r.esRutaCritica).map((r: RenglonCPM) => (
-                    <div key={r.id} className="flex justify-between p-2 border-b dark:border-border text-[11px]">
-                      <span className="font-medium text-red-700 dark:text-red-400">{r.descripcion}</span>
-                      <span className="text-red-600 dark:text-red-400 font-bold">{r.duracionDias}d</span>
-                    </div>
-                  )) : <div className="text-center py-4 text-muted-foreground text-xs">Seleccione un proyecto para ver su ruta crítica</div>}
-                </div>
-              </div>
-              <div className="col-span-12 lg:col-span-5 bg-card rounded-xl shadow-md p-3 flex flex-col">
-                <h3 className="font-bold text-xs text-card-foreground mb-2 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-blue-700" />Gantt — {selectedProyecto ? presupuestos.find(p => p.id === selectedProyecto)?.proyecto : 'Seleccione un proyecto'}</h3>
-                <div className="flex-1 min-h-0">
-                  <GanttView proyectoId={selectedProyecto ?? undefined} />
-                </div>
-              </div>
-              <div className="col-span-12 lg:col-span-3 bg-card rounded-xl shadow-md p-3 flex flex-col overflow-y-auto">
-                <h3 className="font-bold text-xs text-card-foreground mb-2 flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-emerald-600" />Control de Planilla</h3>
-                <div className="space-y-2">
-                  {selectedProyecto ? (
-                    <>
-                      <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-center">
-                        <div className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-semibold">Total Invertido</div>
-                        <div className="text-xl font-bold text-blue-900 dark:text-blue-100">{fmtQ(gastosPersonal)}</div>
-                      </div>
-                      <div className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Últimos Pagos</div>
-                      {transacciones.filter(t => t.proyectoId === selectedProyecto && t.categoria === 'mano-obra').slice(0, 5).map(t => (
-                        <div key={t.id} className="flex justify-between items-center py-1.5 border-b dark:border-border text-[11px]">
-                          <div>
-                            <div className="text-card-foreground">{t.descripcion || 'Pago'}</div>
-                            <div className="text-muted-foreground">{t.fecha}</div>
-                          </div>
-                          <div className="font-semibold text-emerald-700 dark:text-emerald-400">{fmtQ(t.costoTotal)}</div>
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <div className="text-center py-6 text-muted-foreground text-xs">Seleccione un proyecto arriba</div>
-                  )}
-                </div>
-              </div>
-              {selectedProyecto && (
-                <div className="col-span-12 bg-card rounded-xl shadow-md p-3">
-                  <BitacoraAvancePanel presupuestoId={selectedProyecto} />
-                </div>
-              )}
+        {/* Charts grid */}
+        <div className="flex-1 grid grid-cols-12 gap-2 overflow-hidden">
+          {visibleCharts.length > 0 ? (
+            visibleCharts.map((chartId, idx) => {
+              const def = chartDefinitions[chartId];
+              if (!def) return null;
+              return (
+                <ChartCard key={chartId} id={chartId} title={def.title} icon={def.icon} span={def.span} height={def.height} onDrop={handleDrop} onRemove={handleRemove} delay={idx * 50}>
+                  {def.render()}
+                </ChartCard>
+              );
+            })
+          ) : (
+            <div className="col-span-12 flex items-center justify-center text-muted-foreground text-xs">
+              Todas las gráficas ocultas. <button onClick={() => setHiddenCharts(new Set())} className="underline ml-1 text-primary">Restaurar todas</button>
             </div>
           )}
         </div>
       </div>
-
-      {/* Tables section (below the chart viewport) */}
-      <div className="p-2 sm:p-3 space-y-4">
-          <ProyectosTabla titulo="Proyectos en Ejecución" proyectos={ejecucion} color="emerald" onAction={(p) => {
-            if (p.fase === 'ejecución') transicionFase(p.id, 'pausa');
-            else if (p.fase === 'pausa') transicionFase(p.id, 'ejecución');
-          }} actionLabel={(p) => p.fase === 'pausa' ? 'Reanudar' : 'Pausar'} onVer={(p) => { setSelectedProyecto(p.id); setPagina(2); }} />
-
-        <ProyectosTabla titulo="Proyectos en Planeación" proyectos={planeacion} color="amber" onAction={(p) => transicionFase(p.id, 'ejecución')} actionLabel={() => 'Iniciar'} onVer={(p) => { setSelectedProyecto(p.id); setPagina(2); }} />
-
-        {pausa.length > 0 && (
-          <ProyectosTabla titulo="Proyectos en Pausa" proyectos={pausa} color="amber" onAction={(p) => transicionFase(p.id, 'ejecución')} actionLabel={() => 'Reanudar'} />
-        )}
-        {finalizados.length > 0 && (
-          <ProyectosTabla titulo="Proyectos Finalizados" proyectos={finalizados} color="emerald" />
-        )}
-      </div>
     </PageShell>
   );
 };
-
-const ProyectosTabla: React.FC<{
-  titulo: string;
-  proyectos: Presupuesto[];
-  color: string;
-  onAction?: (p: Presupuesto) => void;
-  actionLabel?: (p: Presupuesto) => string;
-  onVer?: (p: Presupuesto) => void;
-}> = ({ titulo, proyectos, color, onAction, actionLabel, onVer }) => {
-  const colors: Record<string, string> = {
-    emerald: 'from-emerald-600 to-emerald-700',
-    amber: 'from-amber-600 to-amber-700',
-  };
-  return (
-    <div className="bg-card rounded-xl shadow-md overflow-hidden border dark:border-border">
-      <div className={`bg-gradient-to-r ${colors[color]} text-white p-3 flex items-center justify-between`}>
-        <h3 className="font-bold text-sm">{titulo} ({proyectos.length})</h3>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead className="bg-muted dark:bg-muted">
-            <tr>
-              <th className="p-2.5 text-left text-muted-foreground">Proyecto</th>
-              <th className="p-2.5 text-left hidden md:table-cell text-muted-foreground">Cliente</th>
-              <th className="p-2.5 text-left text-muted-foreground">Avance Físico</th>
-              <th className="p-2.5 text-right text-muted-foreground">Ingresos</th>
-              <th className="p-2.5 text-right text-muted-foreground">Gastos</th>
-              <th className="p-2.5 text-center text-muted-foreground">Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {proyectos.map(p => (
-              <tr key={p.id} className="border-b dark:border-border hover:bg-muted/30 transition">
-                <td className="p-2.5">
-                  <div className="font-semibold text-card-foreground">{p.proyecto}</div>
-                  <div className="text-[10px] text-muted-foreground">{p.tipologia || 'General'} · {fmtQ(p.total)}</div>
-                </td>
-                <td className="p-2.5 hidden md:table-cell text-muted-foreground">{p.cliente}</td>
-                <td className="p-2.5">
-                  <Progreso valor={p.avanceFisico} color="bg-blue-600" />
-                </td>
-                <td className="p-2.5 text-right text-emerald-700 dark:text-emerald-400 font-semibold">{fmtQ(p.ingresos)}</td>
-                <td className="p-2.5 text-right text-red-700 dark:text-red-400 font-semibold">{fmtQ(p.gastos)}</td>
-                <td className="p-2.5 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    {onVer && (
-                      <button onClick={() => onVer(p)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition">
-                        <Eye className="w-3 h-3" /> Ver
-                      </button>
-                    )}
-                    {onAction && actionLabel ? (
-                      <button onClick={() => onAction(p)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold text-white bg-blue-600 hover:bg-blue-700 transition">
-                        <Play className="w-3 h-3" /> {actionLabel(p)}
-                      </button>
-                    ) : null}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {proyectos.length === 0 && (
-              <tr><td colSpan={7} className="text-center py-6 text-muted-foreground">Sin proyectos en esta categoría</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
-
-const Progreso: React.FC<{ valor: number; color: string }> = ({ valor, color }) => (
-  <div className="flex items-center gap-2 min-w-[120px]">
-    <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-      <div className={`${color} h-full transition-all`} style={{ width: `${valor}%` }} />
-    </div>
-    <span className="text-[10px] font-semibold w-8 text-right">{valor}%</span>
-  </div>
-);
 
 export default React.memo(SeguimientoScreen);
