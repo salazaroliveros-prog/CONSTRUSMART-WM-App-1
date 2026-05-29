@@ -27,7 +27,7 @@ const TeamsScreen: React.FC = () => {
   const equiposConMiembros = useMemo(() => {
     return equipos.map(e => ({
       ...e,
-      miembros: equipoMiembros.filter(m => m.equipo_id === e.id)
+      miembros: equipoMiembros.filter(m => m.equipoId === e.id)
     }));
   }, [equipos, equipoMiembros]);
 
@@ -127,14 +127,14 @@ const TeamsScreen: React.FC = () => {
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <Users className="w-4 h-4" /> {eq.nombre}
               </h3>
-              {eq.user_id === session?.user?.id && (
+              {eq.userId === session?.user?.id && (
                 <span className="text-[10px] bg-emerald-500 px-2 py-0.5 rounded-full">Propietario</span>
               )}
             </div>
 
             <div className="p-3">
               {/* Invitar */}
-              {eq.user_id === session?.user?.id && (
+              {eq.userId === session?.user?.id && (
                 <div className="mb-3">
                   {inviteTeamId === eq.id ? (
                     <div className="flex gap-2">
@@ -178,9 +178,9 @@ const TeamsScreen: React.FC = () => {
                   return (
                     <div key={m.id} className="flex items-center gap-2 p-2 rounded hover:bg-muted">
                       <Icon className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm flex-1 text-card-foreground">{m.user_id.slice(0, 8)}...</span>
+                      <span className="text-sm flex-1 text-card-foreground">{m.userId.slice(0, 8)}...</span>
                       <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-semibold">{rolLabels[m.rol]}</span>
-                      {eq.user_id === session?.user?.id && (
+                      {eq.userId === session?.user?.id && (
                         <button onClick={() => handleRemoveMember(m.id)} className="text-red-400 hover:text-red-600 p-1">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
