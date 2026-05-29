@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { Actividad, CreateActividad, dbToActividad, actividadToDb } from '@/types/supabase';
+import { Actividad, CreateActividad, UpdateActividad, dbToActividad, actividadToDb } from '@/types/supabase';
 
 export const ActividadesService = {
   async addActividad(payload: CreateActividad): Promise<Actividad> {
@@ -8,6 +8,14 @@ export const ActividadesService = {
       .insert(actividadToDb(payload) as any)
       .select()
       .single();
+    if (error) throw error;
+    return dbToActividad(data);
+  },
+
+  async updateActividad(id: string, payload: UpdateActividad, userId?: string): Promise<Actividad> {
+    let query = supabase.from('actividades').update(actividadToDb(payload) as any).eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+    const { data, error } = await (query as any).select().single();
     if (error) throw error;
     return dbToActividad(data);
   },
