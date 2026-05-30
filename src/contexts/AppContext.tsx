@@ -273,6 +273,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
        }
      }, []);
 
+   useEffect(() => {
     const sessionTimeout = setTimeout(() => {
       if (mountedRef.current) {
         setLoading(false);
@@ -382,7 +383,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
          async (m) => {
             // Delegate mutation execution to AppDataService to centralize Supabase access and error handling
             const svc = (await import('@/services/AppDataService')).default;
-            const resp = await svc.executeMutation({ table: m.table, action: m.action, data: m.data as any, filters: m.filters as any });
+            const resp = await svc.executeMutation({ table: m.table, action: m.action, data: m.data, filters: m.filters });
             if (!resp.success) throw resp.error || new Error('Mutation failed');
          },
          (done, total) => {

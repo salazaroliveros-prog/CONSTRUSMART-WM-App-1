@@ -1,3 +1,5 @@
+import type { Database, TableName } from '@/types/supabase';
+
 const CACHE_PREFIX = 'offline_';
 const PENDING_KEY = 'offline_pending';
 const TABLES = ['clientes', 'proyectos', 'presupuestos', 'transacciones', 'actividades', 'equipos', 'equipo_miembros'] as const;
@@ -30,12 +32,12 @@ export function clearUserCache(userId: string): void {
   });
 }
 
-export interface PendingMutation {
+export interface PendingMutation<T extends TableName = TableName> {
   id: string;
-  table: string;
+  table: T;
   action: 'INSERT' | 'UPDATE' | 'DELETE';
-  data: Record<string, unknown>;
-  filters?: Record<string, unknown>;
+  data: Partial<Database[T]>;
+  filters?: Partial<Database[T]>;
   userId: string;
   createdAt: number;
 }
@@ -54,7 +56,7 @@ export function getPendingMutations(userId: string): PendingMutation[] {
   }
 }
 
-export function addPendingMutation(m: Omit<PendingMutation, 'id' | 'createdAt'>): void {
+export function addPendingMutation<T extends TableName>(m: Omit<PendingMutation<T>, 'id' | 'createdAt'>): void {
   try {
     const list = getPendingMutations(m.userId);
     list.push({ ...m, id: crypto.randomUUID(), createdAt: Date.now() });

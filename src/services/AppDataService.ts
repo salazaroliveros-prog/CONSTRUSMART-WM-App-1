@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/supabase';
+import type { PostgrestQueryBuilder } from '@supabase/supabase-js';
 
 export type TableName = keyof Database;
 
@@ -11,6 +12,20 @@ export interface MutationParams<T extends TableName = TableName> {
 }
 
 export type QueryResultMap = Partial<Record<TableName, Database[TableName][]>>;
+
+function applyFilters<T extends TableName>(
+  query: PostgrestQueryBuilder<Database[T], Database[T], Database[T]>,
+  filters?: Partial<Database[T]>
+) {
+  if (!filters) return query;
+
+  let filteredQuery = query;
+  for (const [key, value] of Object.entries(filters)) {
+    if (value === undefined) continue;
+    filteredQuery = filteredQuery.eq(key, value as string | number | boolean | null);
+  }
+  return filteredQuery;
+}
 
 // Centraliza las consultas que antes vivían en AppContext.
 export const AppDataService = {
@@ -58,31 +73,27 @@ export const AppDataService = {
     return (data || []) as Database[T][];
   },
 
-  async executeMutation<T extends TableName>(params: MutationParams<T>) {
+  async executeMutation<T extends TableName>(params: MutationParams<T>): Promise<{ success: true } | { success: false; error: unknown }> {
     const { table, action, data, filters } = params;
-    let queryBase = supabase.from(table);
+    const queryBase = supabase.from<T>(table);
 
     try {
       if (action === 'INSERT') {
+        if (!data) throw new Error('INSERT requires data');
         const { error } = await queryBase.insert(data).select().single();
         if (error) throw error;
       } else if (action === 'UPDATE') {
         if (!filters) throw new Error('UPDATE requires filters');
-        let updateQuery = queryBase.update(data);
-        Object.entries(filters).forEach(([key, value]) => {
-          updateQuery = updateQuery.eq(key, value as any);
-        });
+        if (!data) throw new Error('UPDATE requires data');
+        const updateQuery = applyFilters(queryBase.update(data), filters);
         const { error } = await updateQuery.select().single();
         if (error) throw error;
       } else if (action === 'DELETE') {
-        let deleteQuery = queryBase;
-        if (filters) {
-          Object.entries(filters).forEach(([key, value]) => {
-            deleteQuery = deleteQuery.eq(key, value as any);
-          });
-        }
+        const deleteQuery = applyFilters(queryBase, filters);
         const { error } = await deleteQuery.delete();
         if (error) throw error;
+      } else {
+        throw new Error(`Unsupported action ${action}`);
       }
       return { success: true };
     } catch (e) {
