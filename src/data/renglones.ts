@@ -1631,16 +1631,6 @@ export const renglonesPorTipologia: Record<Tipologia, Renglon[]> = {
   civil: [...adjustForTypology(baseRenglones('civ'), 1.10, 'civ'), ...civilEspecificos],
   publica: [...adjustForTypology(baseRenglones('pub'), 1.20, 'pub'), ...publicaEspecificos],
 };
-
-export const tipologiaLabels: Record<Tipologia, string> = {
-  general: 'General',
-  residencial: 'Residencial',
-  comercial: 'Comercial',
-  industrial: 'Industrial',
-  civil: 'Civil',
-  publica: 'Pública',
-};
-
 export function calcularAPU(linea: Renglon & { cantidad: number; baseTotalPersonas?: number }) {
   const sub = linea.subrenglones || { materiales: [], manoObra: [], equipos: [] };
   const materiales = sub.materiales || [];
