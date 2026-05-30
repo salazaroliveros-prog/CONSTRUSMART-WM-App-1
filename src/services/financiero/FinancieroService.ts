@@ -1,24 +1,31 @@
 import { supabase } from '@/lib/supabase';
-import type { Transaccion } from '@/types/supabase';
+import type { DBTransaccion } from '@/types/supabase';
+import type { Transaccion, CreateTransaccion, UpdateTransaccion } from '@/types/supabase';
 import { toast } from 'sonner';
+
+const TABLE = 'transacciones' as const;
 
 /**
  * Servicio centralizado para operaciones financieras.
  * Encapsula la lógica de cálculo y acceso a datos de transacciones.
- * FUENTE ÚNICA para proyecciones de cash flow.
  */
 export const FinancieroService = {
   /**
    * Calcula el balance incluyendo la nómina real (mano-obra)
    */
-  async getResumenFinancieroDetallado(userId: string) {
+  async getResumenFinancieroDetallado(userId: string): Promise<{
+    ingresos: number;
+    gastosGenerales: number;
+    gastosPersonal: number;
+    rentabilidadNeta: number;
+  }> {
     const { data, error } = await supabase
-      .from('transacciones')
+      .from(TABLE)
       .select('*')
       .eq('user_id', userId);
 
     if (error) throw error;
-    const transacciones = (data || []) as Transaccion[];
+    const transacciones = (data ?? []) as unknown as Transaccion[];
     const ingresos = transacciones.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
     const gastosGenerales = transacciones.filter(t => t.tipo === 'gasto' && t.categoria !== 'mano-obra').reduce((s, t) => s + t.costoTotal, 0);
     const gastosPersonal = transacciones.filter(t => t.tipo === 'gasto' && t.categoria === 'mano-obra').reduce((s, t) => s + t.costoTotal, 0);
@@ -34,25 +41,25 @@ export const FinancieroService = {
   /**
    * Obtiene transacciones, opcionalmente filtradas por proyecto
    */
-  async getTransacciones(userId?: string, proyectoId?: string) {
-    let query = supabase.from('transacciones').select('*');
+  async getTransacciones(userId?: string, proyectoId?: string): Promise<Transaccion[]> {
+    let query = supabase.from(TABLE).select('*');
     if (userId) query = query.eq('user_id', userId);
     if (proyectoId) query = query.eq('proyecto_id', proyectoId);
     query = query.order('fecha', { ascending: false });
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []) as Transaccion[];
+    return (data ?? []) as unknown as Transaccion[];
   },
 
-  async deleteTransaccion(id: string, userId?: string) {
-    let query = supabase.from('transacciones').delete().eq('id', id);
+  async deleteTransaccion(id: string, userId?: string): Promise<void> {
+    let query = supabase.from(TABLE).delete().eq('id', id);
     if (userId) query = query.eq('user_id', userId);
     const { error } = await query;
     if (error) throw error;
   },
 
-  async updateTransaccion(id: string, payload: Partial<Transaccion>, userId?: string) {
-    const dbRecord: Record<string, unknown> = {};
+  async updateTransaccion(id: string, payload: UpdateTransaccion, userId?: string): Promise<Transaccion> {
+    const dbRecord: Partial<DBTransaccion> = {};
     if (payload.tipo !== undefined) dbRecord.tipo = payload.tipo;
     if (payload.descripcion !== undefined) dbRecord.descripcion = payload.descripcion;
     if (payload.cantidad !== undefined) dbRecord.cantidad = payload.cantidad;
@@ -62,39 +69,42 @@ export const FinancieroService = {
     if (payload.costoTotal !== undefined) dbRecord.costo_total = payload.costoTotal;
     if (payload.fecha !== undefined) dbRecord.fecha = payload.fecha;
     if (payload.proyectoId !== undefined) dbRecord.proyecto_id = payload.proyectoId;
-    let query = supabase.from('transacciones').update(dbRecord).eq('id', id);
+
+    let query = supabase.from(TABLE).update(dbRecord).eq('id', id);
     if (userId) query = query.eq('user_id', userId);
-    const { data, error } = await query.select().single();
+    const { data, error } = await query.select().single<DBTransaccion>();
     if (error) throw error;
-    return data as Transaccion;
+    if (!data) throw new Error('No se pudo actualizar la transacción');
+    return data as unknown as Transaccion;
   },
 
   /**
    * Registra una nueva transacción con validación empresarial
    */
-  async registrarTransaccion(transaccion: Omit<Transaccion, 'id' | 'userId'>, userId: string) {
+  async registrarTransaccion(transaccion: CreateTransaccion, userId: string): Promise<Transaccion> {
     try {
-      const dbRecord = {
+      const dbRecord: Partial<DBTransaccion> = {
         user_id: userId,
         tipo: transaccion.tipo,
-        descripcion: transaccion.descripcion,
-        cantidad: transaccion.cantidad,
-        unidad: transaccion.unidad,
+        descripcion: transaccion.descripcion ?? null,
+        cantidad: transaccion.cantidad ?? 1,
+        unidad: transaccion.unidad ?? null,
         categoria: transaccion.categoria,
-        costo_unitario: transaccion.costoUnitario,
-        costo_total: transaccion.costoTotal,
+        costo_unitario: transaccion.costoUnitario ?? 0,
+        costo_total: transaccion.costoTotal ?? 0,
         fecha: transaccion.fecha,
-        proyecto_id: transaccion.proyectoId,
-        empleado_id: transaccion.empleadoId,
+        proyecto_id: transaccion.proyectoId ?? 'admin',
       };
+
       const { data, error } = await supabase
-        .from('transacciones')
+        .from(TABLE)
         .insert(dbRecord)
         .select()
-        .single();
+        .single<DBTransaccion>();
 
       if (error) throw error;
-      return data as Transaccion;
+      if (!data) throw new Error('No se pudo registrar la transacción');
+      return data as unknown as Transaccion;
     } catch (error) {
       console.error('Error en FinancieroService.registrarTransaccion:', error);
       toast.error('Error al registrar transacción');

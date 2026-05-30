@@ -37,6 +37,193 @@ export interface Renglon {
 }
 
 export type Tipologia = 'general' | 'residencial' | 'comercial' | 'industrial' | 'civil' | 'publica';
+export type NivelCalidad = 'basico' | 'moderado' | 'premium';
+
+/**
+ * Parámetros de mercado Guatemala - Costos por m² según calidad de acabados
+ */
+export interface ParametroMercadoGuatemala {
+  nombre: string;
+  descripcion: string;
+  costoMinimoPorM2: number;
+  costoMaximoPorM2: number;
+  moneda: string;
+}
+
+export const MERCADO_GUATEMALA: Record<NivelCalidad, ParametroMercadoGuatemala> = {
+  basico: {
+    nombre: 'Nivel Básico (Económico)',
+    descripcion: 'Vivienda económica de un nivel, acabados básicos',
+    costoMinimoPorM2: 3000,
+    costoMaximoPorM2: 3500,
+    moneda: 'Q',
+  },
+  moderado: {
+    nombre: 'Nivel Moderado (Medio)',
+    descripcion: 'Vivienda de dos niveles, acabados estándar',
+    costoMinimoPorM2: 3500,
+    costoMaximoPorM2: 4000,
+    moneda: 'Q',
+  },
+  premium: {
+    nombre: 'Nivel Premium (Alto)',
+    descripcion: 'Vivienda de tres niveles, acabados de lujo',
+    costoMinimoPorM2: 4000,
+    costoMaximoPorM2: 5000,
+    moneda: 'Q',
+  },
+};
+
+/**
+ * Calcula el costo estimado del proyecto según parámetros de mercado Guatemala
+ */
+export function calcularCostoM2Guatemala(areaTotalM2: number, nivelCalidad: NivelCalidad): {
+  costoMinimo: number;
+  costoMaximo: number;
+  costoPromedio: number;
+  nivel: ParametroMercadoGuatemala;
+} {
+  const nivel = MERCADO_GUATEMALA[nivelCalidad];
+  return {
+    costoMinimo: nivel.costoMinimoPorM2 * areaTotalM2,
+    costoMaximo: nivel.costoMaximoPorM2 * areaTotalM2,
+    costoPromedio: ((nivel.costoMinimoPorM2 + nivel.costoMaximoPorM2) / 2) * areaTotalM2,
+    nivel,
+  };
+}
+
+/**
+ * Multiplicadores por tipología (precios relativos al mercado)
+ */
+export const TIPOLOGY_MULTIPLIERS: Record<Tipologia, number> = {
+  general: 1.0,
+  residencial: 1.0,
+  comercial: 1.15,
+  industrial: 1.25,
+  civil: 1.10,
+  publica: 1.20,
+};
+
+export const tipologiaLabels: Record<Tipologia, string> = {
+  general: 'General',
+  residencial: 'Residencial',
+  comercial: 'Comercial',
+  industrial: 'Industrial',
+  civil: 'Civil',
+  publica: 'Pública',
+};
+
+/**
+ * Interface para dimensiones configurables de renglones
+ */
+export interface DimensionesCimentacion {
+  largo: number;  // metros
+  ancho: number;  // metros
+  profundidad: number; // metros
+}
+
+export interface DimensionesColumna {
+  base: number;   // metros
+  lado: number;   // metros
+  altura: number; // metros
+}
+
+export interface DimensionesSolera {
+  ancho: number;  // metros
+  alto: number;   // metros
+  longitud: number; // metros lineales
+}
+
+export interface DimensionesZapata {
+  largo: number;  // metros
+  ancho: number;  // metros
+  profundidad: number; // metros
+  cantidad: number;
+}
+
+/**
+ * Calcula materiales para cimentación según dimensiones
+ */
+export function calcularCimentacionPorDimensiones(dims: DimensionesCimentacion) {
+  const volumenExcavacion = dims.largo * dims.ancho * dims.profundidad;
+  const volumenConcreto = volumenExcavacion * 0.95; // 95% del hueco es concreto
+  const volumenEncofrado = (dims.largo + dims.ancho) * 2 * dims.profundidad;
+  // Acero: 80 kg/m³ para concreto estructural
+  const pesoAcero = volumenConcreto * 80;
+  
+  return {
+    volumenExcavacion: Math.round(volumenExcavacion * 1000) / 1000,
+    volumenConcreto: Math.round(volumenConcreto * 1000) / 1000,
+    volumenEncofrado: Math.round(volumenEncofrado * 1000) / 1000,
+    pesoAcero: Math.round(pesoAcero * 100) / 100,
+    costoExcavacion: volumenExcavacion * 180,
+    costoConcreto: volumenConcreto * 2200,
+    costoEncofrado: volumenEncofrado * 85,
+    costoAcero: pesoAcero * 18,
+  };
+}
+
+/**
+ * Calcula materiales para columna según dimensiones
+ */
+export function calcularColumnaPorDimensiones(dims: DimensionesColumna) {
+  const volumenConcreto = dims.base * dims.lado * dims.altura;
+  const perimetro = (dims.base + dims.lado) * 2;
+  const volumenEncofrado = perimetro * dims.altura;
+  // 4 varillas No.4 por columna
+  const numVarillas = Math.max(4, Math.ceil(perimetro * 4));
+  const pesoAcero = numVarillas * dims.altura * 0.411; // kg/ml varilla No.4
+  
+  return {
+    volumenConcreto: Math.round(volumenConcreto * 10000) / 10000,
+    volumenEncofrado: Math.round(volumenEncofrado * 10000) / 10000,
+    numVarillas,
+    pesoAcero: Math.round(pesoAcero * 100) / 100,
+    costoConcreto: volumenConcreto * 2200,
+    costoEncofrado: volumenEncofrado * 85,
+    costoAcero: pesoAcero * 18,
+  };
+}
+
+/**
+ * Calcula materiales para solera según dimensiones
+ */
+export function calcularSoleraPorDimensiones(dims: DimensionesSolera) {
+  const volumenConcreto = dims.ancho * dims.alto * dims.longitud;
+  const perimetro = (dims.ancho + dims.alto) * 2;
+  const volumenEncofrado = perimetro * dims.longitud;
+  const pesoAcero = volumenConcreto * 60; // 60 kg/m³ para soleras
+  
+  return {
+    volumenConcreto: Math.round(volumenConcreto * 10000) / 10000,
+    volumenEncofrado: Math.round(volumenEncofrado * 10000) / 10000,
+    pesoAcero: Math.round(pesoAcero * 100) / 100,
+    costoConcreto: volumenConcreto * 2200,
+    costoEncofrado: volumenEncofrado * 85,
+    costoAcero: pesoAcero * 18,
+  };
+}
+
+/**
+ * Calcula materiales para zapata según dimensiones
+ */
+export function calcularZapataPorDimensiones(dims: DimensionesZapata) {
+  const volumenUnitario = dims.largo * dims.ancho * dims.profundidad;
+  const volumenTotal = volumenUnitario * dims.cantidad;
+  const perimetro = (dims.largo + dims.ancho) * 2;
+  const volumenEncofrado = perimetro * dims.profundidad * dims.cantidad;
+  const pesoAcero = volumenTotal * 80; // 80 kg/m³
+  
+  return {
+    volumenUnitario: Math.round(volumenUnitario * 10000) / 10000,
+    volumenTotal: Math.round(volumenTotal * 10000) / 10000,
+    volumenEncofrado: Math.round(volumenEncofrado * 10000) / 10000,
+    pesoAcero: Math.round(pesoAcero * 100) / 100,
+    costoConcreto: volumenTotal * 2200,
+    costoEncofrado: volumenEncofrado * 85,
+    costoAcero: pesoAcero * 18,
+  };
+}
 
 function mat(nombre: string, unidad: string, cantidad: number, costoUnitario: number, desperdicio?: number): SubMaterial {
   return { nombre, unidad, cantidad, costoUnitario, desperdicio };
