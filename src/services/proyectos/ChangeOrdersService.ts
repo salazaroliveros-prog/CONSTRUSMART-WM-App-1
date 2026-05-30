@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
-import { ChangeOrder } from '@/utils/changeOrders';
+import type { ChangeOrder } from '@/utils/changeOrders';
+import type { CambiosPresupuesto } from '@/types/supabase';
 
 export class ChangeOrdersService {
   static async listar(presupuestoId: string): Promise<ChangeOrder[]> {
@@ -10,19 +11,27 @@ export class ChangeOrdersService {
       .order('version', { ascending: false });
 
     if (error) throw error;
-    
-    return (data || []).map((c: any) => ({
-      id: c.id,
-      presupuesto_id: c.presupuesto_id,
-      version: c.version,
-      cambios: c.cambios,
-      descripcion: c.motivo,
-      estado: c.estado === 'aprobado' ? 'aprobada' : c.estado === 'rechazado' ? 'rechazada' : 'pendiente',
-      solicitado_por: c.aprobado_por || '',
-      solicitado_fecha: new Date(c.created_at),
-      aprobado_por: c.aprobado_por,
-      aprobado_fecha: undefined,
-      comentarios: c.motivo,
+
+    return (data ?? []).map((db: CambiosPresupuesto) => ({
+      id: db.id,
+      presupuesto_id: db.presupuesto_id,
+      version: db.version,
+      cambios: Object.entries(db.cambios || {}).map(([key, val]) => ({
+        renglon_id: key,
+        cantidad_anterior: val.anterior,
+        cantidad_nueva: val.nuevo,
+        unitario_anterior: val.anterior,
+        unitario_nuevo: val.nuevo,
+        motivo: val.motivo,
+        impacto: val.nuevo - val.anterior,
+      })),
+      descripcion: db.descripcion_cambios || '',
+      estado: db.estado === 'aprobado' ? 'aprobada' : db.estado === 'rechazado' ? 'rechazada' : 'pendiente',
+      solicitado_por: db.usuario_creador || '',
+      solicitado_fecha: db.created_at ? new Date(db.created_at) : new Date(),
+      aprobado_por: db.aprobado_por,
+      aprobado_fecha: db.approved_at ? new Date(db.approved_at) : undefined,
+      comentarios: db.descripcion_cambios,
     }));
   }
 
@@ -31,8 +40,12 @@ export class ChangeOrdersService {
       id: orden.id,
       presupuesto_id: orden.presupuesto_id,
       version: orden.version,
-      cambios: orden.cambios,
-      motivo: orden.descripcion,
+      cambios: orden.cambios.reduce((acc, c) => ({
+        ...acc,
+        [c.renglon_id]: { anterior: c.cantidad_anterior, nuevo: c.cantidad_nueva, motivo: c.motivo }
+      }), {} as Record<string, { anterior: number; nuevo: number; motivo: string }>),
+      descripcion_cambios: orden.descripcion,
+      usuario_creador: orden.solicitado_por,
       estado: 'pendiente',
     });
     if (error) throw error;
@@ -44,7 +57,7 @@ export class ChangeOrdersService {
       .update({ 
         estado: 'aprobado',
         aprobado_por: aprobadoPor,
-        motivo: comentarios || '',
+        descripcion_cambios: comentarios || '',
       })
       .eq('id', ordenId);
     if (error) throw error;
@@ -55,7 +68,7 @@ export class ChangeOrdersService {
       .from('cambios_presupuesto')
       .update({ 
         estado: 'rechazado',
-        motivo,
+        descripcion_cambios: motivo,
       })
       .eq('id', ordenId);
     if (error) throw error;

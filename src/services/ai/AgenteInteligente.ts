@@ -1,15 +1,18 @@
 import { PresupuestosService } from '@/services/presupuestos/PresupuestosService';
 import { CoreEngineService } from '@/services/CoreEngineService';
+import type { Presupuesto, Transaccion } from '@/types/supabase';
+
+interface Alerta {
+  tipo: string;
+  proyecto: string;
+  mensaje: string;
+}
 
 export const AgenteInteligente = {
-  /**
-   * Analiza la salud del proyecto y genera alertas proactivas.
-   * Proporciona sugerencias para la activación automática del proyecto.
-   */
-  async diagnosticarProyecto(presupuesto: any, transacciones: any[]) {
+  async diagnosticarProyecto(presupuesto: Presupuesto, transacciones: Transaccion[]): Promise<Alerta[]> {
     const gastosReal = transacciones
       .filter(t => t.proyectoId === presupuesto.id && t.tipo === 'gasto')
-      .reduce((s: number, t: any) => s + (t.costoTotal || 0), 0);
+      .reduce((s: number, t: Transaccion) => s + (t.costoTotal || 0), 0);
       
     const desviacion = PresupuestosService.analizarDesviacion(presupuesto, gastosReal);
     

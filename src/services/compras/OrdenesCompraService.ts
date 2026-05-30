@@ -107,7 +107,7 @@ export const OrdenesCompraService = {
     const dbRecord = ordenCompraItemToDb(datos);
     const { error } = await supabase
       .from('orden_compra_items')
-      .update(dbRecord as any)
+      .update(dbRecord)
       .eq('id', id);
     if (error) throw error;
   },

@@ -1,34 +1,43 @@
-/**
- * LoggerService - Centralized logging for Construsmart WM
- * Handles production error tracking and debug logs.
- */
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 export const LoggerService = {
-  log(message: string, data?: any) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[LOG] ${message}`, data || '');
+  log(message: string, data?: unknown) {
+    if (data !== undefined) {
+      console.log(`[LOG] ${message}`, data);
+    } else {
+      console.log(`[LOG] ${message}`);
+    }
+  },
+  
+  warn(message: string, data?: unknown) {
+    if (data !== undefined) {
+      console.warn(`[WARN] ${message}`, data);
+    } else {
+      console.warn(`[WARN] ${message}`);
+    }
+  },
+  
+  error(message: string, error?: unknown) {
+    if (error !== undefined) {
+      console.error(`[ERROR] ${message}`, error);
+    } else {
+      console.error(`[ERROR] ${message}`);
+    }
+  },
+  
+  info(message: string, data?: unknown) {
+    if (data !== undefined) {
+      console.info(`[INFO] ${message}`, data);
+    } else {
+      console.info(`[INFO] ${message}`);
     }
   },
 
-  warn(message: string, data?: any) {
-    console.warn(`[WARN] ${message}`, data || '');
-    // Here you could integrate with a remote service like Sentry or LogRocket
+  group(label: string) {
+    console.group(label);
   },
 
-  error(message: string, error?: any) {
-    console.error(`[ERROR] ${message}`, error || '');
-    
-    // Remote tracking simulation
-    if (process.env.NODE_ENV === 'production') {
-      // fetch('/api/log-error', { method: 'POST', body: JSON.stringify({ message, error: error?.toString() }) });
-    }
+  groupEnd() {
+    console.groupEnd();
   },
-
-  info(message: string, data?: any) {
-    if (process.env.NODE_ENV === 'development') {
-      console.info(`[INFO] ${message}`, data || '');
-    }
-  }
 };
-
-export default LoggerService;

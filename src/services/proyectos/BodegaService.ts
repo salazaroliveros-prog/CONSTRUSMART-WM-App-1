@@ -17,6 +17,10 @@ export const BodegaService = {
   },
 
   async registrarUso(materialId: string, cantidad: number, referencia = 'Uso de almacén', userId?: string) {
+    const stockActual = await MovimientosMaterialesService.calcularStock(materialId);
+    if (stockActual < cantidad) {
+      throw new Error(`Stock insuficiente. Disponible: ${stockActual}, Solicitado: ${cantidad}`);
+    }
     return await this.registrarMovimiento(materialId, 'salida', cantidad, referencia, userId);
   },
 

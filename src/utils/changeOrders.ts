@@ -52,19 +52,19 @@ export function crearChangeOrder(
   const version = versiones_anteriores.length + 1;
 
   // Comparar líneas
-  const lineasAnteriores = presupuesto_actual.lineas || [];
+  const lineasAnteriores = (presupuesto_actual.lineas || []) as Record<string, unknown>[];
 
-   
-  lineasNuevas.forEach((nueva: any) => {
-     
-    const anterior = lineasAnteriores.find((l: any) => l.id === nueva.id);
+  
+  lineasNuevas.forEach((nueva) => {
+    
+    const anterior = lineasAnteriores.find((l) => l.id === nueva.id);
     
     if (anterior) {
-       
-      const costoAnt = (anterior as any).costoUnitario || 0;
+      
+      const costoAnt = (anterior.costoUnitario as number) || 0;
       const costaNvo = nueva.unitario;
        
-      const cantAnt = (anterior as any).cantidad || 0;
+      const cantAnt = (anterior.cantidad as number) || 0;
       const cantNva = nueva.cantidad;
 
       if (cantAnt !== cantNva || costoAnt !== costaNvo) {
