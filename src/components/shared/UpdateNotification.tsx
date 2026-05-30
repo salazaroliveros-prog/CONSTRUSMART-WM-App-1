@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { registerSW } from 'virtual:pwa-register';
+import { LoggerService } from '@/services/LoggerService';
 
 const UpdateNotification: React.FC = () => {
   const [show, setShow] = useState(false);
@@ -8,7 +9,7 @@ const UpdateNotification: React.FC = () => {
   useEffect(() => {
     updateFnRef.current = registerSW({
       onNeedRefresh: () => setShow(true),
-      onOfflineReady: () => console.log('PWA lista para uso offline'),
+      onOfflineReady: () => LoggerService.info('PWA lista para uso offline'),
     });
   }, []);
 
