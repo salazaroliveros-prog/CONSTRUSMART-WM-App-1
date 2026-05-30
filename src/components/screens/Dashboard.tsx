@@ -7,7 +7,7 @@ import ChartCard from '@/components/shared/ChartCard';
 import { fmtQ } from '@/lib/exporters';
 import { CoreEngineService } from '@/services/CoreEngineService';
 import { AgenteInteligente } from '@/services/ai/AgenteInteligente';
-import { BarChart3, TrendingUp, TrendingDown, DollarSign, Percent, Shield, AlertTriangle, ArrowLeft, ArrowRight, FolderKanban, Wallet, ShoppingCart, PieChartIcon, LineChartIcon, Activity, Target, Download, Plus, Save } from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, DollarSign, Percent, Shield, AlertTriangle, ArrowLeft, ArrowRight, FolderKanban, Wallet, ShoppingCart, PieChartIcon, LineChartIcon, Activity, Target, Download, Plus, Save, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { toast } from 'sonner';
@@ -61,13 +61,13 @@ const Dashboard: React.FC = () => {
     try {
       const saved = localStorage.getItem('dash_charts');
       return saved ? JSON.parse(saved) : [
-        ['kpi','quick-entry','curvas','gantt','fase','avance'],
-        ['flujo-caja','gastos-cat','comp-mensual','ingresos-proy'],
+        ['kpi','quick-entry','calendario','curvas','gantt','fase'],
+        ['avance','flujo-caja','gastos-cat','comp-mensual','ingresos-proy'],
         ['heatmap','alertas','balance-acum','gauge-rent']
       ];
     } catch { return [
-      ['kpi','quick-entry','curvas','gantt','fase','avance'],
-      ['flujo-caja','gastos-cat','comp-mensual','ingresos-proy'],
+      ['kpi','quick-entry','calendario','curvas','gantt','fase'],
+      ['avance','flujo-caja','gastos-cat','comp-mensual','ingresos-proy'],
       ['heatmap','alertas','balance-acum','gauge-rent']
     ]; }
   });
@@ -244,7 +244,7 @@ const Dashboard: React.FC = () => {
 
   const gastosCategorias = ['materiales', 'mano-obra', 'herramienta', 'sub-contrato', 'administrativo', 'personal', 'transporte', 'fijos'];
 
-  const chartDefinitions = useMemo((): Record<string, ChartDef> => ({
+  const chartDefinitions: Record<string, ChartDef> = {
     'kpi': {
       id: 'kpi', title: 'KPIs', icon: <TrendingUp className="w-3.5 h-3.5 text-blue-700" />,
       span: 'col-span-12', height: 'min-h-[90px]',
@@ -520,7 +520,7 @@ const Dashboard: React.FC = () => {
         );
       },
     },
-  }), [curvaSData, flujoMensual, gastosPorCategoria, ingresosPorProyecto, faseDistribucion, avanceData, balanceAcumulado, stats, alertas, presupuestos, setView, transicionFase]);
+  };
 
 const layoutClass = "h-dvh flex flex-col p-0.5 sm:p-2 md:p-3 overflow-hidden";
 const pageClass = "flex-1 grid grid-cols-12 gap-1 sm:gap-2 overflow-hidden";

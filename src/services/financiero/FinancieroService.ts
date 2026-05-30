@@ -18,17 +18,16 @@ export const FinancieroService = {
       .eq('user_id', userId);
 
     if (error) throw error;
-    
-    const transacciones = data as Transaccion[];
+    const transacciones = (data || []) as Transaccion[];
     const ingresos = transacciones.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
     const gastosGenerales = transacciones.filter(t => t.tipo === 'gasto' && t.categoria !== 'mano-obra').reduce((s, t) => s + t.costoTotal, 0);
     const gastosPersonal = transacciones.filter(t => t.tipo === 'gasto' && t.categoria === 'mano-obra').reduce((s, t) => s + t.costoTotal, 0);
-    
+
     return {
       ingresos,
       gastosGenerales,
       gastosPersonal,
-      rentabilidadNeta: ingresos - gastosGenerales - gastosPersonal
+      rentabilidadNeta: ingresos - gastosGenerales - gastosPersonal,
     };
   },
 
@@ -65,9 +64,9 @@ export const FinancieroService = {
     if (payload.proyectoId !== undefined) dbRecord.proyecto_id = payload.proyectoId;
     let query = supabase.from('transacciones').update(dbRecord).eq('id', id);
     if (userId) query = query.eq('user_id', userId);
-    const { data, error } = await (query as any).select().single();
+    const { data, error } = await query.select().single();
     if (error) throw error;
-    return data;
+    return data as Transaccion;
   },
 
   /**
@@ -95,7 +94,7 @@ export const FinancieroService = {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as Transaccion;
     } catch (error) {
       console.error('Error en FinancieroService.registrarTransaccion:', error);
       toast.error('Error al registrar transacción');

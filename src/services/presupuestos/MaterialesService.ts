@@ -1,14 +1,14 @@
 import { supabase } from '@/lib/supabase';
-import { Material } from '@/types/supabase';
+import type { Material } from '@/types/supabase';
 
 export const MaterialesService = {
-  async getMateriales(presupuestoId: string) {
+  async getMateriales(presupuestoId: string): Promise<Material[]> {
     const { data, error } = await supabase
       .from('materiales_proyecto')
       .select('*')
       .eq('presupuesto_id', presupuestoId);
     if (error) throw error;
-    return data as any as Material[];
+    return (data || []) as Material[];
   },
 
   // Extrae materiales del JSON embebido de lineas (subrenglones.materiales)
@@ -19,10 +19,10 @@ export const MaterialesService = {
       .eq('id', presupuestoId)
       .single();
     if (error) throw error;
-    
-    const lineas = presupuesto.lineas || [];
+
+    const lineas = presupuesto?.lineas || [];
     const materialesDesglosados: Record<string, { cantidad: number; unidad: string; costoUnitario: number; nombre: string; codigo: string }> = {};
-    
+
     lineas.forEach((linea: any) => {
       (linea?.subrenglones?.materiales || []).forEach((mat: any) => {
         const key = mat.nombre?.toLowerCase() || 'material sin nombre';
@@ -38,7 +38,7 @@ export const MaterialesService = {
         materialesDesglosados[key].cantidad += (mat.cantidad || 0) * (linea.cantidad || 1);
       });
     });
-    
+
     return Object.entries(materialesDesglosados).map(([_, m]) => ({
       nombre: m.nombre,
       unidad: m.unidad,
@@ -53,7 +53,7 @@ export const MaterialesService = {
   async persistDesglosados(presupuestoId: string): Promise<Material[]> {
     const existentes = await this.getMateriales(presupuestoId);
     if (existentes.length > 0) return existentes;
-    
+
     const desglosados = await this.getDesglosado(presupuestoId);
     if (desglosados.length === 0) return [];
 
@@ -72,41 +72,41 @@ export const MaterialesService = {
       .insert(inserts)
       .select();
     if (error) throw error;
-    return (data || []) as any as Material[];
+    return (data || []) as Material[];
   },
 
-  async addMaterial(material: any) {
-    const { data, error } = await (supabase
-      .from('materiales_proyecto') as any)
+  async addMaterial(material: Partial<Material>) {
+    const { data, error } = await supabase
+      .from('materiales_proyecto')
       .insert(material)
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return data as Material;
   },
 
   async buscarPorNombre(presupuestoId: string, nombre: string) {
     const criterio = nombre.trim();
     if (!criterio) return null;
 
-    const { data, error } = await (supabase
-      .from('materiales_proyecto') as any)
+    const { data, error } = await supabase
+      .from('materiales_proyecto')
       .select('*')
       .eq('presupuesto_id', presupuestoId)
       .ilike('nombre', `%${criterio}%`)
       .limit(1);
 
     if (error) throw error;
-    return (data && data[0]) || null;
+    return (data && data[0]) as Material | null;
   },
 
   async registrarUso(materialId: string, cantidad: number) {
-    const { data, error } = await (supabase
-      .from('movimientos_materiales') as any)
+    const { data, error } = await supabase
+      .from('movimientos_materiales')
       .insert({ material_id: materialId, tipo: 'salida', cantidad })
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return data as any;
   }
 };
