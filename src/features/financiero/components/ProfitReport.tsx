@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import type { Transaccion, Presupuesto } from '@/types/supabase';
+import { CAT_OPERATIVO, CAT_ADMIN, CAT_PERSONAL, isOperativo, isAdmin, isPersonal } from '@/types/supabase';
 import { TrendingUp, TrendingDown, DollarSign, PiggyBank, Building2, Users, AlertCircle, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, Legend } from 'recharts';
 import { fmtQ } from '@/lib/exporters';
@@ -12,10 +13,6 @@ const COLORS = {
   gastoPers: '#EF4444',
   margen: '#8B5CF6',
 };
-
-const CAT_OPERATIVO = ['materiales', 'mano-obra', 'herramienta', 'sub-contrato', 'transporte'] as const;
-const CAT_ADMIN = ['administrativo', 'fijos'] as const;
-const CAT_PERSONAL = ['personal', 'hogar'] as const;
 
 interface ProjectProfit {
   id: string;
@@ -34,9 +31,9 @@ const ProfitReport: React.FC<{
 }> = ({ transacciones, presupuestos }) => {
   const totals = useMemo(() => {
     const ingresos = transacciones.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
-    const gastoOperativo = transacciones.filter(t => t.tipo === 'gasto' && CAT_OPERATIVO.includes(t.categoria as any)).reduce((s, t) => s + t.costoTotal, 0);
-    const gastoAdmin = transacciones.filter(t => t.tipo === 'gasto' && CAT_ADMIN.includes(t.categoria as any)).reduce((s, t) => s + t.costoTotal, 0);
-    const gastoPersonal = transacciones.filter(t => t.tipo === 'gasto' && CAT_PERSONAL.includes(t.categoria as any)).reduce((s, t) => s + t.costoTotal, 0);
+    const gastoOperativo = transacciones.filter(t => t.tipo === 'gasto' && isOperativo(t.categoria)).reduce((s, t) => s + t.costoTotal, 0);
+    const gastoAdmin = transacciones.filter(t => t.tipo === 'gasto' && isAdmin(t.categoria)).reduce((s, t) => s + t.costoTotal, 0);
+    const gastoPersonal = transacciones.filter(t => t.tipo === 'gasto' && isPersonal(t.categoria)).reduce((s, t) => s + t.costoTotal, 0);
     const gastoTotal = gastoOperativo + gastoAdmin + gastoPersonal;
     return { ingresos, gastoOperativo, gastoAdmin, gastoPersonal, gastoTotal, neto: ingresos - gastoTotal };
   }, [transacciones]);
@@ -46,8 +43,8 @@ const ProfitReport: React.FC<{
     return activos.map<ProjectProfit>(p => {
       const txns = transacciones.filter(t => t.proyectoId === p.id);
       const ingresos = txns.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
-      const gastosOperativos = txns.filter(t => t.tipo === 'gasto' && CAT_OPERATIVO.includes(t.categoria as any)).reduce((s, t) => s + t.costoTotal, 0);
-      const gastosAdmin = txns.filter(t => t.tipo === 'gasto' && CAT_ADMIN.includes(t.categoria as any)).reduce((s, t) => s + t.costoTotal, 0);
+      const gastosOperativos = txns.filter(t => t.tipo === 'gasto' && isOperativo(t.categoria)).reduce((s, t) => s + t.costoTotal, 0);
+      const gastosAdmin = txns.filter(t => t.tipo === 'gasto' && isAdmin(t.categoria)).reduce((s, t) => s + t.costoTotal, 0);
       const margen = ingresos - gastosOperativos - gastosAdmin;
       const rentabilidad = p.total > 0 ? (margen / p.total) * 100 : 0;
       return { id: p.id, nombre: p.proyecto || '—', presupuesto: p.total, ingresos, gastosOperativos, gastosAdmin, margen, rentabilidad };

@@ -1,6 +1,22 @@
 import { supabase } from '@/lib/supabase';
 import type { Material } from '@/types/supabase';
 
+type SubMaterial = {
+  nombre?: string;
+  unidad?: string;
+  cantidad?: number;
+  costoUnitario?: number;
+  codigo?: string;
+};
+
+type PresupuestoLinea = {
+  codigo?: string;
+  cantidad?: number;
+  subrenglones?: {
+    materiales?: SubMaterial[];
+  };
+};
+
 export const MaterialesService = {
   async getMateriales(presupuestoId: string): Promise<Material[]> {
     const { data, error } = await supabase
@@ -20,22 +36,24 @@ export const MaterialesService = {
       .single();
     if (error) throw error;
 
-    const lineas = presupuesto?.lineas || [];
+    const lineas = (presupuesto?.lineas || []) as PresupuestoLinea[];
     const materialesDesglosados: Record<string, { cantidad: number; unidad: string; costoUnitario: number; nombre: string; codigo: string }> = {};
 
-    lineas.forEach((linea: any) => {
-      (linea?.subrenglones?.materiales || []).forEach((mat: any) => {
-        const key = mat.nombre?.toLowerCase() || 'material sin nombre';
+    lineas.forEach((linea) => {
+      const materiales = linea.subrenglones?.materiales ?? [];
+      materiales.forEach((mat) => {
+        const nombre = mat.nombre?.trim() || 'Material sin nombre';
+        const key = nombre.toLowerCase();
         if (!materialesDesglosados[key]) {
           materialesDesglosados[key] = {
             cantidad: 0,
             unidad: mat.unidad || 'u',
-            costoUnitario: mat.costoUnitario || 0,
-            nombre: mat.nombre || key,
+            costoUnitario: mat.costoUnitario ?? 0,
+            nombre,
             codigo: mat.codigo || linea.codigo || '',
           };
         }
-        materialesDesglosados[key].cantidad += (mat.cantidad || 0) * (linea.cantidad || 1);
+        materialesDesglosados[key].cantidad += (mat.cantidad ?? 0) * (linea.cantidad ?? 1);
       });
     });
 

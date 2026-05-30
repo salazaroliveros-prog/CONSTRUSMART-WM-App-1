@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTheme } from '@/components/theme-provider';
-import { supabase } from '@/lib/supabase';
+import { AuthService } from '@/services/AuthService';
 import { FinancieroService } from '@/services/financiero/FinancieroService';
 import { PresupuestosService } from '@/services/presupuestos/PresupuestosService';
 import { ProyectosService } from '@/services/proyectos/ProyectosService';
@@ -11,8 +11,9 @@ import { ProveedoresService } from '@/services/compras/ProveedoresService';
 import { OrdenesCompraService } from '@/services/compras/OrdenesCompraService';
 import { NotificacionesService } from '@/services/NotificacionesService';
 import { MaterialesService } from '@/services/presupuestos/MaterialesService';
+import { RealtimeService } from '@/services/RealtimeService';
 import type { TableName, QueryResultMap } from '@/services/AppDataService';
-import type { Session, RealtimeChannel } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { 
   Cliente, Proyecto, Transaccion, Actividad, Presupuesto, Equipo, EquipoMiembro,
@@ -54,8 +55,8 @@ type AppNotification = {
   accion_url?: string;
 }
 
-const dbToNotification = (row: Record<string, unknown>): AppNotification => {
-  const createdRaw = row.created_at as any;
+const dbToNotification = (row: Database['notificaciones']): AppNotification => {
+  const createdRaw = row.created_at;
   const created_at = createdRaw
     ? (typeof createdRaw === 'string' ? createdRaw : new Date(createdRaw).toISOString())
     : new Date().toISOString();
@@ -173,39 +174,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    const [authError, setAuthError] = useState<string | null>(null);
    const [sidebarOpen, setSidebarOpen] = useState(false);
    const { setTheme } = useTheme();
-   const loadingRef = useRef(false);
 
    const [clientes, setClientes] = useState<Cliente[]>([]);
    const [proyectos, setProyectos] = useState<Proyecto[]>([]);
    const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
    const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
    const [actividades, setActividades] = useState<Actividad[]>([]);
-    const [equipos, setEquipos] = useState<Equipo[]>([]);
-    const [equipoMiembros, setEquipoMiembros] = useState<EquipoMiembro[]>([]);
-    const [proveedores, setProveedores] = useState<Proveedor[]>([]);
-    const [ordenesCompra, setOrdenesCompra] = useState<OrdenCompra[]>([]);
-    const [notifications, setNotifications] = useState<AppNotification[]>([]);
-    const [isOnline, setIsOnline] = useState(navigator.onLine);
-    const [pendingCount, setPendingCount] = useState(0);
-   const realtimeClientes = useRef<RealtimeChannel | null>(null);
-   const realtimeProyectos = useRef<RealtimeChannel | null>(null);
-   const realtimePresupuestos = useRef<RealtimeChannel | null>(null);
-   const realtimeTransacciones = useRef<RealtimeChannel | null>(null);
-   const realtimeActividades = useRef<RealtimeChannel | null>(null);
-   const realtimeEquipos = useRef<RealtimeChannel | null>(null);
-   const realtimeEquipoMiembros = useRef<RealtimeChannel | null>(null);
-   const realtimeProveedores = useRef<RealtimeChannel | null>(null);
-   const realtimeOrdenesCompra = useRef<RealtimeChannel | null>(null);
-   const realtimeRenglones = useRef<RealtimeChannel | null>(null);
-   const realtimeRenglonUsage = useRef<RealtimeChannel | null>(null);
-   const realtimeRenglonPrecios = useRef<RealtimeChannel | null>(null);
-   const realtimeCambios = useRef<RealtimeChannel | null>(null);
-   const realtimeMateriales = useRef<RealtimeChannel | null>(null);
-   const realtimeMovimientos = useRef<RealtimeChannel | null>(null);
-   const realtimeConciliaciones = useRef<RealtimeChannel | null>(null);
-   const realtimePartidas = useRef<RealtimeChannel | null>(null);
-   const realtimeChecklist = useRef<RealtimeChannel | null>(null);
-   const realtimeNotificaciones = useRef<RealtimeChannel | null>(null);
+   const [equipos, setEquipos] = useState<Equipo[]>([]);
+   const [equipoMiembros, setEquipoMiembros] = useState<EquipoMiembro[]>([]);
+   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+   const [ordenesCompra, setOrdenesCompra] = useState<OrdenCompra[]>([]);
+   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+   const [isOnline, setIsOnline] = useState(navigator.onLine);
+   const [pendingCount, setPendingCount] = useState(0);
+   const loadingRef = useRef(false);
+   const realtimeCleanupRef = useRef<(() => void) | null>(null);
    const initDoneRef = useRef(false);
    const mountedRef = useRef(true);
 
@@ -223,14 +206,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const dataSvc = (await import('@/services/AppDataService')).default;
         const data = await dataSvc.loadAll(userId);
 
-         const mapAndSet = <T extends TableName>(
+         const mapAndSet = <T extends TableName, State>(
            name: T,
-           setter: React.Dispatch<React.SetStateAction<Database[T][]>>,
-           mapper?: (row: Database[T]) => any
+           setter: React.Dispatch<React.SetStateAction<State[]>>,
+           mapper: (row: Database[T]) => State,
          ) => {
            const rows = (data[name] || []) as Database[T][];
-           const mapped = mapper ? rows.map(mapper) : rows;
-           setter(mapped as any);
+           const mapped = rows.map(mapper);
+           setter(mapped);
            if (rows.length > 0) saveCachedData(name, userId, mapped);
          };
 
@@ -250,20 +233,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
          const tables: TableName[] = ['clientes', 'proyectos', 'presupuestos', 'transacciones', 'actividades', 'equipos', 'equipo_miembros', 'proveedores', 'ordenes_compra', 'notificaciones'];
          let anyCache = false;
          for (const t of tables) {
-           const cached = loadCachedData<Database[typeof t]>(t, userId);
-           if (cached) {
-             anyCache = true;
-             switch (t) {
-               case 'clientes': setClientes(cached as any); break;
-               case 'proyectos': setProyectos(cached as any); break;
-               case 'presupuestos': setPresupuestos(cached as any); break;
-               case 'transacciones': setTransacciones(cached as any); break;
-               case 'actividades': setActividades(cached as any); break;
-               case 'equipos': setEquipos(cached as any); break;
-               case 'equipo_miembros': setEquipoMiembros(cached as any); break;
-               case 'proveedores': setProveedores(cached as any); break;
-               case 'ordenes_compra': setOrdenesCompra(cached as any); break;
-               case 'notificaciones': setNotifications(cached as any); break;
+           switch (t) {
+             case 'clientes': {
+               const cached = loadCachedData<Cliente>(t, userId);
+               if (cached) { anyCache = true; setClientes(cached); }
+               break;
+             }
+             case 'proyectos': {
+               const cached = loadCachedData<Proyecto>(t, userId);
+               if (cached) { anyCache = true; setProyectos(cached); }
+               break;
+             }
+             case 'presupuestos': {
+               const cached = loadCachedData<Presupuesto>(t, userId);
+               if (cached) { anyCache = true; setPresupuestos(cached); }
+               break;
+             }
+             case 'transacciones': {
+               const cached = loadCachedData<Transaccion>(t, userId);
+               if (cached) { anyCache = true; setTransacciones(cached); }
+               break;
+             }
+             case 'actividades': {
+               const cached = loadCachedData<Actividad>(t, userId);
+               if (cached) { anyCache = true; setActividades(cached); }
+               break;
+             }
+             case 'equipos': {
+               const cached = loadCachedData<Equipo>(t, userId);
+               if (cached) { anyCache = true; setEquipos(cached); }
+               break;
+             }
+             case 'equipo_miembros': {
+               const cached = loadCachedData<EquipoMiembro>(t, userId);
+               if (cached) { anyCache = true; setEquipoMiembros(cached); }
+               break;
+             }
+             case 'proveedores': {
+               const cached = loadCachedData<Proveedor>(t, userId);
+               if (cached) { anyCache = true; setProveedores(cached); }
+               break;
+             }
+             case 'ordenes_compra': {
+               const cached = loadCachedData<OrdenCompra>(t, userId);
+               if (cached) { anyCache = true; setOrdenesCompra(cached); }
+               break;
+             }
+             case 'notificaciones': {
+               const cached = loadCachedData<AppNotification>(t, userId);
+               if (cached) { anyCache = true; setNotifications(cached); }
+               break;
              }
            }
          }
@@ -283,15 +302,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const initSession = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
+        const { session: currentSession, error } = await AuthService.getSession();
+        if (error) throw error;
         if (!mountedRef.current) return;
-        setSession(data.session);
-        if (data.session) {
+        setSession(currentSession);
+        if (currentSession) {
           initDoneRef.current = true;
-          await loadAll(data.session.user.id);
+          await loadAll(currentSession.user.id);
           if (!mountedRef.current) return;
           setView('dashboard');
-          setupRealtimeListeners(data.session.user.id);
+          setupRealtimeListeners(currentSession.user.id);
         } else {
           setView('login');
         }
@@ -308,7 +328,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     initSession();
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event: string, s: Session | null) => {
+    const { data: sub } = AuthService.onAuthStateChange(async (_event: string, s: Session | null) => {
       if (!initDoneRef.current) return;
       setSession(s);
       if (s) {
@@ -341,23 +361,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         window.removeEventListener('online', handleOnline);
         window.removeEventListener('offline', handleOffline);
         if (sub?.subscription) sub.subscription.unsubscribe();
-        if (realtimeClientes.current) realtimeClientes.current.unsubscribe();
-       if (realtimeProyectos.current) realtimeProyectos.current.unsubscribe();
-       if (realtimeTransacciones.current) realtimeTransacciones.current.unsubscribe();
-        if (realtimeActividades.current) realtimeActividades.current.unsubscribe();
-        if (realtimePresupuestos.current) realtimePresupuestos.current.unsubscribe();
-        if (realtimeRenglones.current) realtimeRenglones.current.unsubscribe();
-        if (realtimeRenglonUsage.current) realtimeRenglonUsage.current.unsubscribe();
-        if (realtimeRenglonPrecios.current) realtimeRenglonPrecios.current.unsubscribe();
-        if (realtimeCambios.current) realtimeCambios.current.unsubscribe();
-        if (realtimeMateriales.current) realtimeMateriales.current.unsubscribe();
-        if (realtimeMovimientos.current) realtimeMovimientos.current.unsubscribe();
-        if (realtimeConciliaciones.current) realtimeConciliaciones.current.unsubscribe();
-        if (realtimePartidas.current) realtimePartidas.current.unsubscribe();
-        if (realtimeChecklist.current) realtimeChecklist.current.unsubscribe();
-        if (realtimeNotificaciones.current) realtimeNotificaciones.current.unsubscribe();
-        if (realtimeProveedores.current) realtimeProveedores.current.unsubscribe();
-        if (realtimeOrdenesCompra.current) realtimeOrdenesCompra.current.unsubscribe();
+        realtimeCleanupRef.current?.();
       };
      
    }, []);
@@ -414,329 +418,103 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, [isOnline, session?.user.id]);
 
  const setupRealtimeListeners = (userId: string) => {
-     if (realtimeClientes.current) realtimeClientes.current.unsubscribe();
-     realtimeClientes.current = supabase
-       .channel('clientes')
-       .on('postgres_changes', {
-         event: '*',
-         schema: 'public',
-         table: 'clientes',
-         filter: `user_id=eq.${userId}`
-       }, (payload) => {
-         handleRealtimeChange('clientes', payload);
-       })
-       .subscribe();
-
-     if (realtimeProyectos.current) realtimeProyectos.current.unsubscribe();
-     realtimeProyectos.current = supabase
-       .channel('proyectos')
-       .on('postgres_changes', {
-         event: '*',
-         schema: 'public',
-         table: 'proyectos',
-         filter: `user_id=eq.${userId}`
-       }, (payload) => {
-         handleRealtimeChange('proyectos', payload);
-       })
-       .subscribe();
-
-      if (realtimePresupuestos.current) realtimePresupuestos.current.unsubscribe();
-      realtimePresupuestos.current = supabase
-        .channel('presupuestos')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'presupuestos',
-          filter: `user_id=eq.${userId}`
-        }, (payload) => {
-          handleRealtimeChange('presupuestos', payload);
-        })
-        .subscribe();
-
-      if (realtimeTransacciones.current) realtimeTransacciones.current.unsubscribe();
-     realtimeTransacciones.current = supabase
-       .channel('transacciones')
-       .on('postgres_changes', {
-         event: '*',
-         schema: 'public',
-         table: 'transacciones',
-         filter: `user_id=eq.${userId}`
-       }, (payload) => {
-         handleRealtimeChange('transacciones', payload);
-       })
-       .subscribe();
-
-     if (realtimeActividades.current) realtimeActividades.current.unsubscribe();
-     realtimeActividades.current = supabase
-       .channel('actividades')
-       .on('postgres_changes', {
-         event: '*',
-         schema: 'public',
-         table: 'actividades',
-         filter: `user_id=eq.${userId}`
-       }, (payload) => {
-         handleRealtimeChange('actividades', payload);
-       })
-       .subscribe();
-
-     if (realtimeEquipos.current) realtimeEquipos.current.unsubscribe();
-     realtimeEquipos.current = supabase
-       .channel('equipos')
-       .on('postgres_changes', {
-         event: '*',
-         schema: 'public',
-         table: 'equipos',
-         filter: `user_id=eq.${userId}`
-       }, (payload) => {
-         handleRealtimeChange('equipos', payload);
-       })
-       .subscribe();
-
-     if (realtimeEquipoMiembros.current) realtimeEquipoMiembros.current.unsubscribe();
-     realtimeEquipoMiembros.current = supabase
-       .channel('equipo_miembros')
-       .on('postgres_changes', {
-         event: '*',
-         schema: 'public',
-         table: 'equipo_miembros',
-         filter: `user_id=eq.${userId}`
-       }, (payload) => {
-         handleRealtimeChange('equipo_miembros', payload);
-       })
-       .subscribe();
-
-     if (realtimeProveedores.current) realtimeProveedores.current.unsubscribe();
-     realtimeProveedores.current = supabase
-       .channel('proveedores')
-       .on('postgres_changes', {
-         event: '*',
-         schema: 'public',
-         table: 'proveedores',
-         filter: `user_id=eq.${userId}`
-       }, (payload) => {
-         handleRealtimeChange('proveedores', payload);
-       })
-       .subscribe();
-
-     if (realtimeOrdenesCompra.current) realtimeOrdenesCompra.current.unsubscribe();
-     realtimeOrdenesCompra.current = supabase
-       .channel('ordenes_compra')
-       .on('postgres_changes', {
-         event: '*',
-         schema: 'public',
-         table: 'ordenes_compra',
-         filter: `user_id=eq.${userId}`
-       }, (payload) => {
-         handleRealtimeChange('ordenes_compra', payload);
-       })
-       .subscribe();
-
-     if (realtimeRenglones.current) realtimeRenglones.current.unsubscribe();
-     realtimeRenglones.current = supabase
-       .channel('renglones')
-       .on('postgres_changes', {
-         event: '*', schema: 'public', table: 'renglones',
-         filter: `user_id=eq.${userId}`
-       }, () => { /* feature hook refreshes on mount */ })
-       .subscribe();
-
-     if (realtimeRenglonUsage.current) realtimeRenglonUsage.current.unsubscribe();
-     realtimeRenglonUsage.current = supabase
-       .channel('renglon_usage')
-       .on('postgres_changes', {
-         event: '*', schema: 'public', table: 'renglon_usage',
-         filter: `user_id=eq.${userId}`
-       }, () => {})
-       .subscribe();
-
-     if (realtimeRenglonPrecios.current) realtimeRenglonPrecios.current.unsubscribe();
-     realtimeRenglonPrecios.current = supabase
-       .channel('renglon_precios_historial')
-       .on('postgres_changes', {
-         event: '*', schema: 'public', table: 'renglon_precios_historial'
-       }, () => {})
-       .subscribe();
-
-     if (realtimeCambios.current) realtimeCambios.current.unsubscribe();
-     realtimeCambios.current = supabase
-       .channel('cambios_presupuesto')
-       .on('postgres_changes', {
-         event: '*', schema: 'public', table: 'cambios_presupuesto'
-       }, () => {})
-       .subscribe();
-
-     if (realtimeMateriales.current) realtimeMateriales.current.unsubscribe();
-     realtimeMateriales.current = supabase
-       .channel('materiales_proyecto')
-       .on('postgres_changes', {
-         event: '*', schema: 'public', table: 'materiales_proyecto'
-       }, () => {})
-       .subscribe();
-
-     if (realtimeMovimientos.current) realtimeMovimientos.current.unsubscribe();
-     realtimeMovimientos.current = supabase
-       .channel('movimientos_materiales')
-       .on('postgres_changes', {
-         event: '*', schema: 'public', table: 'movimientos_materiales',
-         filter: `user_id=eq.${userId}`
-       }, () => {})
-       .subscribe();
-
-     if (realtimeConciliaciones.current) realtimeConciliaciones.current.unsubscribe();
-     realtimeConciliaciones.current = supabase
-       .channel('conciliaciones')
-       .on('postgres_changes', {
-         event: '*', schema: 'public', table: 'conciliaciones',
-         filter: `user_id=eq.${userId}`
-       }, () => {})
-       .subscribe();
-
-     if (realtimePartidas.current) realtimePartidas.current.unsubscribe();
-     realtimePartidas.current = supabase
-       .channel('partidas_conciliacion')
-       .on('postgres_changes', {
-         event: '*', schema: 'public', table: 'partidas_conciliacion'
-       }, () => {})
-       .subscribe();
-
-     if (realtimeChecklist.current) realtimeChecklist.current.unsubscribe();
-     realtimeChecklist.current = supabase
-       .channel('checklist_items')
-       .on('postgres_changes', {
-         event: '*', schema: 'public', table: 'checklist_items'
-       }, () => {})
-       .subscribe();
-
-     if (realtimeNotificaciones.current) realtimeNotificaciones.current.unsubscribe();
-     realtimeNotificaciones.current = supabase
-       .channel('notificaciones')
-       .on('postgres_changes', {
-         event: '*', schema: 'public', table: 'notificaciones',
-         filter: `user_id=eq.${userId}`
-       }, (payload) => {
-         handleRealtimeChange('notificaciones', payload);
-       })
-       .subscribe();
+     realtimeCleanupRef.current?.();
+     realtimeCleanupRef.current = RealtimeService.subscribe(userId, handleRealtimeChange);
    };
 
+  type RealtimeEventType = 'INSERT' | 'UPDATE' | 'DELETE';
+  type RealtimePayload<T extends TableName> = {
+    eventType: RealtimeEventType;
+    new?: Database[T];
+    old?: Database[T];
+  };
+
+  const parseRealtimePayload = <T extends TableName>(payload: unknown): RealtimePayload<T> => payload as RealtimePayload<T>;
+
+  const isRecordWithId = (value: unknown): value is { id: string } =>
+    typeof value === 'object' && value !== null && 'id' in value && typeof (value as any).id === 'string';
+
+  const getRecordId = (record?: { id?: unknown }): string | undefined =>
+    typeof record?.id === 'string' ? record.id : undefined;
+
+  const getPendingMutationId = (mutation: PendingMutation): string | undefined => {
+    if (mutation.data && isRecordWithId(mutation.data)) return mutation.data.id;
+    if (mutation.filters && isRecordWithId(mutation.filters)) return mutation.filters.id;
+    return undefined;
+  };
+
+  const applyRealtimeChange = <T extends TableName, S extends { id: string }>(
+    payload: RealtimePayload<T>,
+    setter: React.Dispatch<React.SetStateAction<S[]>>,
+    converter: (row: Database[T]) => S,
+  ) => {
+    if (payload.eventType === 'INSERT' && payload.new) {
+      const id = getRecordId(payload.new);
+      if (!id) return;
+      setter(prev => prev.some(x => x.id === id) ? prev : [converter(payload.new), ...prev]);
+    } else if (payload.eventType === 'UPDATE' && payload.new) {
+      const id = getRecordId(payload.new);
+      if (!id) return;
+      setter(prev => prev.map(x => x.id === id ? converter(payload.new!) : x));
+    } else if (payload.eventType === 'DELETE' && payload.old) {
+      const id = getRecordId(payload.old);
+      if (!id) return;
+      setter(prev => prev.filter(x => x.id !== id));
+    }
+  };
+
   // Manejar cambios realtime
-  const handleRealtimeChange = (table: string, payload: unknown) => {
+  const handleRealtimeChange = (table: TableName, payload: unknown) => {
     const realPayload = payload as {
-      eventType: string;
+      eventType?: string;
       new?: Record<string, unknown>;
       old?: Record<string, unknown>;
     };
 
-    const eventId = (realPayload.new?.id || realPayload.old?.id) as string | undefined;
-    
+    const eventId = getRecordId(realPayload.new) || getRecordId(realPayload.old);
+
     // Si existe una mutación pendiente local para el mismo registro, ignorar el evento realtime
     // para evitar "saltos" en la UI (reconciliación optimista)
     try {
       if (eventId && session?.user?.id) {
         const pending = getPendingMutations(session.user.id);
-        const hasConflict = pending.some(m => m.table === table && (
-          (m.data && (m.data as any).id === eventId) ||
-          (m.filters && (m.filters as any).id === eventId)
-        ));
+        const hasConflict = pending.some(m => m.table === table && getPendingMutationId(m) === eventId);
         if (hasConflict) return;
       }
     } catch (e) {
       LoggerService.warn('Error en reconciliación realtime:', e);
     }
 
-    // Evitar doble aplicación si el cambio ya está en el estado local (por id y timestamp/version si existiera)
-    const isDuplicate = (list: any[], id: string) => list.some(x => x.id === id && JSON.stringify(x) === JSON.stringify(realPayload.new));
-
     switch (table) {
       case 'clientes':
-        if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setClientes(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToCliente(realPayload.new!), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          setClientes(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToCliente(realPayload.new!) : x));
-        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          setClientes(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
-        }
+        applyRealtimeChange(parseRealtimePayload<'clientes'>(payload), setClientes, dbToCliente);
         break;
       case 'proyectos':
-        if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setProyectos(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToProyecto(realPayload.new!), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          setProyectos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToProyecto(realPayload.new!) : x));
-        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          setProyectos(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
-        }
+        applyRealtimeChange(parseRealtimePayload<'proyectos'>(payload), setProyectos, dbToProyecto);
         break;
       case 'transacciones':
-        if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setTransacciones(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToTransaccion(realPayload.new!), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          setTransacciones(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToTransaccion(realPayload.new!) : x));
-        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          setTransacciones(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
-        }
+        applyRealtimeChange(parseRealtimePayload<'transacciones'>(payload), setTransacciones, dbToTransaccion);
         break;
       case 'presupuestos':
-        if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setPresupuestos(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToPresupuesto(realPayload.new!), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          setPresupuestos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToPresupuesto(realPayload.new!) : x));
-        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          setPresupuestos(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
-        }
+        applyRealtimeChange(parseRealtimePayload<'presupuestos'>(payload), setPresupuestos, dbToPresupuesto);
         break;
       case 'actividades':
-        if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setActividades(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToActividad(realPayload.new!), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          setActividades(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToActividad(realPayload.new!) : x));
-        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          setActividades(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
-        }
+        applyRealtimeChange(parseRealtimePayload<'actividades'>(payload), setActividades, dbToActividad);
         break;
       case 'equipos':
-        if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setEquipos(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToEquipo(realPayload.new!), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          setEquipos(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToEquipo(realPayload.new!) : x));
-        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          setEquipos(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
-        }
+        applyRealtimeChange(parseRealtimePayload<'equipos'>(payload), setEquipos, dbToEquipo);
         break;
       case 'equipo_miembros':
-        if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setEquipoMiembros(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToEquipoMiembro(realPayload.new!), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          setEquipoMiembros(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToEquipoMiembro(realPayload.new!) : x));
-        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          setEquipoMiembros(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
-        }
+        applyRealtimeChange(parseRealtimePayload<'equipo_miembros'>(payload), setEquipoMiembros, dbToEquipoMiembro);
         break;
       case 'proveedores':
-        if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setProveedores(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToProveedor(realPayload.new!), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          setProveedores(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToProveedor(realPayload.new!) : x));
-        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          setProveedores(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
-        }
+        applyRealtimeChange(parseRealtimePayload<'proveedores'>(payload), setProveedores, dbToProveedor);
         break;
       case 'ordenes_compra':
-        if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setOrdenesCompra(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToOrdenCompra(realPayload.new!), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          setOrdenesCompra(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToOrdenCompra(realPayload.new!) : x));
-        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          setOrdenesCompra(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
-        }
+        applyRealtimeChange(parseRealtimePayload<'ordenes_compra'>(payload), setOrdenesCompra, dbToOrdenCompra);
         break;
       case 'notificaciones':
-        if (realPayload.eventType === 'INSERT' && realPayload.new) {
-          setNotifications(prev => prev.some(x => x.id === (realPayload.new as any).id) ? prev : [dbToNotification(realPayload.new!), ...prev]);
-        } else if (realPayload.eventType === 'UPDATE' && realPayload.new) {
-          setNotifications(prev => prev.map(x => x.id === (realPayload.new as any).id ? dbToNotification(realPayload.new!) : x));
-        } else if (realPayload.eventType === 'DELETE' && realPayload.old) {
-          setNotifications(prev => prev.filter(x => x.id !== (realPayload.old as any).id));
-        }
+        applyRealtimeChange(parseRealtimePayload<'notificaciones'>(payload), setNotifications, dbToNotification);
         break;
     }
   };
@@ -744,31 +522,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------- Auth ----------
   const signIn = useCallback(async (email: string, password: string) => {
     setAuthError(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { setAuthError(error.message); return false; }
+    const result = await AuthService.signInWithPassword(email, password);
+    if (!result.success) { setAuthError(result.error ?? 'Error de autenticación'); return false; }
     return true;
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, nombre: string) => {
     setAuthError(null);
-    const { error } = await supabase.auth.signUp({
-      email, password,
-      options: { data: { nombre } },
-    });
-    if (error) { setAuthError(error.message); return false; }
+    const result = await AuthService.signUpWithEmail(email, password, nombre);
+    if (!result.success) { setAuthError(result.error ?? 'Error de registro'); return false; }
     return true;
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+    const result = await AuthService.signInWithGoogle();
+    if (!result.success) {
+      toast.error(result.error ?? 'Error al iniciar sesión con Google');
+    }
   }, []);
 
   const resetPassword = useCallback(async (email: string): Promise<boolean> => {
     setAuthError(null);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    if (error) { setAuthError(error.message); return false; }
+    const result = await AuthService.resetPassword(email);
+    if (!result.success) { setAuthError(result.error ?? 'Error al restablecer la contraseña'); return false; }
     return true;
   }, []);
 
@@ -777,7 +553,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearUserCache(session.user.id);
       clearPendingMutations(session.user.id);
     }
-    await supabase.auth.signOut();
+    const result = await AuthService.signOut();
+    if (!result.success) {
+      toast.error('Error al cerrar sesión');
+    }
     setView('login');
   }, [session?.user.id]);
 
