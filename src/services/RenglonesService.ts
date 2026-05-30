@@ -64,21 +64,21 @@ const TABLE_RENGLONES = 'renglones' as const;
 const TABLE_USAGE = 'renglon_usage' as const;
 const TABLE_HISTORIAL = 'renglon_precios_historial' as const;
 
-export function dbToRenglon(db: DBRenglon): Renglon {
+export function dbToRenglon(db: DBRenglon & Record<string, unknown>): Renglon {
   return {
     id: db.id ?? '',
     codigo: db.codigo ?? '',
     descripcion: db.descripcion ?? '',
-    tipoRenglon: (db as Record<string, unknown>).tipo_renglon as TipoRenglon | undefined,
+    tipoRenglon: db.tipo_renglon as TipoRenglon | undefined,
     unidad: db.unidad ?? '',
     rendimiento: Number(db.rendimiento) || 0,
     costoMaterial: Number(db.costo_material) || 0,
     costoManoObra: Number(db.costo_mano_obra) || 0,
     costoHerramienta: Number(db.costo_herramienta) || 0,
-    categoria: (db as Record<string, unknown>).categoria as string | undefined,
-    activo: (db as Record<string, unknown>).activo !== false,
-    created_at: db.created_at as string | undefined,
-    updated_at: db.updated_at as string | undefined,
+    categoria: db.categoria as string | undefined,
+    activo: db.activo !== false,
+    created_at: db.created_at ?? undefined,
+    updated_at: db.updated_at ?? undefined,
   };
 }
 

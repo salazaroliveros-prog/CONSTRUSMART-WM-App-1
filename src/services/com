@@ -2,12 +2,12 @@ import { supabase } from '@/lib/supabase';
 import type {
   OrdenCompra, CreateOrdenCompra, UpdateOrdenCompra,
   OrdenCompraItem, CreateOrdenCompraItem, UpdateOrdenCompraItem,
-  RecepcionOC, CreateRecepcionOC, CreateRecepcionOCItem,
+  RecepcionOC, CreateRecepcionOC, UpdateRecepcionOC,
+  CreateRecepcionOCItem, DBOrdenCompraItem,
 } from '@/types/supabase';
 import { dbToOrdenCompra, ordenCompraToDb, dbToOrdenCompraItem, ordenCompraItemToDb, dbToRecepcionOC, recepcionOCToDb, dbToRecepcionOCItem } from '@/types/supabase';
 
 export const OrdenesCompraService = {
-  // ====== Órdenes de Compra ======
   async listar(userId: string): Promise<OrdenCompra[]> {
     const { data, error } = await supabase
       .from('ordenes_compra')
@@ -23,7 +23,7 @@ export const OrdenesCompraService = {
       .from('ordenes_compra')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
     if (error) throw error;
     return data ? dbToOrdenCompra(data) : null;
   },
@@ -56,8 +56,11 @@ export const OrdenesCompraService = {
     if (error) throw error;
   },
 
-  // ====== Generar folio ======
   async generarFolio(userId: string): Promise<string> {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const prefix = `OC-${year}${month}-`;
     const { data, error } = await supabase
       .from('ordenes_compra')
       .select('folio')
@@ -65,19 +68,17 @@ export const OrdenesCompraService = {
       .order('created_at', { ascending: false })
       .limit(1);
     if (error) throw error;
-    const rows = data as any[];
+    const rows = data as unknown as { folio: string }[];
     const ultimo = rows?.[0]?.folio as string || 'OC-0000';
-    const num = parseInt(ultimo.replace('OC-', ''), 10) + 1;
-    return `OC-${String(num).padStart(4, '0')}`;
+    const num = parseInt(ultimo.split('-')[2] || '0', 10) + 1;
+    return `${prefix}${String(num).padStart(5, '0')}`;
   },
 
-  // ====== Items ======
   async listarItems(ordenCompraId: string): Promise<OrdenCompraItem[]> {
     const { data, error } = await supabase
       .from('orden_compra_items')
       .select('*')
-      .eq('orden_compra_id', ordenCompraId)
-      .order('created_at');
+      .eq('orden_compra_id', ordenCompraId);
     if (error) throw error;
     return (data || []).map(d => dbToOrdenCompraItem(d));
   },
@@ -119,7 +120,7 @@ export const OrdenesCompraService = {
 
   // ====== Recepción ======
   async crearRecepcion(datos: CreateRecepcionOC, userId: string): Promise<RecepcionOC> {
-    const dbRecord = recepcionOCToDb(datos);
+    const dbRecord = recepcionOCToDb(datos as UpdateRecepcionOC);
     const { data, error } = await supabase
       .from('recepcion_oc')
       .insert({ ...dbRecord, user_id: userId })
@@ -147,7 +148,7 @@ export const OrdenesCompraService = {
   async actualizarCantidadRecibida(itemId: string, cantidad: number): Promise<void> {
     const { error } = await supabase
       .from('orden_compra_items')
-      .update({ cantidad_recibida: cantidad })
+      .update({ cantidad_recibida: cantidad } satisfies Partial<DBOrdenCompraItem>)
       .eq('id', itemId);
     if (error) throw error;
   },

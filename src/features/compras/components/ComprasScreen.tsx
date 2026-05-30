@@ -492,7 +492,7 @@ const ComprasScreen: React.FC = () => {
                   <span>Total: <strong className="text-card-foreground">${oc.total.toLocaleString()}</strong></span>
                 </div>
                 {selectedOC?.id === oc.id && ocItems.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-border">
+                  <div className="mt-3 pt-3 border-t border-border overflow-x-auto">
                     <table className="table-standard">
                       <thead>
                         <tr>

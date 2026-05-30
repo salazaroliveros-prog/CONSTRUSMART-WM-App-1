@@ -51,14 +51,14 @@ export const CAT_ADMIN = ['administrativo', 'fijos'] as const;
 export const CAT_PERSONAL = ['personal', 'hogar'] as const;
 
 // Guardias de tipo
-export function isOperativo(cat: unknown): cat is typeof CAT_OPERATIVO[number] {
-  return CAT_OPERATIVO.includes(cat as any);
+export function isOperativo(cat: string): cat is typeof CAT_OPERATIVO[number] {
+  return CAT_OPERATIVO.includes(cat as typeof CAT_OPERATIVO[number]);
 }
-export function isAdmin(cat: unknown): cat is typeof CAT_ADMIN[number] {
-  return CAT_ADMIN.includes(cat as any);
+export function isAdmin(cat: string): cat is typeof CAT_ADMIN[number] {
+  return CAT_ADMIN.includes(cat as typeof CAT_ADMIN[number]);
 }
-export function isPersonal(cat: unknown): cat is typeof CAT_PERSONAL[number] {
-  return CAT_PERSONAL.includes(cat as any);
+export function isPersonal(cat: string): cat is typeof CAT_PERSONAL[number] {
+  return CAT_PERSONAL.includes(cat as typeof CAT_PERSONAL[number]);
 }
 
 // ====== Esquemas de validación Zod ======
@@ -137,7 +137,7 @@ const PresupuestoSchema = z.object({
   factor_administrativos: z.number().min(0).default(0),
   factor_imprevistos: z.number().min(0).default(0),
   factor_utilidad: z.number().min(0).default(0),
-  lineas: z.array(z.any()).default([]),
+  lineas: z.array(z.record(z.unknown())).default([]),
   avance_fisico: z.number().min(0).max(100).default(0),
   avance_financiero: z.number().min(0).max(100).default(0),
   ingresos: z.number().default(0),
@@ -743,7 +743,7 @@ export const validatePresupuesto = (data: unknown): DBPresupuesto => Presupuesto
 
 // DBRow se conserva temporalmente para compatibilidad con funciones legacy
 // TODO: migrar dbTo* y *ToDb para usar Database[T] directamente
-type DBRow = Record<string, unknown>;
+// Migrado: cada función dbTo* ahora acepta su tipo específico de Database
 
 // ====== Funciones de transformación DB <-> App ======
 export const dbToCliente = (db: DBRow): Cliente => ({
