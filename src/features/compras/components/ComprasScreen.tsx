@@ -41,7 +41,7 @@ const estatusIcon: Record<string, React.ComponentType<{ className?: string }>> =
 };
 
 const ComprasScreen: React.FC = () => {
-  const { session, proveedores, proyectos, presupuestos } = useAppContext();
+  const { session, proveedores, proyectos, presupuestos, addOrdenCompra, refreshOrdenesCompra } = useAppContext();
   const userId = session?.user?.id;
 
   const [tab, setTab] = useState<Tab>('proveedores');
@@ -222,6 +222,7 @@ const ComprasScreen: React.FC = () => {
       setOrdenes(p => [oc, ...p]);
       toast.success(`OC ${folio} creada con éxito`);
       resetOCForm();
+      await refreshOrdenesCompra();
     } catch (err) {
       toast.error('Error al crear orden de compra');
       console.error(err);

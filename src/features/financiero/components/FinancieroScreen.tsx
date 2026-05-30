@@ -4,15 +4,20 @@ import { useAppContext } from '@/contexts/AppContext';
 import PageShell from '@/components/shared/PageShell';
 import ChartCard from '@/components/shared/ChartCard';
 import { fmtQ } from '@/lib/exporters';
-import { TrendingUp, TrendingDown, Wallet, PieChartIcon, ArrowLeft, ArrowRight, LineChartIcon, DollarSign, Percent, Target, Activity, CreditCard, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, PieChartIcon, ArrowLeft, ArrowRight, LineChartIcon, DollarSign, Percent, Target, Activity, CreditCard, BarChart3, Plus, X, Save } from 'lucide-react';
 import ProfitReport from './ProfitReport';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, LineChart, Line, AreaChart, Area, RadialBarChart, RadialBar } from 'recharts';
+import { toast } from 'sonner';
+import type { CreateTransaccion } from '@/types/supabase';
+import { DateUtils } from '@/utils/dateUtils';
 
 const categoriaLabels: Record<string, string> = {
   'materiales': 'Materiales', 'mano-obra': 'Mano de Obra', 'herramienta': 'Herramienta', 'sub-contrato': 'Sub-Contrato',
   'administrativo': 'Administrativo', 'personal': 'Personal', 'transporte': 'Transporte', 'fijos': 'Gastos Fijos',
   'hogar': 'Hogar', 'aporte': 'Aporte', 'trabajos-extra': 'Trabajos Extra',
 };
+
+const CATEGORIAS = ['materiales', 'mano-obra', 'herramienta', 'sub-contrato', 'administrativo', 'personal', 'transporte', 'fijos', 'hogar', 'aporte', 'trabajos-extra'] as const;
 
 const PIE_COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#84CC16', '#F97316', '#6366F1', '#14B8A6'];
 const KPIColorMap: Record<string, string> = {
@@ -27,7 +32,7 @@ interface ChartDef {
 }
 
 const FinancieroScreen: React.FC = () => {
-  const { transacciones, presupuestos, proyectos, deleteTransaccion } = useAppContext();
+  const { transacciones, presupuestos, proyectos, deleteTransaccion, addTransaccion, session } = useAppContext();
   const proyeccion = useMemo(() => CoreEngineService.proyectarTendencia(transacciones), [transacciones]);
   const [filterTipo, setFilterTipo] = useState<'todos' | 'ingreso' | 'gasto'>('todos');
   const [filterCat, setFilterCat] = useState<string>('todos');
@@ -47,6 +52,11 @@ const FinancieroScreen: React.FC = () => {
       ['flujo-caja', 'proyecciones', 'proy-vs-real', 'ingresos-origen', 'distrib-operativos'],
       ['profit-report', 'margen-proy', 'evo-balance', 'radar-salud', 'gauge-eficiencia'],
     ]; }
+  });
+
+  const [showTransForm, setShowTransForm] = useState(false);
+  const [transForm, setTransForm] = useState<CreateTransaccion>({
+    tipo: 'gasto', descripcion: '', cantidad: 1, unidad: '', categoria: 'materiales', costoUnitario: 0, costoTotal: 0, fecha: DateUtils.todayISO(), proyectoId: 'admin',
   });
 
   useEffect(() => { localStorage.setItem('fin_charts', JSON.stringify(chartOrder)); }, [chartOrder]);
@@ -162,6 +172,19 @@ const FinancieroScreen: React.FC = () => {
   const handleRemove = useCallback((id: string) => { setHiddenCharts(prev => new Set(prev).add(id)); }, []);
 
   const saludFinanciera = useMemo(() => CoreEngineService.analizarSaludFinanciera(transacciones), [transacciones]);
+
+  const handleSaveTransaction = async () => {
+    if (!session?.user?.id) { toast.error('Sesión no encontrada'); return; }
+    if (!transForm.descripcion.trim()) { toast.error('La descripción es requerida'); return; }
+    try {
+      await addTransaccion(transForm);
+      toast.success('Transacción registrada');
+      setShowTransForm(false);
+      setTransForm({ tipo: 'gasto', descripcion: '', cantidad: 1, unidad: '', categoria: 'materiales', costoUnitario: 0, costoTotal: 0, fecha: DateUtils.todayISO(), proyectoId: 'admin' });
+    } catch (err) {
+      toast.error('Error al registrar transacción');
+    }
+  };
 
   const chartDefinitions = useMemo((): Record<string, ChartDef> => ({
     'kpi': {
@@ -451,6 +474,10 @@ const FinancieroScreen: React.FC = () => {
               </div>
               <button onClick={nextPage} className="p-1.5 rounded hover:bg-accent text-muted-foreground"><ArrowRight className="w-4 h-4" /></button>
             </div>
+            <button onClick={() => setShowTransForm(true)}
+              className="btn-primary text-xs px-3 py-1.5">
+              <Plus className="w-3.5 h-3.5" /> Nueva Transacción
+            </button>
           </div>
         </div>
 
@@ -473,6 +500,91 @@ const FinancieroScreen: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Modal: Nueva Transacción */}
+      {showTransForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowTransForm(false)}>
+          <div className="bg-card dark:bg-card rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-border">
+              <h2 className="text-lg font-semibold text-card-foreground">Nueva Transacción</h2>
+              <button onClick={() => setShowTransForm(false)} className="btn-ghost p-1 text-muted-foreground"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="label-standard">Tipo</label>
+                <select value={transForm.tipo} onChange={e => setTransForm(f => ({ ...f, tipo: e.target.value as 'ingreso' | 'gasto' }))}
+                  className="select-standard w-full">
+                  <option value="gasto">Gasto</option>
+                  <option value="ingreso">Ingreso</option>
+                </select>
+              </div>
+              <div>
+                <label className="label-standard">Descripción</label>
+                <input type="text" value={transForm.descripcion} onChange={e => setTransForm(f => ({ ...f, descripcion: e.target.value }))}
+                  className="input-standard" placeholder="Ej: Compra de cemento" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label-standard">Categoría</label>
+                  <select value={transForm.categoria} onChange={e => setTransForm(f => ({ ...f, categoria: e.target.value }))}
+                    className="select-standard w-full">
+                    {CATEGORIAS.map(c => (
+                      <option key={c} value={c}>{categoriaLabels[c] || c}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label-standard">Proyecto</label>
+                  <select value={transForm.proyectoId} onChange={e => setTransForm(f => ({ ...f, proyectoId: e.target.value }))}
+                    className="select-standard w-full">
+                    <option value="admin">Admin</option>
+                    {presupuestos.map(p => (
+                      <option key={p.id} value={p.id}>{p.proyecto}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label-standard">Cantidad</label>
+                  <input type="number" min={0} value={transForm.cantidad} onChange={e => setTransForm(f => ({ ...f, cantidad: Number(e.target.value) }))}
+                    className="input-standard" />
+                </div>
+                <div>
+                  <label className="label-standard">Unidad</label>
+                  <input type="text" value={transForm.unidad} onChange={e => setTransForm(f => ({ ...f, unidad: e.target.value }))}
+                    className="input-standard" placeholder="m³, kg, pza..." />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label-standard">Costo Unitario</label>
+                  <input type="number" min={0} value={transForm.costoUnitario} onChange={e => {
+                    const cu = Number(e.target.value);
+                    setTransForm(f => ({ ...f, costoUnitario: cu, costoTotal: cu * f.cantidad }));
+                  }} className="input-standard" />
+                </div>
+                <div>
+                  <label className="label-standard">Costo Total</label>
+                  <input type="number" min={0} value={transForm.costoTotal} onChange={e => setTransForm(f => ({ ...f, costoTotal: Number(e.target.value) }))}
+                    className="input-standard" />
+                </div>
+              </div>
+              <div>
+                <label className="label-standard">Fecha</label>
+                <input type="date" value={transForm.fecha} onChange={e => setTransForm(f => ({ ...f, fecha: e.target.value }))}
+                  className="input-standard" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 p-5 border-t border-border">
+              <button onClick={() => setShowTransForm(false)} className="btn-secondary">Cancelar</button>
+              <button onClick={handleSaveTransaction} className="btn-primary">
+                <Save className="w-4 h-4" /> Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 };

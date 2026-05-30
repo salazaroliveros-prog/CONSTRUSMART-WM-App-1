@@ -27,8 +27,8 @@ FinancieroService.ts → uso de Record<string, unknown)
 PresupuestoScreen.tsx
 ✅ Catálogo, cálculo APU, filtros y guardado están presentes
 ✅ PanelAPUPredictor ya está integrado en el UI
-⚠️ Usa as any en persistedCatalog / lineas
-⚠️ Memoria de cálculo y tipologías están dentro del componente en vez de un motor reutilizable
+✅ Eliminado `as any` en `persistedCatalog` y tipado del guardado de renglones personalizados
+⚠️ Sigue existiendo deuda en `lineas` y memoria de cálculo todavía está dentro del componente en vez de un motor reutilizable
 4. Compras / Órdenes de compra
 ComprasScreen.tsx
 ✅ UI de proveedores + OC + recepción existe

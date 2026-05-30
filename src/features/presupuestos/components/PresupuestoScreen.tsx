@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import PageShell from '@/components/shared/PageShell';
-import { renglonesPorTipologia, Tipologia, tipologiaLabels, Renglon, SubMaterial, SubManoObra, SubEquipo, calcularAPU } from '@/data/renglones';
+import { renglonesPorTipologia, Tipologia, tipologiaLabels, Renglon, SubMaterial, SubManoObra, SubEquipo, Subrenglones, calcularAPU } from '@/data/renglones';
 import { obtenerBibliotecaRenglones, crearRenglon } from '@/services/RenglonesService';
-import type { Renglon as ServiceRenglon } from '@/services/RenglonesService';
+import type { Renglon as ServiceRenglon, MaterialUnitario, SubRenglon } from '@/services/RenglonesService';
 import { downloadCSV, exportPresupuestoPDF, fmtQ } from '@/lib/exporters';
 import { BitacoraAvancePanel } from '@/components/shared/BitacoraAvancePanel';
 import { PanelAPUPredictor } from '@/components/PanelAPUPredictor';
@@ -18,6 +18,61 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+
+function mapServiceRenglonToDataRenglon(serviceRenglon: ServiceRenglon): Renglon {
+  const materiales: SubMaterial[] = (serviceRenglon.materiales || []).map((m: MaterialUnitario) => ({
+    nombre: m.nombre,
+    unidad: m.unidad,
+    cantidad: m.cantidad,
+    costoUnitario: m.costoUnitario,
+  }));
+
+  const subrenglones: Subrenglones = {
+    materiales,
+    manoObra: [],
+    equipos: [],
+  };
+
+  return {
+    id: serviceRenglon.id,
+    codigo: serviceRenglon.codigo,
+    descripcion: serviceRenglon.descripcion,
+    unidad: serviceRenglon.unidad,
+    rendimiento: serviceRenglon.rendimiento,
+    costoMaterial: serviceRenglon.costoMaterial,
+    costoManoObra: serviceRenglon.costoManoObra,
+    costoHerramienta: serviceRenglon.costoHerramienta,
+    subrenglones,
+  };
+}
+
+function buildCustomServiceRenglon(customRenglon: CustomRenglonForm, tipologia: string): Omit<ServiceRenglon, 'id'> {
+  return {
+    codigo: customRenglon.codigo || `PERS-${Date.now()}`,
+    descripcion: customRenglon.descripcion || 'Renglón personalizado',
+    unidad: customRenglon.unidad || 'm²',
+    rendimiento: customRenglon.rendimiento || 1,
+    costoMaterial: customRenglon.costoMaterial || 0,
+    costoManoObra: customRenglon.costoManoObra || 0,
+    costoHerramienta: customRenglon.costoHerramienta || 0,
+    materiales: [{
+      id: 'custom-material',
+      nombre: customRenglon.materialNombre || 'Material personal',
+      cantidad: customRenglon.materialCantidad || 0,
+      unidad: customRenglon.materialUnidad || 'u',
+      costoUnitario: customRenglon.materialCostoUnitario || 0,
+    }],
+    subrenglones: [{
+      id: `m-${Date.now()}`,
+      descripcion: customRenglon.materialNombre || 'Material personal',
+      cantidad: customRenglon.materialCantidad || 0,
+      unidad: customRenglon.materialUnidad || 'u',
+      costoUnitario: customRenglon.materialCostoUnitario || 0,
+    }],
+    activo: true,
+    tipologia,
+  };
+}
 
 export interface MemoriaCalculo {
   veces: number;
@@ -154,17 +209,7 @@ const PresupuestoScreen: React.FC = () => {
 
   // Merge persisted catalog (user) with base catalog, prefer persisted entries
   const mergedCatalog: Renglon[] = [
-    ...persistedCatalog.filter(p => (p.tipologia || 'general') === tipologia).map(p => ({
-      id: p.id,
-      codigo: p.codigo,
-      descripcion: p.descripcion,
-      unidad: p.unidad,
-      rendimiento: p.rendimiento,
-      costoMaterial: p.costoMaterial,
-      costoManoObra: p.costoManoObra,
-      costoHerramienta: p.costoHerramienta,
-      subrenglones: p.subrenglones as any || { materiales: [], manoObra: [], equipos: [] },
-    })),
+    ...persistedCatalog.filter(p => (p.tipologia || 'general') === tipologia).map(serviceRenglonToDataRenglon),
     ...catalogo.filter(c => !(persistedCatalog || []).some(p => p.codigo === c.codigo))
   ];
 
@@ -398,22 +443,7 @@ const PresupuestoScreen: React.FC = () => {
 
   const saveCustomToCatalog = useCallback(async () => {
     if (!session?.user?.id) return;
-    const renglonToSave: any = {
-      codigo: customRenglon.codigo || `PERS-${Date.now()}`,
-      descripcion: customRenglon.descripcion || 'Renglón personalizado',
-      unidad: customRenglon.unidad || 'm²',
-      rendimiento: customRenglon.rendimiento || 1,
-      costoMaterial: customRenglon.costoMaterial || 0,
-      costoManoObra: customRenglon.costoManoObra || 0,
-      costoHerramienta: customRenglon.costoHerramienta || 0,
-      subrenglones: {
-        materiales: [{ nombre: customRenglon.materialNombre || '', unidad: customRenglon.materialUnidad || 'u', cantidad: customRenglon.materialCantidad || 0, costoUnitario: customRenglon.materialCostoUnitario || 0 }],
-        manoObra: [{ descripcion: customRenglon.manoDescripcion || '', cantidadPersonas: customRenglon.manoCantidadPersonas || 1, jornal: customRenglon.manoJornal || 0 }],
-        equipos: [{ descripcion: customRenglon.equipoDescripcion || '', cantidad: customRenglon.equipoCantidad || 0, costoHora: customRenglon.equipoCostoHora || 0 }],
-      },
-      activo: true,
-      tipologia: tipologia,
-    };
+    const renglonToSave: Omit<ServiceRenglon, 'id'> = buildCustomServiceRenglon(customRenglon, tipologia);
 
     const id = await crearRenglon(renglonToSave, session.user.id);
     if (id) {

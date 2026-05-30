@@ -131,6 +131,7 @@ interface DataContextType {
   updateProveedor: (id: string, p: UpdateProveedor) => Promise<void>;
   deleteProveedor: (id: string) => Promise<void>;
   ordenesCompra: OrdenCompra[];
+  addOrdenCompra: (oc: CreateOrdenCompra) => Promise<OrdenCompra | null>;
   refreshOrdenesCompra: () => Promise<void>;
   updateOrdenCompra: (id: string, data: UpdateOrdenCompra) => Promise<void>;
   deleteOrdenCompra: (id: string) => Promise<void>;
@@ -1003,6 +1004,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // ---------- addOrdenCompra ----------
+  const addOrdenCompra = async (oc: CreateOrdenCompra): Promise<OrdenCompra | null> => {
+    if (!session) { toast.error('Sesión no encontrada'); return null; }
+    const userId = session.user.id;
+    try {
+      if (!isOnline) {
+        addPendingMutation({ table: 'ordenes_compra', action: 'INSERT', data: ordenCompraToDb(oc), userId });
+        const optimistic: OrdenCompra = {
+          ...oc,
+          id: crypto.randomUUID(),
+          userId,
+          estatus: oc.estatus || 'pendiente',
+          created_at: new Date().toISOString(),
+        };
+        setOrdenesCompra(prev => [optimistic, ...prev]);
+        setPendingCount(getPendingCount(userId));
+        toast.success('OC guardada localmente (sin conexión)');
+        return optimistic;
+      }
+      const creada = await OrdenesCompraService.crear(oc, userId);
+      setOrdenesCompra(prev => [creada, ...prev]);
+      saveCachedData('ordenes_compra', userId, [creada, ...ordenesCompra]);
+      toast.success('Orden de compra creada');
+      return creada;
+    } catch (error) {
+      toast.error('Error al crear orden de compra');
+      throw error;
+    }
+  };
+
   const refreshOrdenesCompra = async () => {
     if (!session) return;
     try {
@@ -1359,7 +1390,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     equipos, addEquipo, updateEquipo, deleteEquipo,
     equipoMiembros, addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
     proveedores, addProveedor, updateProveedor, deleteProveedor,
-    ordenesCompra, refreshOrdenesCompra, updateOrdenCompra, deleteOrdenCompra,
+    ordenesCompra, addOrdenCompra, refreshOrdenesCompra, updateOrdenCompra, deleteOrdenCompra,
     notifications, markNotificationAsRead, deleteNotification,
      
    
@@ -1374,7 +1405,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addEquipo, updateEquipo, deleteEquipo,
     addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
     addProveedor, updateProveedor, deleteProveedor,
-    refreshOrdenesCompra, updateOrdenCompra, deleteOrdenCompra,
+    addOrdenCompra, refreshOrdenesCompra, updateOrdenCompra, deleteOrdenCompra,
     markNotificationAsRead, deleteNotification,
   ]);
 

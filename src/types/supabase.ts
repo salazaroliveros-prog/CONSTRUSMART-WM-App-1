@@ -29,9 +29,9 @@ export interface Database {
   subrenglon_materiales: DBSubrenglonMaterial;
   subrenglon_mano_obra: DBSubrenglonManoObra;
   subrenglon_equipos: DBSubrenglonEquipo;
-  renglones: any;
-  renglon_usage: any;
-  renglon_precios_historial: any;
+  renglones: DBRenglon;
+  renglon_usage: DBRenglonUsage;
+  renglon_precios_historial: DBRenglonPrecioHistorial;
 }
 
 // ====== Tipos auxiliares enumerables ======
@@ -655,6 +655,40 @@ export interface DBSubrenglonEquipo {
   costo_hora: number;
   created_at?: string;
   updated_at?: string;
+}
+
+// ====== Tipos para tablas de renglones (catálogo APU) ======
+export interface DBRenglon {
+  id: string;
+  codigo: string;
+  descripcion: string;
+  unidad: string;
+  rendimiento: number;
+  costo_material: number;
+  costo_mano_obra: number;
+  costo_herramienta: number;
+  user_id?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DBRenglonUsage {
+  id: string;
+  renglon_id: string;
+  presupuesto_id?: string;
+  user_id: string;
+  usado_en?: string;
+  created_at?: string;
+}
+
+export interface DBRenglonPrecioHistorial {
+  id: string;
+  renglon_id: string;
+  costo_material: number;
+  costo_mano_obra: number;
+  costo_herramienta: number;
+  user_id?: string;
+  created_at?: string;
 }
 
 export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos' | 'bodega' | 'cotizacion' | 'compras' | 'aprobacion';

@@ -1,18 +1,10 @@
 /**
- * RenglonesService v2
+ * RenglonesService v3 — tipado fuerte
  * Servicio avanzado para gestión de renglones, biblioteca de materiales, y cálculo de APU
- * 
- * Features:
- * - CRUD de renglones con versionado
- * - Búsqueda avanzada con relevancia
- * - Catálogo de materiales y MO por tipo
- * - Historial de precios
- * - Favoritos y frecuencia de uso
- * - Importación/Exportación
- * - Integración con Supabase
  */
 
 import { supabase } from '@/lib/supabase';
+import type { DBRenglon, DBRenglonUsage, DBRenglonPrecioHistorial } from '@/types/supabase';
 
 export type TipoRenglon = 'material' | 'mano_obra' | 'herramienta' | 'transporte' | 'otro';
 
@@ -68,38 +60,35 @@ export interface HistorialPrecio {
   variacion: number;
 }
 
-type DBRow = Record<string, unknown>;
+const TABLE_RENGLONES = 'renglones' as const;
+const TABLE_USAGE = 'renglon_usage' as const;
+const TABLE_HISTORIAL = 'renglon_precios_historial' as const;
 
-export function dbToRenglon(db: DBRow): Renglon {
+export function dbToRenglon(db: DBRenglon): Renglon {
   return {
-    id: (db.id as string) ?? '',
-    codigo: (db.codigo as string) ?? '',
-    descripcion: (db.descripcion as string) ?? '',
-    tipoRenglon: db.tipo_renglon as TipoRenglon | undefined,
-    unidad: (db.unidad as string) ?? '',
+    id: db.id ?? '',
+    codigo: db.codigo ?? '',
+    descripcion: db.descripcion ?? '',
+    tipoRenglon: (db as Record<string, unknown>).tipo_renglon as TipoRenglon | undefined,
+    unidad: db.unidad ?? '',
     rendimiento: Number(db.rendimiento) || 0,
     costoMaterial: Number(db.costo_material) || 0,
     costoManoObra: Number(db.costo_mano_obra) || 0,
     costoHerramienta: Number(db.costo_herramienta) || 0,
-    subrenglones: Array.isArray(db.subrenglones) ? db.subrenglones as SubRenglon[] : undefined,
-    materiales: Array.isArray(db.materiales) ? db.materiales as MaterialUnitario[] : undefined,
-    categoria: db.categoria as string | undefined,
-    etiquetas: Array.isArray(db.etiquetas) ? db.etiquetas as string[] : undefined,
-    tipologia: db.tipologia as string | undefined,
-    estimacionTiempo: db.estimacion_tiempo != null ? Number(db.estimacion_tiempo) : undefined,
-    dificultad: db.dificultad as 'baja' | 'media' | 'alta' | undefined,
-    equipoRequerido: Array.isArray(db.equipo_requerido) ? db.equipo_requerido as string[] : undefined,
-    notas: db.notas as string | undefined,
-    favorito: db.favorito === true,
-    frecuenciaUso: db.frecuencia_uso != null ? Number(db.frecuencia_uso) : undefined,
-    ultimoUso: db.ultimo_uso as string | undefined,
-    activo: db.activo !== false,
+    categoria: (db as Record<string, unknown>).categoria as string | undefined,
+    activo: (db as Record<string, unknown>).activo !== false,
     created_at: db.created_at as string | undefined,
     updated_at: db.updated_at as string | undefined,
   };
 }
 
-export function renglonToDb(renglon: Partial<Renglon>): Record<string, unknown> {
+const EXTRA_FIELDS = [
+  'tipo_renglon', 'categoria', 'etiquetas', 'tipologia', 'estimacion_tiempo',
+  'dificultad', 'equipo_requerido', 'notas', 'favorito', 'frecuencia_uso',
+  'ultimo_uso', 'activo', 'subrenglones', 'materiales',
+] as const;
+
+export function renglonToDb(renglon: Partial<Renglon>): Partial<DBRenglon> & Record<string, unknown> {
   const out: Record<string, unknown> = {};
   if (renglon.codigo !== undefined) out.codigo = renglon.codigo;
   if (renglon.descripcion !== undefined) out.descripcion = renglon.descripcion;
@@ -122,7 +111,7 @@ export function renglonToDb(renglon: Partial<Renglon>): Record<string, unknown> 
   if (renglon.frecuenciaUso !== undefined) out.frecuencia_uso = renglon.frecuenciaUso;
   if (renglon.ultimoUso !== undefined) out.ultimo_uso = renglon.ultimoUso;
   if (renglon.activo !== undefined) out.activo = renglon.activo;
-  return out;
+  return out as Partial<DBRenglon> & Record<string, unknown>;
 }
 
 export interface ResultadoBusqueda {
@@ -191,7 +180,7 @@ export const RENGLONES_BASE: Renglon[] = [
 export async function obtenerBibliotecaRenglones(userId: string): Promise<Renglon[]> {
   try {
     const { data, error } = await supabase
-      .from('renglones')
+      .from(TABLE_RENGLONES)
       .select('*')
       .eq('user_id', userId)
       .eq('activo', true)
@@ -202,7 +191,7 @@ export async function obtenerBibliotecaRenglones(userId: string): Promise<Renglo
       return RENGLONES_BASE;
     }
 
-    return (data || []).map(dbToRenglon);
+    return (data ?? []).map(dbToRenglon);
   } catch (error) {
     console.error('Error obteniendo biblioteca:', error);
     return RENGLONES_BASE;
@@ -223,7 +212,6 @@ export function buscarRenglones(
 ): Renglon[] {
   let resultados = renglones;
 
-  // Búsqueda por texto
   if (termino.trim()) {
     const term = termino.toLowerCase();
     resultados = resultados.filter(
@@ -234,7 +222,6 @@ export function buscarRenglones(
     );
   }
 
-  // Filtros
   if (filtros?.categoria) {
     resultados = resultados.filter((r) => r.categoria === filtros.categoria);
   }
@@ -257,22 +244,20 @@ export async function obtenerRenglonesFreuentes(
 ): Promise<Renglon[]> {
   try {
     const { data, error } = await supabase
-      .from('renglon_usage')
-      .select('renglon_id, count(*) as veces')
+      .from(TABLE_USAGE)
+      .select('renglon_id')
       .eq('user_id', userId)
-      .order('veces', { ascending: false })
       .limit(limite);
 
-    if (error) return [];
+    if (error || !data || data.length === 0) return [];
 
-     
-    const ids = data?.map((d: any) => d.renglon_id) || [];
+    const ids = data.map((d) => d.renglon_id);
     const { data: renglones } = await supabase
-      .from('renglones')
+      .from(TABLE_RENGLONES)
       .select('*')
       .in('id', ids);
 
-    return (renglones || []).map(dbToRenglon);
+    return (renglones ?? []).map(dbToRenglon);
   } catch (error) {
     console.error('Error obteniendo renglones frecuentes:', error);
     return [];
@@ -288,35 +273,33 @@ export async function crearRenglon(renglon: Omit<Renglon, 'id'>, userId: string)
       ...renglonToDb(renglon),
       user_id: userId,
       created_at: new Date().toISOString(),
-    };
+    } satisfies Partial<DBRenglon> & Record<string, unknown>;
+
     const { data, error } = await supabase
-      .from('renglones')
-      .insert(payload as any)
+      .from(TABLE_RENGLONES)
+      .insert(payload)
       .select('id')
-      .single();
+      .single<{ id: string }>();
 
-    if (error) throw error;
-
-    const d = data as any;
+    if (error || !data) throw error || new Error('No se pudo crear renglon');
 
     // Registrar precio inicial en historial
-    if (d?.id) {
-      const costoTotal = (renglon.costoMaterial ?? 0) + (renglon.costoManoObra ?? 0) + (renglon.costoHerramienta ?? 0);
-      if (costoTotal > 0) {
-        try {
-          await supabase.from('renglon_precios_historial').insert({
-            renglon_id: d.id,
-            costo: costoTotal,
-            fecha: new Date().toISOString(),
-            user_id: userId,
-          } as any);
-        } catch (e) {
-          console.warn('Error registrando precio inicial:', e);
-        }
+    const costoTotal = (renglon.costoMaterial ?? 0) + (renglon.costoManoObra ?? 0) + (renglon.costoHerramienta ?? 0);
+    if (costoTotal > 0) {
+      try {
+        await supabase.from(TABLE_HISTORIAL).insert({
+          renglon_id: data.id,
+          costo_material: renglon.costoMaterial ?? 0,
+          costo_mano_obra: renglon.costoManoObra ?? 0,
+          costo_herramienta: renglon.costoHerramienta ?? 0,
+          user_id: userId,
+        } satisfies Partial<DBRenglonPrecioHistorial>);
+      } catch (e) {
+        console.warn('Error registrando precio inicial:', e);
       }
     }
 
-    return d?.id || null;
+    return data.id;
   } catch (error) {
     console.error('Error creando renglon:', error);
     return null;
@@ -335,10 +318,11 @@ export async function actualizarRenglon(
     const payload = {
       ...renglonToDb(cambios),
       updated_at: new Date().toISOString(),
-    };
+    } satisfies Partial<DBRenglon> & Record<string, unknown>;
+
     const { error } = await supabase
-      .from('renglones')
-      .update(payload as any)
+      .from(TABLE_RENGLONES)
+      .update(payload)
       .eq('id', id)
       .eq('user_id', userId);
 
@@ -356,12 +340,13 @@ export async function actualizarRenglon(
         (cambios.costoHerramienta ?? 0);
       if (costoTotal > 0) {
         try {
-          await supabase.from('renglon_precios_historial').insert({
+          await supabase.from(TABLE_HISTORIAL).insert({
             renglon_id: id,
-            costo: costoTotal,
-            fecha: new Date().toISOString(),
+            costo_material: cambios.costoMaterial ?? 0,
+            costo_mano_obra: cambios.costoManoObra ?? 0,
+            costo_herramienta: cambios.costoHerramienta ?? 0,
             user_id: userId,
-          } as any);
+          } satisfies Partial<DBRenglonPrecioHistorial>);
         } catch (e) {
           console.warn('Error registrando historial de precio:', e);
         }
@@ -381,8 +366,8 @@ export async function actualizarRenglon(
 export async function eliminarRenglon(id: string, userId: string): Promise<boolean> {
   try {
     const { error } = await supabase
-      .from('renglones')
-      .update({ activo: false, updated_at: new Date().toISOString() } as any)
+      .from(TABLE_RENGLONES)
+      .update({ activo: false, updated_at: new Date().toISOString() } satisfies Partial<DBRenglon>)
       .eq('id', id)
       .eq('user_id', userId);
 
@@ -399,21 +384,19 @@ export async function eliminarRenglon(id: string, userId: string): Promise<boole
  */
 export async function clonarRenglon(id: string, userId: string): Promise<string | null> {
   try {
-    const { data: renglon } = await supabase
-      .from('renglones')
+    const { data } = await supabase
+      .from(TABLE_RENGLONES)
       .select('*')
       .eq('id', id)
-      .single();
+      .single<DBRenglon>();
 
-    if (!renglon) return null;
+    if (!data) return null;
 
-    const renglonApp = dbToRenglon(renglon);
-    const copia = {
+    const renglonApp = dbToRenglon(data);
+    const copia: Omit<Renglon, 'id'> = {
       ...renglonApp,
       codigo: `${renglonApp.codigo}-COPIA`,
       descripcion: `${renglonApp.descripcion} (Copia)`,
-      created_at: undefined,
-      updated_at: undefined,
     };
 
     return crearRenglon(copia, userId);
@@ -433,7 +416,7 @@ export async function importarRenglonesDesdeCSV(
   const errores: string[] = [];
   let exitosos = 0;
 
-  const lineas = csv.split('\n').slice(1); // Saltar encabezado
+  const lineas = csv.split('\n').slice(1);
 
   for (const linea of lineas) {
     if (!linea.trim()) continue;
@@ -473,18 +456,9 @@ export async function importarRenglonesDesdeCSV(
  */
 export function obtenerCategorias(): string[] {
   return [
-    'movimiento de tierra',
-    'concreto',
-    'acero',
-    'carpintería',
-    'albañilería',
-    'acabados',
-    'electricidad',
-    'plomería',
-    'pintura',
-    'vidrios',
-    'herrería',
-    'varios',
+    'movimiento de tierra', 'concreto', 'acero', 'carpintería',
+    'albañilería', 'acabados', 'electricidad', 'plomería',
+    'pintura', 'vidrios', 'herrería', 'varios',
   ];
 }
 
@@ -504,12 +478,12 @@ export async function registrarUsoRenglon(
   userId: string
 ): Promise<boolean> {
   try {
-    const { error } = await supabase.from('renglon_usage').insert({
+    const { error } = await supabase.from(TABLE_USAGE).insert({
       renglon_id: renglonId,
       presupuesto_id: presupuestoId,
       user_id: userId,
       created_at: new Date().toISOString(),
-    } as any);
+    } satisfies Partial<DBRenglonUsage>);
 
     if (error) throw error;
     return true;
@@ -520,8 +494,7 @@ export async function registrarUsoRenglon(
 }
 
 /**
- * NUEVA FUNCIÓN: Búsqueda avanzada con relevancia
- * Encuentra renglones similares usando múltiples criterios
+ * Búsqueda avanzada con relevancia
  */
 export function buscarAvanzado(
   renglones: Renglon[],
@@ -538,58 +511,39 @@ export function buscarAvanzado(
 
   let candidatos = renglones.filter((r) => r.activo);
 
-  // Aplicar filtros
   if (opciones?.tipo) {
     candidatos = candidatos.filter((r) => r.tipoRenglon === opciones.tipo);
   }
-
   if (opciones?.categoria) {
     candidatos = candidatos.filter(
       (r) => r.categoria?.toLowerCase() === opciones.categoria!.toLowerCase()
     );
   }
-
   if (opciones?.soloFavoritos) {
     candidatos = candidatos.filter((r) => r.favorito);
   }
 
-  // Buscar y calcular relevancia
   candidatos.forEach((renglon) => {
     let relevancia = 0;
     let razon = '';
 
-    // Coincidir en código (máxima relevancia)
     if (renglon.codigo.toLowerCase().includes(terminoLower)) {
       relevancia = 100;
       razon = 'Código coincide exactamente';
-    }
-    // Coincidir en descripción
-    else if (renglon.descripcion.toLowerCase().includes(terminoLower)) {
+    } else if (renglon.descripcion.toLowerCase().includes(terminoLower)) {
       relevancia = 80;
       razon = 'Descripción contiene el término';
-    }
-    // Coincidir en etiquetas
-    else if (renglon.etiquetas?.some((e) => e.toLowerCase().includes(terminoLower))) {
+    } else if (renglon.etiquetas?.some((e) => e.toLowerCase().includes(terminoLower))) {
       relevancia = 60;
       razon = 'Etiqueta coincide';
-    }
-    // Coincidir en categoría
-    else if (renglon.categoria?.toLowerCase().includes(terminoLower)) {
+    } else if (renglon.categoria?.toLowerCase().includes(terminoLower)) {
       relevancia = 40;
       razon = 'Categoría coincide';
     }
 
     if (relevancia > 0) {
-      // Boost si es favorito
-      if (renglon.favorito) {
-        relevancia = Math.min(100, relevancia + 15);
-      }
-
-      // Boost por frecuencia de uso
-      if (renglon.frecuenciaUso) {
-        relevancia += Math.min(10, renglon.frecuenciaUso / 5);
-      }
-
+      if (renglon.favorito) relevancia = Math.min(100, relevancia + 15);
+      if (renglon.frecuenciaUso) relevancia += Math.min(10, renglon.frecuenciaUso / 5);
       resultados.push({
         renglon,
         relevancia: Math.round(relevancia),
@@ -598,32 +552,27 @@ export function buscarAvanzado(
     }
   });
 
-  // Ordenar por relevancia
   resultados.sort((a, b) => b.relevancia - a.relevancia);
-
   return resultados.slice(0, opciones?.limite || 20);
 }
 
 /**
- * NUEVA FUNCIÓN: Toggle de favorito
+ * Toggle de favorito
  */
 export async function toggleFavorito(id: string, userId: string): Promise<boolean> {
   try {
-    const { data: renglon } = await supabase
-      .from('renglones')
+    const { data } = await supabase
+      .from(TABLE_RENGLONES)
       .select('favorito')
       .eq('id', id)
       .eq('user_id', userId)
-      .single();
+      .single<{ favorito: boolean }>();
 
-    if (!renglon) return false;
+    if (!data) return false;
 
     const { error } = await supabase
-      .from('renglones')
-      .update({
-        favorito: !renglon.favorito,
-        updated_at: new Date().toISOString(),
-      } as any)
+      .from(TABLE_RENGLONES)
+      .update({ favorito: !data.favorito, updated_at: new Date().toISOString() } satisfies Partial<DBRenglon>)
       .eq('id', id)
       .eq('user_id', userId);
 
@@ -635,19 +584,19 @@ export async function toggleFavorito(id: string, userId: string): Promise<boolea
 }
 
 /**
- * NUEVA FUNCIÓN: Obtiene favoritos del usuario
+ * Obtiene favoritos del usuario
  */
 export async function obtenerFavoritos(userId: string): Promise<Renglon[]> {
   try {
     const { data } = await supabase
-      .from('renglones')
+      .from(TABLE_RENGLONES)
       .select('*')
       .eq('user_id', userId)
       .eq('favorito', true)
       .eq('activo', true)
-      .order('frecuencia_uso', { ascending: false });
+      .order('frecuencia_uso', { ascending: false, nullsFirst: false });
 
-    return (data || []).map(dbToRenglon);
+    return (data ?? []).map(dbToRenglon);
   } catch (error) {
     console.error('Error obteniendo favoritos:', error);
     return [];
@@ -655,7 +604,7 @@ export async function obtenerFavoritos(userId: string): Promise<Renglon[]> {
 }
 
 /**
- * NUEVA FUNCIÓN: Calcula tendencia de precios
+ * Calcula tendencia de precios
  */
 export async function calcularTendenciaPrecios(
   renglonId: string
@@ -669,23 +618,22 @@ export async function calcularTendenciaPrecios(
     hace30Dias.setDate(hace30Dias.getDate() - 30);
 
     const { data: historial } = await supabase
-      .from('renglon_precios_historial')
+      .from(TABLE_HISTORIAL)
       .select('*')
       .eq('renglon_id', renglonId)
-      .gte('fecha', hace30Dias.toISOString())
-      .order('fecha', { ascending: false });
+      .gte('created_at', hace30Dias.toISOString())
+      .order('created_at', { ascending: false });
 
     if (!historial || historial.length < 2) {
-      return {
-        tendencia: 'estable',
-        variacionPorcentaje: 0,
-        periodoAnalisis: 'Datos insuficientes',
-      };
+      return { tendencia: 'estable', variacionPorcentaje: 0, periodoAnalisis: 'Datos insuficientes' };
     }
 
-    const precioFinal = historial[0].costo;
-    const precioInicial = historial[historial.length - 1].costo;
-    const variacion = ((precioFinal - precioInicial) / precioInicial) * 100;
+    const getCostoTotal = (h: DBRenglonPrecioHistorial) =>
+      (h.costo_material ?? 0) + (h.costo_mano_obra ?? 0) + (h.costo_herramienta ?? 0);
+
+    const precioFinal = getCostoTotal(historial[0]);
+    const precioInicial = getCostoTotal(historial[historial.length - 1]);
+    const variacion = precioInicial === 0 ? 0 : ((precioFinal - precioInicial) / precioInicial) * 100;
 
     return {
       tendencia: Math.abs(variacion) < 2 ? 'estable' : variacion > 0 ? 'alza' : 'baja',
@@ -694,16 +642,12 @@ export async function calcularTendenciaPrecios(
     };
   } catch (error) {
     console.error('Error calculando tendencia:', error);
-    return {
-      tendencia: 'estable',
-      variacionPorcentaje: 0,
-      periodoAnalisis: 'Error en el cálculo',
-    };
+    return { tendencia: 'estable', variacionPorcentaje: 0, periodoAnalisis: 'Error en el cálculo' };
   }
 }
 
 /**
- * NUEVA FUNCIÓN: Obtiene estadísticas del catálogo
+ * Obtiene estadísticas del catálogo
  */
 export function obtenerEstadisticasCatalogo(renglones: Renglon[]): {
   total: number;
@@ -714,64 +658,49 @@ export function obtenerEstadisticasCatalogo(renglones: Renglon[]): {
   precioMinimo: number;
   precioMaximo: number;
 } {
-  const estadisticas = {
-    total: renglones.length,
-    porTipo: {} as Record<string, number>,
-    porCategoria: {} as Record<string, number>,
-    favoritos: 0,
-    precioPromedio: 0,
-    precioMinimo: Infinity,
-    precioMaximo: 0,
-  };
+  const totalCostos = renglones.reduce((sum, r) => {
+    return sum + (r.costoMaterial || 0) + (r.costoManoObra || 0) + (r.costoHerramienta || 0);
+  }, 0);
 
-  let totalCostos = 0;
+  const porTipo: Record<string, number> = {};
+  const porCategoria: Record<string, number> = {};
 
   renglones.forEach((r) => {
-    // Contar por tipo
-    if (r.tipoRenglon) {
-      estadisticas.porTipo[r.tipoRenglon] = (estadisticas.porTipo[r.tipoRenglon] || 0) + 1;
-    }
-
-    // Contar por categoría
-    if (r.categoria) {
-      estadisticas.porCategoria[r.categoria] = (estadisticas.porCategoria[r.categoria] || 0) + 1;
-    }
-
-    // Contar favoritos
-    if (r.favorito) {
-      estadisticas.favoritos++;
-    }
-
-    // Calcular precios
-    const costoTotal = (r.costoMaterial || 0) + (r.costoManoObra || 0) + (r.costoHerramienta || 0);
-    totalCostos += costoTotal;
-    estadisticas.precioMinimo = Math.min(estadisticas.precioMinimo, costoTotal);
-    estadisticas.precioMaximo = Math.max(estadisticas.precioMaximo, costoTotal);
+    if (r.tipoRenglon) porTipo[r.tipoRenglon] = (porTipo[r.tipoRenglon] || 0) + 1;
+    if (r.categoria) porCategoria[r.categoria] = (porCategoria[r.categoria] || 0) + 1;
   });
 
-  estadisticas.precioPromedio = renglones.length > 0 ? totalCostos / renglones.length : 0;
-  estadisticas.precioMinimo = estadisticas.precioMinimo === Infinity ? 0 : estadisticas.precioMinimo;
+  const precios = renglones.map((r) => (r.costoMaterial || 0) + (r.costoManoObra || 0) + (r.costoHerramienta || 0));
 
-  return estadisticas;
+  return {
+    total: renglones.length,
+    porTipo,
+    porCategoria,
+    favoritos: renglones.filter((r) => r.favorito).length,
+    precioPromedio: renglones.length > 0 ? totalCostos / renglones.length : 0,
+    precioMinimo: precios.length > 0 ? Math.min(...precios) : 0,
+    precioMaximo: precios.length > 0 ? Math.max(...precios) : 0,
+  };
 }
 
 /**
- * NUEVA FUNCIÓN: Exporta catálogo a JSON
+ * Exporta catálogo a JSON
  */
 export function exportarCatalogoJSON(renglones: Renglon[]): {
   renglones: Renglon[];
   exportadoEn: string;
   total: number;
 } {
+  const activos = renglones.filter((r) => r.activo);
   return {
-    renglones: renglones.filter((r) => r.activo),
+    renglones: activos,
     exportadoEn: new Date().toISOString(),
-    total: renglones.filter((r) => r.activo).length,
+    total: activos.length,
   };
 }
 
 /**
- * NUEVA FUNCIÓN: Sugiere renglones similares basado en historial
+ * Sugiere renglones similares basado en historial
  */
 export function sugerirSimilares(
   renglon: Renglon,

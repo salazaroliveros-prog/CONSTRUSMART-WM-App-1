@@ -32,7 +32,7 @@ interface ChartDef {
 }
 
 const SeguimientoScreen: React.FC = () => {
-  const { presupuestos, transacciones, transicionFase } = useAppContext();
+  const { presupuestos, transacciones, transicionFase, addTransaccion } = useAppContext();
   const [selectedProyecto, setSelectedProyecto] = useState<string | null>(null);
   const [pagina, setPagina] = useState(0);
   const [hiddenCharts, setHiddenCharts] = useState<Set<string>>(new Set());
