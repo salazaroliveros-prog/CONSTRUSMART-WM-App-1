@@ -433,7 +433,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const parseRealtimePayload = <T extends TableName>(payload: unknown): RealtimePayload<T> => payload as RealtimePayload<T>;
 
   const isRecordWithId = (value: unknown): value is { id: string } =>
-    typeof value === 'object' && value !== null && 'id' in value && typeof (value as any).id === 'string';
+    typeof value === 'object' && value !== null && 'id' in value && typeof (value as Record<string, unknown>).id === 'string';
 
   const getRecordId = (record?: { id?: unknown }): string | undefined =>
     typeof record?.id === 'string' ? record.id : undefined;
@@ -762,7 +762,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
       
-      const data = await FinancieroService.registrarTransaccion(dbRecord as any, userId);
+      const data = await FinancieroService.registrarTransaccion(dbRecord as CreateTransaccion, userId);
       if (data) {
         const mapped = dbToTransaccion(data);
         setTransacciones(p => [mapped, ...p]);
@@ -1094,10 +1094,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cachePresupuestos(userId);
       toast.success('Presupuesto guardado');
       return inserted.id;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error al agregar presupuesto:', error);
-      const msg = error?.message || error?.description || 'Error desconocido';
-      const code = error?.code ? ` (${error?.code})` : '';
+      const errObj = error as Record<string, unknown>;
+      const msg = (errObj?.message as string) || (errObj?.description as string) || 'Error desconocido';
+      const code = errObj?.code ? ` (${errObj.code})` : '';
       cachePresupuestos(userId);
       toast.error('Error al guardar presupuesto', { description: `${msg}${code}` });
       throw error;
@@ -1120,10 +1121,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const mapped = dbToPresupuesto(data);
       setPresupuestos(prev => { const updated = prev.map(x => x.id === id ? mapped : x); saveCachedData('presupuestos', userId, updated); return updated; });
       toast.success('Presupuesto actualizado');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error al actualizar presupuesto:', error);
-      const msg = error?.message || error?.description || 'Error desconocido';
-      const code = error?.code ? ` (${error?.code})` : '';
+      const errObj = error as Record<string, unknown>;
+      const msg = (errObj?.message as string) || (errObj?.description as string) || 'Error desconocido';
+      const code = errObj?.code ? ` (${errObj.code})` : '';
       toast.error('Error al actualizar presupuesto', { description: `${msg}${code}` });
       throw error;
     }
@@ -1165,7 +1167,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const nombreProyecto = presupuestos.find(p => p.id === id)?.proyecto || 'Proyecto';
       crearNotificacion(userId, 'info', `Fase cambiada: ${nuevaFase}`, `"${nombreProyecto}" movido a ${nuevaFase}`);
       toast.success(`Proyecto movido a fase: ${nuevaFase}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error en transicionFase:', error);
       if (original) setPresupuestos(prev => prev.map(p => p.id === id ? { ...p, fase: original } : p));
       toast.error('Error al cambiar de fase');

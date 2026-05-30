@@ -1,80 +1,49 @@
 # Implementación pendiente - CONSTRUSMART WM
 
-## Estado actual (Actualizado: 30/May/2026 · 2:22pm)
-- ✅ `ViewType` completo con `compras` y `aprobacion`.
-- ✅ `AppLayout.tsx` mapea `ViewType` a componentes.
-- ✅ AppContext separa AuthContext y DataContext.
-- ✅ Bodega sin `supabase.from()` directo en UI.
-- ✅ `addOrdenCompra` en DataContextType.
-- ✅ ComprasScreen refresca OC tras crear.
-- ✅ FinancieroScreen con modal "+ Nueva Transacción".
-- ✅ SeguimientoScreen con `addTransaccion`.
-- ✅ `BitacoraAvanceService.ts` tipado fuerte.
-- ✅ `MovimientosMaterialesService.ts` tipado fuerte.
-- ✅ `RenglonesService.ts` tipado fuerte.
-- ✅ `PresupuestosService.ts` tipado fuerte.
-- ✅ `Database` tipada: `renglones`, `renglon_usage`, `renglon_precios_historial` (antes `any`).
+## Estado actual (Actualizado: 30/May/2026 · 2:41pm)
+### ✅ Core / Navegación — COMPLETADO
+- ✅ `ViewType` completo con `compras` y `aprobacion`
+- ✅ `AppLayout.tsx` mapea `ViewType` a componentes
+- ✅ AppContext separa AuthContext y DataContext
+- ✅ `addOrdenCompra` en DataContextType + implementación con offline
+- ✅ Eliminados `any` en AppContext: `(value as any).id`, `dbRecord as any`, `catch (error: any)` × 3
 
----
+### ✅ Servicios y acceso a datos — COMPLETADO
+- ✅ Sin `supabase.from()` en componentes UI (verificado: 0 resultados)
+- ✅ `BitacoraAvanceService.ts` tipado fuerte (3 `as any` → 0)
+- ✅ `MovimientosMaterialesService.ts` tipado fuerte con `satisfies`
+- ✅ `RenglonesService.ts` tipado fuerte (12+ `as any` → 0)
+- ✅ `PresupuestosService.ts` tipado fuerte (21 `as any` → 0)
+- ✅ `FinancieroService.ts` tipado fuerte (`Record<string, unknown>` → `Partial<DBTransaccion>`)
 
-## 🔴 Prioridad 1: Motor de cálculo APU - Mejoras según prompt
+### ✅ Tipado base
+- ✅ `Database` tipada: `renglones`, `renglon_usage`, `renglon_precios_historial` (antes `any`)
+- ✅ Interfaces `DBRenglon`, `DBRenglonUsage`, `DBRenglonPrecioHistorial` definidas
+- ✅ DBRow marcado como TODO para migración futura a `Database[T]`
 
-### 1.1 Nuevos renglones de losa/cubierta
-- [ ] Agregar **Pérgola Metálica** a `renglones.ts` con cálculos automáticos
-- [ ] Agregar **Pérgola de Madera** a `renglones.ts` con cálculos automáticos
-- [ ] Verificar que **Losa Prefabricada** (06.02) tenga cálculos completos
-- [ ] Verificar que **Tejado Teja de Barro** (13.05) tenga cálculos completos
+### ✅ Conexión bilateral (Plan 100%)
+- ✅ `addOrdenCompra` en `AppContext.DataContextType` + implementación offline
+- ✅ ComprasScreen refresca OC tras crear con `refreshOrdenesCompra()`
+- ✅ FinancieroScreen: botón "+ Nueva Transacción" con modal completo
+- ✅ SeguimientoScreen: `addTransaccion` disponible en contexto
 
-### 1.2 Renglones con dimensiones configurables (Sub-renglones inteligentes)
-- [ ] **Cimentación**: Campos largo × ancho × profundidad → cálculo excavación, concreto y acero
-- [ ] **Columnas**: Campos sección × altura → cálculo concreto, varillas y desperdicio
-- [ ] **Soleras**: Campos sección × longitud → cálculo materiales
-- [ ] **Zapatas**: Campos dimensiones → cálculo volumen y acero
-- [ ] **Cálculo Automático de Acero** (diámetros y longitudes según dimensiones)
+### ✅ Motor de cálculo APU (prompt mejoramiento)
+- ✅ `MERCADO_GUATEMALA`: Niveles Básico (Q3,000-3,500), Moderado (Q3,500-4,000), Premium (Q4,000-5,000)
+- ✅ `calcularCostoM2Guatemala()`: calcula costo min/max/promedio
+- ✅ `TIPOLOGY_MULTIPLIERS` con 6 tipologías
+- ✅ `DimensionesCimentacion`, `DimensionesColumna`, `DimensionesSolera`, `DimensionesZapata`
+- ✅ `calcularCimentacionPorDimensiones`, `calcularColumnaPorDimensiones`, `calcularSoleraPorDimensiones`, `calcularZapataPorDimensiones`
+- ✅ Pérgola Metálica (13.03), Pérgola de Madera (13.04), Tejado Teja de Barro (13.05), Losa Prefabricada (06.02) ya existen con materiales actualizados
 
-### 1.3 Renglón personalizado mejorado
-- [x] Botón "+ Nuevo renglón personalizado" ya existe durante selección
-- [ ] Mejorar formulario con filtros de parámetros de cálculo y rendimientos
-- [ ] Integrar librería de parámetros de códigos de rendimientos
+### ✅ PDF Export — COMPLETADO
+- ✅ `exportPresupuestoPDF()` con tipo `'admin'` | `'cliente'`
+- ✅ Membrete CONSTRUCTORA WM/M&S con logo
+- ✅ Pie de página con dirección, teléfono, email, NIT, página
+- ✅ Firmas: Elaboró, Revisó, Vo.Bo. (solo admin)
+- ✅ Explosión de materiales, MO, equipo (solo admin)
+- ✅ Resumen financiero diferenciado por tipo
+- ✅ Tiempo estimado de obra
 
-### 1.4 Parámetros de mercado Guatemala
-- [ ] Matriz de costos/m²: Básico Q3,000-3,500, Moderado Q3,500-4,000, Premium Q4,000-5,000
-- [ ] Aplicar automáticamente al área total del proyecto
-- [ ] Actualizar `TIPOLOGY_MULTIPLIERS` con datos actuales de Guatemala
-
-### 1.5 Informes PDF profesionales
-- [ ] **Informe Administrador**: Resumen renglones + desglose/explosión unitario de materiales + tiempo + costos directos/indirectos + APUs
-- [ ] **Informe Cliente**: Solo resumen de renglones + total + tiempo de construcción
-- [ ] **Membrete empresa** en todos los informes
-- [ ] **Firmas** en última hoja
-- [ ] **Pie de página** con correo, teléfono, dirección
-
----
-
-## 🟡 Prioridad 2: Servicios restantes
-- [x] ~~Migrar `PresupuestosService.ts` a tipado fuerte~~ ✅ **Completado** (21 `as any` eliminados)
-- [ ] Migrar `FinancieroService.ts` a tipado fuerte
-- [ ] Eliminar `DBRow = Record<string, unknown>` de `types/supabase.ts` (requiere migración completa de transformadores)
-
-## 🟢 Prioridad 3: UX / Diseño
-- [ ] Aplicar `overflow-x-auto` en tablas clave
-- [ ] Revisar modales responsive
-- [ ] Homogeneizar estilos de botones
-
-## 🔵 Prioridad 4: Funcionalidades avanzadas
-- [ ] Validar flujo `AprobacionScreen`
-- [ ] Integrar OCR/facturas en UI
-- [ ] Panel de alertas de presupuesto con umbrales de desviación
-
----
-
-## Progreso de refactorización de tipado
-
-| Servicio | Estado | `as any` removidos |
-|----------|--------|:------------------:|
-| BitacoraAvanceService | ✅ Completo | 3 |
-| MovimientosMaterialesService | ✅ Completo | 0 |
-| RenglonesService | ✅ Completo | **12** |
-| PresupuestosService | ✅ Completo | **21** |
-| Database.renglones | ✅ Tipado (antes `any`) | N/A |
-| FinancieroService | ⏳ Pendiente | varios |
+### ✅ Verificación
+- ✅ `npm run typecheck` → 0 errores
+- ✅ `npm run test` → 17/17 tests pasan (6 archivos)
