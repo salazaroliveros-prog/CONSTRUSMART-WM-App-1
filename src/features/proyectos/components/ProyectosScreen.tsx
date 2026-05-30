@@ -3,9 +3,10 @@ import { useAppContext } from '@/contexts/AppContext';
 import type { Presupuesto } from '@/types/supabase';
 import PageShell from '@/components/shared/PageShell';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { Play, PauseCircle, CheckCircle, Folder, Filter, Edit3, Save, Trash2, X, ChevronDown, ChevronRight, DollarSign, TrendingUp, TrendingDown, Ruler, Percent, AlertTriangle, Download } from 'lucide-react';
+import { Play, PauseCircle, CheckCircle, Folder, Filter, Edit3, Save, Trash2, X, ChevronDown, ChevronRight, DollarSign, TrendingUp, TrendingDown, Ruler, Percent, AlertTriangle, Download, Database } from 'lucide-react';
 import { downloadCSV } from '@/lib/exporters';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 type Fase = Presupuesto['fase'];
 const nextFase: Record<Fase, { label: string; icon: React.ComponentType<{ className?: string }>; color: string; fase: Fase } | null> = {
@@ -67,6 +68,102 @@ const ProyectosScreen: React.FC = () => {
   });
   const [renglonAvances, setRenglonAvances] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+
+  const seedTestData = useCallback(async () => {
+    setSeeding(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error('Debes iniciar sesión primero'); return; }
+
+      const proyectos = [
+        {
+          user_id: user.id,
+          nombre: 'CONSTRUCCIÓN RESIDENCIAL VISTA AL LAGO',
+          cliente: 'Carlos Méndez',
+          tipo: 'Residencial',
+          estado: 'Planeación',
+          presupuesto_total: 250000,
+          avance_fisico: 0,
+          avance_financiero: 0,
+          ingresos: 0,
+          gastos: 0,
+          pendiente_aportar: 250000,
+          fecha_inicio: '2026-06-15',
+          fecha_fin: '2026-12-30',
+          fase: 'planeación',
+          total: 250000,
+        },
+        {
+          user_id: user.id,
+          nombre: 'OFICINAS COMERCIALES ZONA 10',
+          cliente: 'Empresa Constructora XYZ',
+          tipo: 'Comercial',
+          estado: 'Ejecución',
+          presupuesto_total: 500000,
+          avance_fisico: 70,
+          avance_financiero: 60,
+          ingresos: 300000,
+          gastos: 250000,
+          pendiente_aportar: 200000,
+          fecha_inicio: '2026-01-10',
+          fecha_fin: '2026-09-30',
+          fase: 'ejecución',
+          total: 500000,
+        },
+        {
+          user_id: user.id,
+          nombre: 'CENTRO COMERCIAL SAN MIGUEL',
+          cliente: 'Inversiones del Sur',
+          tipo: 'Comercial',
+          estado: 'Parado',
+          presupuesto_total: 800000,
+          avance_fisico: 80,
+          avance_financiero: 82,
+          ingresos: 656000,
+          gastos: 500000,
+          pendiente_aportar: 144000,
+          fecha_inicio: '2025-11-01',
+          fecha_fin: '2026-08-15',
+          fase: 'pausa',
+          total: 800000,
+        },
+        {
+          user_id: user.id,
+          nombre: 'BODEGA INDUSTRIAL ZONA 14',
+          cliente: 'Logística Express',
+          tipo: 'Industrial',
+          estado: 'Finalizado',
+          presupuesto_total: 350000,
+          avance_fisico: 100,
+          avance_financiero: 100,
+          ingresos: 350000,
+          gastos: 320000,
+          pendiente_aportar: 0,
+          fecha_inicio: '2025-06-01',
+          fecha_fin: '2026-02-28',
+          fase: 'finalizado',
+          total: 350000,
+        },
+      ];
+
+      const { error } = await supabase.from('proyectos').insert(proyectos);
+      if (error) throw error;
+
+      // Reload projects
+      const { data: refreshed } = await supabase.from('proyectos').select('*');
+      if (refreshed) {
+        // Force page reload to sync context
+        window.location.reload();
+      }
+      toast.success('4 proyectos de prueba cargados correctamente');
+    } catch (err) {
+      console.error('Seed error:', err);
+      toast.error('Error al cargar datos de prueba');
+    } finally {
+      setSeeding(false);
+    }
+  }, []);
 
   const filtrados = useMemo(() => {
     let r = presupuestos;
@@ -229,6 +326,14 @@ const ProyectosScreen: React.FC = () => {
             <input placeholder="Buscar proyecto o cliente..." value={search} onChange={e => setSearch(e.target.value)}
               className="input-standard w-full" />
           </div>
+          <button
+            onClick={seedTestData}
+            disabled={seeding}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-lg transition-colors shrink-0 disabled:opacity-50"
+          >
+            <Database className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{seeding ? 'Cargando...' : 'Cargar Prueba'}</span>
+          </button>
           <button
             onClick={handleExportProyectos}
             className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-lg transition-colors shrink-0"
