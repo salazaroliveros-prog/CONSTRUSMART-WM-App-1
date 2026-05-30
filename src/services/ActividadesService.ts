@@ -5,7 +5,7 @@ export const ActividadesService = {
   async addActividad(payload: CreateActividad): Promise<Actividad> {
     const { data, error } = await supabase
       .from('actividades')
-      .insert(actividadToDb(payload) as any)
+      .insert(actividadToDb(payload))
       .select()
       .single();
     if (error) throw error;
@@ -13,9 +13,9 @@ export const ActividadesService = {
   },
 
   async updateActividad(id: string, payload: UpdateActividad, userId?: string): Promise<Actividad> {
-    let query = supabase.from('actividades').update(actividadToDb(payload) as any).eq('id', id);
+    let query = supabase.from('actividades').update(actividadToDb(payload)).eq('id', id);
     if (userId) query = query.eq('user_id', userId);
-    const { data, error } = await (query as any).select().single();
+    const { data, error } = await query.select().single();
     if (error) throw error;
     return dbToActividad(data);
   },

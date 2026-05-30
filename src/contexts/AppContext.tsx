@@ -11,6 +11,7 @@ import { ProveedoresService } from '@/services/compras/ProveedoresService';
 import { OrdenesCompraService } from '@/services/compras/OrdenesCompraService';
 import { NotificacionesService } from '@/services/NotificacionesService';
 import { MaterialesService } from '@/services/presupuestos/MaterialesService';
+import type { TableName, QueryResultMap } from '@/services/AppDataService';
 import type { Session, RealtimeChannel } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { 
@@ -24,7 +25,8 @@ import {
   dbToCliente, clienteToDb, dbToProyecto, proyectoToDb,
   dbToTransaccion, dbToActividad, dbToPresupuesto, presupuestoToDb,
   dbToEquipo, equipoToDb, dbToEquipoMiembro, equipoMiembroToDb,
-  dbToProveedor, dbToOrdenCompra, proveedorToDb, ordenCompraToDb, actividadToDb
+  dbToProveedor, dbToOrdenCompra, proveedorToDb, ordenCompraToDb, actividadToDb,
+  Database
 } from '@/types/supabase';
 import {
   loadCachedData, saveCachedData, clearUserCache,
@@ -220,56 +222,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
         const dataSvc = (await import('@/services/AppDataService')).default;
         const data = await dataSvc.loadAll(userId);
-          // Mapear resultados a setters usando mapeadores existentes
-          const mapAndSet = (name: string, setter: React.Dispatch<React.SetStateAction<any[]>>, mapper?: (r: any) => any) => {
-            const rows = data[name] || [];
-            const mapped = mapper ? rows.map(mapper) : rows;
-            setter(mapped);
-            if (rows.length > 0) saveCachedData(name, userId, mapped);
-          };
 
-          mapAndSet('clientes', setClientes, dbToCliente);
-          mapAndSet('proyectos', setProyectos, dbToProyecto);
-          mapAndSet('presupuestos', setPresupuestos, dbToPresupuesto);
-          mapAndSet('transacciones', setTransacciones, dbToTransaccion);
-          mapAndSet('actividades', setActividades, dbToActividad);
-          mapAndSet('equipos', setEquipos, dbToEquipo);
-          mapAndSet('equipo_miembros', setEquipoMiembros, dbToEquipoMiembro);
-          mapAndSet('proveedores', setProveedores, dbToProveedor);
-          mapAndSet('ordenes_compra', setOrdenesCompra, dbToOrdenCompra);
-          mapAndSet('notificaciones', setNotifications, dbToNotification);
+         const mapAndSet = <T extends TableName>(
+           name: T,
+           setter: React.Dispatch<React.SetStateAction<Database[T][]>>,
+           mapper?: (row: Database[T]) => any
+         ) => {
+           const rows = (data[name] || []) as Database[T][];
+           const mapped = mapper ? rows.map(mapper) : rows;
+           setter(mapped as any);
+           if (rows.length > 0) saveCachedData(name, userId, mapped);
+         };
 
-        } catch (e) {
-          // cargar desde cache individualmente si falla la carga en línea
-          const tables = ['clientes','proyectos','presupuestos','transacciones','actividades','equipos','equipo_miembros','proveedores','ordenes_compra','notificaciones'];
-          let anyCache = false;
-          for (const t of tables) {
-            const cached = loadCachedData(t, userId);
-            if (cached) {
-              anyCache = true;
-              switch (t) {
-                case 'clientes': setClientes(cached as any); break;
-                case 'proyectos': setProyectos(cached as any); break;
-                case 'presupuestos': setPresupuestos(cached as any); break;
-                case 'transacciones': setTransacciones(cached as any); break;
-                case 'actividades': setActividades(cached as any); break;
-                case 'equipos': setEquipos(cached as any); break;
-                case 'equipo_miembros': setEquipoMiembros(cached as any); break;
-                case 'proveedores': setProveedores(cached as any); break;
-                case 'ordenes_compra': setOrdenesCompra(cached as any); break;
-                case 'notificaciones': setNotifications(cached as any); break;
-              }
-            }
-          }
-          if (anyCache) toast.info('Modo offline — mostrando datos guardados');
-        } finally {
-          loadingRef.current = false;
-        }
-      }, []);
+         mapAndSet('clientes', setClientes, dbToCliente);
+         mapAndSet('proyectos', setProyectos, dbToProyecto);
+         mapAndSet('presupuestos', setPresupuestos, dbToPresupuesto);
+         mapAndSet('transacciones', setTransacciones, dbToTransaccion);
+         mapAndSet('actividades', setActividades, dbToActividad);
+         mapAndSet('equipos', setEquipos, dbToEquipo);
+         mapAndSet('equipo_miembros', setEquipoMiembros, dbToEquipoMiembro);
+         mapAndSet('proveedores', setProveedores, dbToProveedor);
+         mapAndSet('ordenes_compra', setOrdenesCompra, dbToOrdenCompra);
+         mapAndSet('notificaciones', setNotifications, dbToNotification);
 
-  // Inicialización de sesión y realtime listeners
-  useEffect(() => {
-    mountedRef.current = true;
+       } catch (e) {
+         // cargar desde cache individualmente si falla la carga en línea
+         const tables: TableName[] = ['clientes', 'proyectos', 'presupuestos', 'transacciones', 'actividades', 'equipos', 'equipo_miembros', 'proveedores', 'ordenes_compra', 'notificaciones'];
+         let anyCache = false;
+         for (const t of tables) {
+           const cached = loadCachedData<Database[typeof t]>(t, userId);
+           if (cached) {
+             anyCache = true;
+             switch (t) {
+               case 'clientes': setClientes(cached as any); break;
+               case 'proyectos': setProyectos(cached as any); break;
+               case 'presupuestos': setPresupuestos(cached as any); break;
+               case 'transacciones': setTransacciones(cached as any); break;
+               case 'actividades': setActividades(cached as any); break;
+               case 'equipos': setEquipos(cached as any); break;
+               case 'equipo_miembros': setEquipoMiembros(cached as any); break;
+               case 'proveedores': setProveedores(cached as any); break;
+               case 'ordenes_compra': setOrdenesCompra(cached as any); break;
+               case 'notificaciones': setNotifications(cached as any); break;
+             }
+           }
+         }
+         if (anyCache) toast.info('Modo offline — mostrando datos guardados');
+       } finally {
+         loadingRef.current = false;
+       }
+     }, []);
 
     const sessionTimeout = setTimeout(() => {
       if (mountedRef.current) {

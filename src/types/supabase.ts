@@ -5,7 +5,34 @@
 import { z } from 'zod';
 
 // Database type for createClient generic (Supabase schema shape)
-export type Database = Record<string, unknown>;
+export interface Database {
+  clientes: DBCliente;
+  proyectos: DBProyecto;
+  transacciones: DBTransaccion;
+  actividades: DBActividad;
+  presupuestos: DBPresupuesto;
+  equipos: DBEquipo;
+  equipo_miembros: DBEquipoMiembro;
+  proveedores: DBProveedor;
+  ordenes_compra: DBOrdenCompra;
+  orden_compra_items: DBOrdenCompraItem;
+  recepcion_oc: DBRecepcionOC;
+  recepcion_oc_items: DBRecepcionOCItem;
+  ocr_documentos: DBOcrDocumento;
+  device_tokens: DBDeviceToken;
+  notificaciones: DBNotificacion;
+  cambios_presupuesto: CambiosPresupuesto;
+  bitacora_avance: DBBitacoraAvance;
+  materiales_proyecto: DBMaterial;
+  movimientos_materiales: DBMovimientoMaterial;
+  subrenglones: DBSubrenglon;
+  subrenglon_materiales: DBSubrenglonMaterial;
+  subrenglon_mano_obra: DBSubrenglonManoObra;
+  subrenglon_equipos: DBSubrenglonEquipo;
+  renglones: any;
+  renglon_usage: any;
+  renglon_precios_historial: any;
+}
 
 // ====== Esquemas de validación Zod ======
 const ClienteSchema = z.object({
@@ -490,6 +517,118 @@ export interface RecepcionOCItem {
   created_at?: string;
 }
 export type CreateRecepcionOCItem = Omit<RecepcionOCItem, 'id' | 'created_at'>;
+
+export interface DBNotificacion {
+  id: string;
+  user_id: string;
+  tipo: TipoNotificacion;
+  titulo: string;
+  mensaje: string | null;
+  leido: boolean;
+  accion_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type TipoNotificacion = 'info' | 'alerta' | 'exito' | 'warning';
+
+export interface Notificacion {
+  id: string;
+  userId: string;
+  tipo: 'info' | 'alerta' | 'exito' | 'warning';
+  titulo: string;
+  mensaje?: string | null;
+  leido: boolean;
+  accionUrl?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type CreateNotificacion = Omit<DBNotificacion, 'id' | 'created_at' | 'updated_at'>;
+export type UpdateNotificacion = Partial<CreateNotificacion>;
+
+export interface DBMaterial {
+  id: string;
+  presupuesto_id: string;
+  nombre: string;
+  unidad: string;
+  cantidad_estimada: number;
+  cantidad_utilizada: number;
+  costo_unitario: number;
+  proveedor?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type Material = DBMaterial;
+
+export interface DBMovimientoMaterial {
+  id: string;
+  material_id: string;
+  tipo: 'entrada' | 'salida';
+  cantidad: number;
+  fecha?: string;
+  nota?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type MovimientoMaterial = DBMovimientoMaterial;
+
+export interface DBBitacoraAvance {
+  id: string;
+  presupuesto_id: string;
+  actividad: string;
+  descripcion: string;
+  estado: string;
+  fecha: string;
+  avance: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type BitacoraAvance = DBBitacoraAvance;
+
+export interface DBSubrenglon {
+  id: string;
+  presupuesto_id: string;
+  descripcion: string;
+  renglon_codigo?: string;
+  cantidad?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DBSubrenglonMaterial {
+  id: string;
+  subrenglon_id: string;
+  nombre: string;
+  unidad: string;
+  cantidad: number;
+  costo_unitario: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DBSubrenglonManoObra {
+  id: string;
+  subrenglon_id: string;
+  descripcion: string;
+  cantidad_personas: number;
+  jornal: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DBSubrenglonEquipo {
+  id: string;
+  subrenglon_id: string;
+  descripcion: string;
+  cantidad: number;
+  costo_hora: number;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos' | 'bodega' | 'cotizacion' | 'compras' | 'aprobacion';
 
