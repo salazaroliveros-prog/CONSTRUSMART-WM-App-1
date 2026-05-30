@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 
-function mapServiceRenglonToDataRenglon(serviceRenglon: ServiceRenglon): Renglon {
+function serviceRenglonToDataRenglon(serviceRenglon: ServiceRenglon): Renglon {
   const materiales: SubMaterial[] = (serviceRenglon.materiales || []).map((m: MaterialUnitario) => ({
     nombre: m.nombre,
     unidad: m.unidad,
