@@ -741,6 +741,8 @@ export const validateTransaccion = (data: unknown): DBTransaccion => Transaccion
 export const validateActividad = (data: unknown): DBActividad => ActividadSchema.parse(data);
 export const validatePresupuesto = (data: unknown): DBPresupuesto => PresupuestoSchema.parse(data);
 
+// DBRow se conserva temporalmente para compatibilidad con funciones legacy
+// TODO: migrar dbTo* y *ToDb para usar Database[T] directamente
 type DBRow = Record<string, unknown>;
 
 // ====== Funciones de transformación DB <-> App ======
