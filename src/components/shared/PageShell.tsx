@@ -17,7 +17,7 @@ const PageShell: React.FC<PageShellProps> = ({ children, title, showHome = true,
           <LazyHeader showHome={showHome} title={title} />
         </Suspense>
       )}
-      <main className="flex-1 w-full mx-auto">
+      <main className="flex-1 w-full max-w-full mx-auto px-3 sm:px-5 overflow-x-hidden">
         {children}
       </main>
     </div>

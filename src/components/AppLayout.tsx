@@ -101,7 +101,7 @@ const AppLayout: React.FC = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-background" data-view={view}>
       {isNotLogin && <Sidebar />}
-      <div className="flex-1 min-w-0 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-w-0 min-h-0 overflow-x-hidden overflow-y-auto">
         <CommandPalette />
         <DevDiagnostics />
         <div className={`w-full ${fadeState === 'fading' ? 'main-content-fade' : 'main-content'}`} style={{ transitionDuration: '0.15s' }}>
