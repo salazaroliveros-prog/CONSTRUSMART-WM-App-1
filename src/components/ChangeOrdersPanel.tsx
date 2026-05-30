@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
+import { useAuthContext } from '@/contexts/AppContext';
 import { requiereAprobacionEspecial, calcularImpacto } from '@/utils/changeOrders';
 import type { Presupuesto } from '@/types/supabase';
 import { AlertTriangle, CheckCircle, Clock } from 'lucide-react';
@@ -27,6 +28,8 @@ interface ChangeOrdersPanelProps {
 
 export const ChangeOrdersPanel: React.FC<ChangeOrdersPanelProps> = ({ presupuesto }) => {
   const { changeOrders, crearOrden, aprobar, rechazar, loading } = useChangeOrders(presupuesto);
+  const { session } = useAuthContext();
+  const userId = session?.user?.id || '';
   const [motivoNuevo, setMotivoNuevo] = useState('');
   const [isOpen, setIsOpen] = useState(false);
 
@@ -177,14 +180,14 @@ export const ChangeOrdersPanel: React.FC<ChangeOrdersPanelProps> = ({ presupuest
                       <Button
                         size="sm"
                         variant="default"
-                        onClick={() => aprobar(orden.id, 'usuario_actual', 'Aprobado')}
+                        onClick={() => aprobar(orden.id, userId, 'Aprobado')}
                       >
                         Aprobar
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => rechazar(orden.id, 'usuario_actual', 'No aplica en este momento')}
+                        onClick={() => rechazar(orden.id, userId, 'No aplica en este momento')}
                       >
                         Rechazar
                       </Button>

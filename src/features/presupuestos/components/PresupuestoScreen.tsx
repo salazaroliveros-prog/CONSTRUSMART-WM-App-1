@@ -14,10 +14,6 @@ import { validarFactores, sugerirFactores, detectarAnomalias } from '@/utils/val
 import type { Suggestion } from '@/utils/predictorAPU';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 
 function serviceRenglonToDataRenglon(serviceRenglon: ServiceRenglon): Renglon {
   const materiales: SubMaterial[] = (serviceRenglon.materiales || []).map((m: MaterialUnitario) => ({
@@ -675,6 +671,16 @@ const PresupuestoScreen: React.FC = () => {
                   <option value="moderado">Moderado (Q 3,500 - Q 4,000 /m²)</option>
                   <option value="premium">Premium (Q 4,000 - Q 5,000 /m²)</option>
                 </select>
+                {calidadReferencial.area > 0 && (
+                  <div className="mt-1.5 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-[10px]">
+                    <div className="font-semibold text-blue-800 dark:text-blue-200">
+                      Costo referencial: Q {calidadReferencial.totalMin.toLocaleString()} – Q {calidadReferencial.totalMax.toLocaleString()}
+                    </div>
+                    <div className="text-[9px] text-blue-600 dark:text-blue-300">
+                      {calidadReferencial.area} m² × {calidadReferencial.label} (Q {calidadReferencial.min.toLocaleString()}-{calidadReferencial.max.toLocaleString()}/m²) · Promedio: Q {calidadReferencial.totalPromedio.toLocaleString()}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>

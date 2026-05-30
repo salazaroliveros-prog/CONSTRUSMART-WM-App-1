@@ -23,6 +23,22 @@ import CommandPalette from '@/components/shared/CommandPalette';
 import OfflineBanner from '@/components/shared/OfflineBanner';
 import DevDiagnostics from '@/dev/DevDiagnostics';
 
+// Mapa estático de vistas — fuera del componente para evitar re-renders
+const viewMappings: Record<ViewType, React.LazyExoticComponent<React.ComponentType<any>>> = {
+  login: LoginScreen,
+  dashboard: Dashboard,
+  clientes: ClientesScreen,
+  presupuesto: PresupuestoScreen,
+  proyectos: ProyectosScreen,
+  seguimiento: SeguimientoScreen,
+  financiero: FinancieroScreen,
+  equipos: TeamsScreen,
+  bodega: BodegaScreen,
+  cotizacion: CotizacionScreen,
+  compras: ComprasScreen,
+  aprobacion: AprobacionScreen,
+};
+
 const AppLayout: React.FC = () => {
   const { view, session, loading } = useAuthContext();
   const [fadeState, setFadeState] = useState<'visible' | 'fading'>('visible');
@@ -62,21 +78,6 @@ const AppLayout: React.FC = () => {
       }
     };
   }, []);
-
-  const viewMappings: Record<ViewType, React.LazyExoticComponent<React.ComponentType<any>>> = {
-  login: LoginScreen,
-  dashboard: Dashboard,
-  clientes: ClientesScreen,
-  presupuesto: PresupuestoScreen,
-  proyectos: ProyectosScreen,
-  seguimiento: SeguimientoScreen,
-  financiero: FinancieroScreen,
-  equipos: TeamsScreen,
-  bodega: BodegaScreen,
-  cotizacion: CotizacionScreen,
-  compras: ComprasScreen,
-  aprobacion: AprobacionScreen,
-};
 
 const renderViewContent = useCallback((v: ViewType) => {
   const Component = viewMappings[v];
