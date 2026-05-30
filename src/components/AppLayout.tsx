@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, Suspense, lazy, useCallback } from 'react';
+import type { ViewType } from '@/types/supabase';
 import { useAuthContext } from '@/contexts/AppContext';
 import { ScreenSkeleton } from '@/components/shared/Skeleton';
 import LoginScreen from '@/components/screens/LoginScreen';
@@ -62,22 +63,25 @@ const AppLayout: React.FC = () => {
     };
   }, []);
 
-  const renderViewContent = useCallback((v: string) => {
-    switch (v) {
-      case 'dashboard': return <Dashboard />;
-      case 'clientes': return <ClientesScreen />;
-      case 'presupuesto': return <PresupuestoScreen />;
-      case 'proyectos': return <ProyectosScreen />;
-      case 'seguimiento': return <SeguimientoScreen />;
-      case 'financiero': return <FinancieroScreen />;
-      case 'equipos': return <TeamsScreen />;
-      case 'bodega': return <BodegaScreen />;
-      case 'cotizacion': return <CotizacionScreen />;
-      case 'compras': return <ComprasScreen />;
-      case 'aprobacion': return <AprobacionScreen />;
-      default: return null;
-    }
-  }, []);
+  const viewMappings: Record<ViewType, React.LazyExoticComponent<React.ComponentType<any>>> = {
+  login: LoginScreen,
+  dashboard: Dashboard,
+  clientes: ClientesScreen,
+  presupuesto: PresupuestoScreen,
+  proyectos: ProyectosScreen,
+  seguimiento: SeguimientoScreen,
+  financiero: FinancieroScreen,
+  equipos: TeamsScreen,
+  bodega: BodegaScreen,
+  cotizacion: CotizacionScreen,
+  compras: ComprasScreen,
+  aprobacion: AprobacionScreen,
+};
+
+const renderViewContent = useCallback((v: ViewType) => {
+  const Component = viewMappings[v];
+  return Component ? <Component /> : null;
+}, []);
 
   if (loading) {
     return (

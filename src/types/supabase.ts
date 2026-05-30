@@ -34,6 +34,33 @@ export interface Database {
   renglon_precios_historial: any;
 }
 
+// ====== Tipos auxiliares enumerables ======
+export const TRANSACCION_TIPO = ['ingreso', 'gasto'] as const;
+export type TipoTransaccion = typeof TRANSACCION_TIPO[number];
+
+export const TRANSACCION_CATEGORIA = [
+  'materiales', 'mano-obra', 'herramienta', 'sub-contrato',
+  'administrativo', 'personal', 'transporte', 'fijos',
+  'hogar', 'aporte', 'trabajos-extra'
+] as const;
+export type CategoriaTransaccion = typeof TRANSACCION_CATEGORIA[number];
+
+// Categorías agrupadas para análisis financiero
+export const CAT_OPERATIVO = ['materiales', 'mano-obra', 'herramienta', 'sub-contrato', 'transporte'] as const;
+export const CAT_ADMIN = ['administrativo', 'fijos'] as const;
+export const CAT_PERSONAL = ['personal', 'hogar'] as const;
+
+// Guardias de tipo
+export function isOperativo(cat: unknown): cat is typeof CAT_OPERATIVO[number] {
+  return CAT_OPERATIVO.includes(cat as any);
+}
+export function isAdmin(cat: unknown): cat is typeof CAT_ADMIN[number] {
+  return CAT_ADMIN.includes(cat as any);
+}
+export function isPersonal(cat: unknown): cat is typeof CAT_PERSONAL[number] {
+  return CAT_PERSONAL.includes(cat as any);
+}
+
 // ====== Esquemas de validación Zod ======
 const ClienteSchema = z.object({
   id: z.string().optional(),

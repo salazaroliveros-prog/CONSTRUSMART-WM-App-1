@@ -2,15 +2,25 @@
 
 Esta lista convierte el plan de revisión en un checklist concreto para el repositorio actual. Cada tarea corresponde a una brecha funcional o técnica detectada en el análisis.
 
+## Estado actual
+- ✅ El sistema ya tiene navegación interna activa y `ViewType` actual incluye `compras` y `aprobacion`.
+- ✅ `AppLayout.tsx` ya mapea `ViewType` a componentes y no depende de un switch de strings.
+- ✅ `AppContext.tsx` ya separa conceptualmente `AuthContext` y `DataContext`, aunque el proveedor aún mantiene lógica pesada.
+- ✅ Se eliminó una declaración duplicada `loadingRef` en `AppContext.tsx`.
+- ✅ La app centraliza la carga inicial en `src/services/AppDataService.ts`, pero aún hay deuda en tipado y en consultas directas dentro de servicios.
+- ✅ El módulo de compras usa servicios, pero esos servicios necesitan reforzar tipos y validación.
+- ✅ Bodega no usa supabase directo en UI y `BodegaService.ts` ya delega la inserción en `MovimientosMaterialesService`.
+- ⚠️ `MovimientosMaterialesService.ts` sigue usando `supabase.from('movimientos_materiales')`.
+- ⚠️ `GanttService` y `FinancieroService` requieren mayor consolidación y estilo de datos más firme.
+
 ## 1. Core / Navegación
-- [ ] Cambiar `renderViewContent(v: string)` en `src/components/AppLayout.tsx` a `renderViewContent(v: ViewType)` con tipado estricto.
-- [ ] Validar que `ViewType` cubre todas las vistas usadas: `dashboard`, `clientes`, `proyectos`, `presupuesto`, `seguimiento`, `financiero`, `equipos`, `bodega`, `cotizacion`, `compras`, `aprobacion`.
-- [ ] Extraer `AuthContext` de `DataContext` en `src/contexts/AppContext.tsx` para separar estado de autenticación de estado de datos.
-- [ ] Mover la lógica de carga y sincronización de datos de `AppContext` a servicios específicos cuando sea posible.
-- [ ] Eliminar `useMemo`/`useCallback` innecesarios y evitar cadenas "magic strings" para vistas.
+- [x] Cambiar `renderViewContent(v: string)` en `src/components/AppLayout.tsx` a `renderViewContent(v: ViewType)` con tipado estricto.
+- [x] Validar que `ViewType` cubre todas las vistas usadas: `dashboard`, `clientes`, `proyectos`, `presupuesto`, `seguimiento`, `financiero`, `equipos`, `bodega`, `cotizacion`, `compras`, `aprobacion`.
+- [ ] Reducir la lógica de estado en `AppContext.tsx`; extraer la carga de datos y la sincronización a servicios específicos.
+- [ ] Eliminar `useMemo`/`useCallback` innecesarios y evitar cadenas "magic strings" para vistas en la navegación.
 
 ## 2. Servicios y acceso a datos
-- [ ] Auditar y mover todas las consultas supabase fuera de componentes UI.
+- [ ] Auditar y mover todas las consultas `supabase.from()` fuera de componentes UI.
 - [ ] Unificar patrones CRUD en servicios tipados y evitar `as any` en `supabase.from()`.
 - [ ] Corregir los siguientes servicios con tipos débiles o `Record<string, unknown>`:
   - `src/services/proyectos/BodegaService.ts`
@@ -19,13 +29,14 @@ Esta lista convierte el plan de revisión en un checklist concreto para el repos
   - `src/services/financiero/FinancieroService.ts`
   - `src/services/RenglonesService.ts`
 - [ ] Añadir tipos `Database[T]` donde aplique y eliminar conversiones de tipo sin validación.
+- [ ] Evaluar si conviene crear un `BaseService`/`DbService` para los CRUD comunes y queries compartidas.
 
 ## 3. Presupuesto
 - [ ] Extraer el motor de cálculo de APU a un servicio reutilizable fuera del componente `PresupuestoScreen`.
 - [ ] Tipar `persistedCatalog`, `lineas` y `subrenglones` sin usar `as any`.
-- [ ] Verificar que `PanelAPUPredictor` reciba datos correctos y que la UI muestre sugerencias de costos históricas.
-- [ ] Asegurar que `validarFactores` y `detectarAnomalias` estén integrados en un flujo operativo claro.
-- [ ] Revisar tipologías y multiplicadores `nivelCalidad` para que no se mezclen en el componente.
+- [ ] Validar que `PanelAPUPredictor` recibe datos históricos correctos y muestra sugerencias de costo con coherencia.
+- [ ] Integrar `validarFactores` y `detectarAnomalias` en un flujo operativo visible al usuario.
+- [ ] Centralizar tipologías, multiplicadores y fórmulas de costo en el motor, no en el componente.
 
 ## 4. Compras / Órdenes de compra
 - [ ] Revisar el diseño responsive de proveedores, órdenes y recepción.
@@ -36,18 +47,19 @@ Esta lista convierte el plan de revisión en un checklist concreto para el repos
 ## 5. Seguimiento
 - [ ] Mejorar `GanttService.calcularRutaCritica` para soportar dependencias de tareas reales.
 - [ ] Modelar predecesores/sucesores de líneas de presupuesto en lugar de usar solo índice/orden implícito.
-- [ ] Reducir la lógica de métricas en `src/components/screens/SeguimientoScreen.tsx` y delegar a servicios.
-- [ ] Verificar que los charts de avance sean móviles y manejables en pantallas pequeñas.
+- [ ] Delegar la lógica de cálculo de métricas de seguimiento a servicios, no al componente.
+- [ ] Verificar que los charts de avance se adaptan bien en móviles.
 
 ## 6. Financiero
 - [ ] Eliminar duplicación entre `src/features/financiero/components/FinancieroScreen.tsx` y `src/components/DashboardFinanciero.tsx`.
 - [ ] Mover todos los cálculos de cashflow, proyecciones y salud financiera a `src/services/CoreEngineService.ts`.
 - [ ] Tipar categorías y transacciones en `ProfitReport` y otras visualizaciones.
-- [ ] Añadir alertas de salud financiera en UI con base en `CoreEngineService.analizarSaludFinanciera`.
+- [ ] Añadir alertas de salud financiera en UI con base en `CoreEngineService`.
 
 ## 7. Bodega / Inventario
-- [ ] Cambiar `BodegaService` para usar payloads tipados en lugar de `Record<string, unknown>`.
-- [ ] Confirmar que ninguna UI usa `supabase.from()` directo.
+- [x] Cambiar `BodegaService` para usar payloads tipados en lugar de `Record<string, unknown>`.
+- [x] Confirmar que ninguna UI usa `supabase.from()` directo.
+- [ ] `MovimientosMaterialesService.ts` aún usa `supabase.from('movimientos_materiales')` y puede centralizarse más.
 - [ ] Agregar validación de stock y manejo de materiales inexistentes en el servicio.
 
 ## 8. UX / Diseño / Estilos
@@ -63,11 +75,17 @@ Esta lista convierte el plan de revisión en un checklist concreto para el repos
 - [ ] Revisar el uso de `Partial<any>` y reemplazarlo por tipos precisos.
 
 ## 10. Funcionalidades avanzadas
-- [ ] Validar el flujo completo de `AprobacionScreen` y su enlace con ordenes / transacciones.
+- [ ] Validar el flujo completo de `AprobacionScreen` y su enlace con órdenes / transacciones.
 - [ ] Integrar OCR / facturas en la UI si el servicio ya existe.
 - [ ] Confirmar que las notificaciones push están implementadas y se muestra el estado al usuario.
 - [ ] Añadir un panel de alertas de presupuesto con umbrales de desviación.
 - [ ] Documentar el modelo de roles/permiso si se usa en la app.
+
+## Instrucciones de ejecución
+1. Priorizar primero `AppContext` y el tipado base para no propagar más deuda.
+2. Luego corregir servicios con tipos débiles y mover cualquier query directa a servicios.
+3. Después, extraer el motor de APU y unificar el cálculo financiero en `CoreEngineService`.
+4. Finalmente, pulir UX responsive y validar avances en `AprobacionScreen`, OCR y notificaciones.
 
 ## Prioridad de ejecución
 1. `AppContext` / `ViewType` / tipado base

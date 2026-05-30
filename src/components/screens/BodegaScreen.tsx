@@ -6,7 +6,7 @@ import { BodegaService } from '@/services/proyectos/BodegaService';
 import { OrdenesCompraService } from '@/services/compras/OrdenesCompraService';
 import { FinancieroService } from '@/services/financiero/FinancieroService';
 import { toast } from 'sonner';
-import type { CreateOrdenCompraItem, CreateOrdenCompra } from '@/types/supabase';
+import type { CreateOrdenCompraItem, CreateOrdenCompra, Material, MovimientoMaterial } from '@/types/supabase';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Search, Plus, Minus, Package, ShoppingCart, AlertTriangle } from 'lucide-react';
@@ -67,25 +67,25 @@ const BodegaScreen: React.FC = () => {
       const movs = await BodegaService.getMovimientos(selectedPresupuestoId);
 
       const movMap: Record<string, { comprado: number; consumido: number }> = {};
-      (movs || []).forEach((m: Record<string, unknown>) => {
-        const mid = m.material_id as string;
+      movs.forEach((m: MovimientoMaterial) => {
+        const mid = m.material_id;
         if (!movMap[mid]) movMap[mid] = { comprado: 0, consumido: 0 };
-        if (m.tipo === 'entrada') movMap[mid].comprado += Number(m.cantidad);
-        else if (m.tipo === 'salida') movMap[mid].consumido += Number(m.cantidad);
+        if (m.tipo === 'entrada') movMap[mid].comprado += m.cantidad;
+        else if (m.tipo === 'salida') movMap[mid].consumido += m.cantidad;
       });
 
       setMateriales(
-        items.map((m: Record<string, unknown>) => {
-          const mov = movMap[m.id as string] || { comprado: 0, consumido: 0 };
+        items.map((m: Material) => {
+          const mov = movMap[m.id] || { comprado: 0, consumido: 0 };
           return {
-            id: m.id as string,
-            nombre: m.nombre as string,
-            codigo: (m.codigo as string | null) ?? null,
-            unidad: (m.unidad as string) || 'unidad',
-            cantidad_estimada: Number(m.cantidad_estimada) || 0,
-            cantidad_utilizada: Number(m.cantidad_utilizada) || 0,
-            costo_unitario: Number(m.costo_unitario) || 0,
-            proveedor: (m.proveedor as string | null) ?? null,
+            id: m.id,
+            nombre: m.nombre,
+            codigo: m.codigo ?? null,
+            unidad: m.unidad || 'unidad',
+            cantidad_estimada: m.cantidad_estimada,
+            cantidad_utilizada: m.cantidad_utilizada,
+            costo_unitario: m.costo_unitario,
+            proveedor: m.proveedor ?? null,
             comprado: mov.comprado,
             consumido: mov.consumido,
             stock: mov.comprado - mov.consumido,
