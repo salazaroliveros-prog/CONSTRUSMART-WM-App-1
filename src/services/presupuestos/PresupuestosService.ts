@@ -30,22 +30,59 @@ export const PresupuestosService = {
 
   /**
    * Recalcula el presupuesto completo basado en sus renglones y sub-renglones.
-   * Motor paramétrico: Recalcula costos unitarios, materiales y mano de obra.
+   * Motor paramétrico: Recalcula costos unitarios, materiales, mano de obra y equipos con subrenglones.
    */
   recalcularPresupuesto(presupuesto: { lineas?: Record<string, unknown>[]; factor_indirectos?: number; factor_administrativos?: number; factor_imprevistos?: number; factor_utilidad?: number }) {
     const renglones = presupuesto.lineas ?? [];
     let costoTotalDirecto = 0;
 
     const renglonesActualizados = renglones.map((r: Record<string, unknown>) => {
-      const materiales = (r.materiales as Record<string, unknown>[] | undefined) ?? [];
-      const costoMaterial = materiales.reduce((s: number, m: Record<string, unknown>) => s + (Number(m.cantidad) * Number(m.costoUnitario)), 0);
-      const costoMO = Number(r.cantidad_mo) * Number(r.jornal);
-      const costoEquipo = Number(r.cantidad_eq) * Number(r.costo_hora);
-
-      const subtotal = costoMaterial + costoMO + costoEquipo;
+      // Estructura de subrenglones: { materiales: [], manoObra: [], equipos: [] }
+      const subrenglones = (r.subrenglones as Record<string, unknown>) ?? { materiales: [], manoObra: [], equipos: [] };
+      const materiales = (subrenglones.materiales as Record<string, unknown>[]) ?? [];
+      const manoObra = (subrenglones.manoObra as Record<string, unknown>[]) ?? [];
+      const equipos = (subrenglones.equipos as Record<string, unknown>[]) ?? [];
+      
+      // Costo de materiales: cantidad * costoUnitario * (1 + desperdicio%)
+      const costoMaterial = materiales.reduce((s: number, m: Record<string, unknown>) => {
+        const cantidad = Number(m.cantidad) || 0;
+        const costoUnitario = Number(m.costoUnitario) || 0;
+        const desperdicio = (Number(m.desperdicio) || 0) / 100;
+        return s + cantidad * (1 + desperdicio) * costoUnitario;
+      }, 0);
+      
+      // Costo de mano de obra: (cantidadPersonas * jornal) / rendimiento
+      const rendimiento = Number(r.rendimiento) || 1;
+      const costoManoObra = manoObra.reduce((s: number, mo: Record<string, unknown>) => {
+        const cantidadPersonas = Number(mo.cantidadPersonas) || 0;
+        const jornal = Number(mo.jornal) || 0;
+        return s + (cantidadPersonas * jornal) / rendimiento;
+      }, 0);
+      
+      // Costo de equipos/herramientas: cantidad * costoHora
+      const costoHerramienta = equipos.reduce((s: number, eq: Record<string, unknown>) => {
+        const cantidad = Number(eq.cantidad) || 0;
+        const costoHora = Number(eq.costoHora) || 0;
+        return s + cantidad * costoHora;
+      }, 0);
+      
+      // Costo unitario (por unidad de rendimiento)
+      const costoUnitario = costoMaterial + costoManoObra + costoHerramienta;
+      
+      // Subtotal: costo unitario * cantidad
+      const cantidad = Number(r.cantidad) || 0;
+      const subtotal = costoUnitario * cantidad;
+      
       costoTotalDirecto += subtotal;
 
-      return { ...r, costoMaterial, costoMO, costoEquipo, subtotal };
+      return {
+        ...r,
+        costoMaterial: Math.round(costoMaterial * 100) / 100,
+        costoManoObra: Math.round(costoManoObra * 100) / 100,
+        costoHerramienta: Math.round(costoHerramienta * 100) / 100,
+        costoUnitario: Math.round(costoUnitario * 100) / 100,
+        subtotal: Math.round(subtotal * 100) / 100,
+      };
     });
 
     const costoIndirectos = (costoTotalDirecto * (presupuesto.factor_indirectos ?? 0)) / 100;
@@ -57,9 +94,14 @@ export const PresupuestosService = {
 
     return {
       lineas: renglonesActualizados,
-      costo_directo: costoTotalDirecto,
-      total: Math.round(total),
-      desglose: { costoIndirectos, costoAdmin, imprevistos, utilidad }
+      costo_directo: Math.round(costoTotalDirecto * 100) / 100,
+      total: Math.round(total * 100) / 100,
+      desglose: {
+        costoIndirectos: Math.round(costoIndirectos * 100) / 100,
+        costoAdmin: Math.round(costoAdmin * 100) / 100,
+        imprevistos: Math.round(imprevistos * 100) / 100,
+        utilidad: Math.round(utilidad * 100) / 100
+      }
     };
   },
 

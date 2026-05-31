@@ -246,6 +246,17 @@ const DeviceTokenSchema = z.object({
   created_at: z.string().optional(),
 });
 
+const EmpleadoSchema = z.object({
+  id: z.string().optional(),
+  user_id: z.string().min(1, 'user_id requerido'),
+  nombre: z.string().min(1, 'El nombre es requerido'),
+  puesto: z.string().default('Operario'),
+  telefono: z.string().optional(),
+  salario_diario: z.number().min(0).default(0),
+  activo: z.boolean().default(true),
+  created_at: z.string().optional(),
+});
+
 // ====== Tipos TypeScript inferidos de Zod ======
 export type DBCliente = z.infer<typeof ClienteSchema>;
 export type DBProyecto = z.infer<typeof ProyectoSchema>;
@@ -261,6 +272,7 @@ export type DBRecepcionOC = z.infer<typeof RecepcionOCSchema>;
 export type DBRecepcionOCItem = z.infer<typeof RecepcionOCItemSchema>;
 export type DBOcrDocumento = z.infer<typeof OcrDocumentoSchema>;
 export type DBDeviceToken = z.infer<typeof DeviceTokenSchema>;
+export type DBEmpleado = z.infer<typeof EmpleadoSchema>;
 
 export interface OcrDocumento {
   id: string;
@@ -374,6 +386,8 @@ export interface Presupuesto {
   total: number;
   fechaInicio: string;
   fechaFin: string;
+  areaConstruccion?: number;
+  nivelCalidad?: 'basico' | 'moderado' | 'premium';
   created_at?: string;
   updated_at?: string;
 }
@@ -450,6 +464,10 @@ export interface CreatePresupuestoInput {
   lineas?: unknown[];
   total?: number;
   costo_directo?: number;
+  fechaInicio?: string;
+  fechaFin?: string;
+  areaConstruccion?: number;
+  nivelCalidad?: 'basico' | 'moderado' | 'premium';
 }
 
 export interface Equipo {
@@ -691,7 +709,7 @@ export interface DBRenglonPrecioHistorial {
   created_at?: string;
 }
 
-export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'bodega' | 'cotizacion' | 'compras';
+export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'bodega' | 'cotizacion' | 'compras' | 'empleados' | 'aprobaciones';
 
 export interface User {
   nombre: string;
@@ -875,6 +893,8 @@ export const dbToPresupuesto = (db: DBRow): Presupuesto => ({
   total: typeof db.total === 'number' ? db.total : Number(db.total) || 0,
   fechaInicio: (db.fecha_inicio as string) ?? '',
   fechaFin: (db.fecha_fin as string) ?? '',
+  areaConstruccion: typeof db.area_construccion === 'number' ? db.area_construccion : Number(db.area_construccion) || 0,
+  nivelCalidad: (db.nivel_calidad as 'basico' | 'moderado' | 'premium') ?? 'basico',
   created_at: (db.created_at as string) ?? undefined,
   updated_at: (db.updated_at as string) ?? undefined,
 });
@@ -901,6 +921,8 @@ export const presupuestoToDb = (presupuesto: UpdatePresupuesto): Partial<DBPresu
   if (presupuesto.costo_directo !== undefined) out.costo_directo = presupuesto.costo_directo;
   out.fecha_inicio = presupuesto.fechaInicio || null;
   out.fecha_fin = presupuesto.fechaFin || null;
+  if (presupuesto.areaConstruccion !== undefined) out.area_construccion = presupuesto.areaConstruccion;
+  if (presupuesto.nivelCalidad !== undefined) out.nivel_calidad = presupuesto.nivelCalidad;
   return out as Partial<DBPresupuesto>;
 };
 
@@ -1066,3 +1088,28 @@ export const dbToRecepcionOCItem = (db: DBRow): RecepcionOCItem => ({
   cantidadRecibida: Number(db.cantidad_recibida) || 0,
   created_at: (db.created_at as string) ?? undefined,
 });
+
+// ====== Validadores para Empleados ======
+export const validateEmpleado = (data: unknown): DBEmpleado => EmpleadoSchema.parse(data);
+
+// ====== Transformadores para Empleados ======
+export const dbToEmpleado = (db: DBRow): Empleado => ({
+  id: (db.id as string) || '',
+  user_id: (db.user_id as string) ?? '',
+  nombre: (db.nombre as string) ?? '',
+  puesto: (db.puesto as string) ?? 'Operario',
+  telefono: (db.telefono as string) ?? '',
+  salario_diario: Number(db.salario_diario) || 0,
+  activo: (db.activo as boolean) ?? true,
+  created_at: (db.created_at as string) ?? '',
+});
+
+export const empleadoToDb = (emp: UpdateEmpleado): Partial<DBEmpleado> => {
+  const out: DBRow = {};
+  if (emp.nombre !== undefined) out.nombre = emp.nombre;
+  if (emp.puesto !== undefined) out.puesto = emp.puesto;
+  if (emp.telefono !== undefined) out.telefono = emp.telefono;
+  if (emp.salario_diario !== undefined) out.salario_diario = emp.salario_diario;
+  if (emp.activo !== undefined) out.activo = emp.activo;
+  return out as Partial<DBEmpleado>;
+};

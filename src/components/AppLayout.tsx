@@ -16,6 +16,8 @@ const SeguimientoScreen = lazy(() => import('@/components/screens/SeguimientoScr
 const BodegaScreen = lazy(() => import('@/components/screens/BodegaScreen'));
 const CotizacionScreen = lazy(() => import('@/components/screens/CotizacionScreen'));
 const ComprasScreen = lazy(() => import('@/features/compras/components/ComprasScreen'));
+const EmpleadosScreen = lazy(() => import('@/features/seguimiento/components/EmpleadosScreen'));
+const AprobacionScreen = lazy(() => import('@/components/screens/AprobacionScreen'));
 
 import CommandPalette from '@/components/shared/CommandPalette';
 import OfflineBanner from '@/components/shared/OfflineBanner';
@@ -33,6 +35,8 @@ const viewMappings: Record<ViewType, React.LazyExoticComponent<React.ComponentTy
   bodega: BodegaScreen,
   cotizacion: CotizacionScreen,
   compras: ComprasScreen,
+  empleados: EmpleadosScreen,
+  aprobaciones: AprobacionScreen,
 };
 
 const AppLayout: React.FC = () => {

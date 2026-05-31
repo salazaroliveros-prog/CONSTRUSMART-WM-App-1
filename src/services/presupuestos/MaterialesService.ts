@@ -68,29 +68,83 @@ export const MaterialesService = {
   },
 
   // Persiste materiales desglosados en la tabla real (evita IDs efímeros)
+  // Si ya existen, compara y actualiza cantidades y costos
   async persistDesglosados(presupuestoId: string): Promise<Material[]> {
-    const existentes = await this.getMateriales(presupuestoId);
-    if (existentes.length > 0) return existentes;
-
     const desglosados = await this.getDesglosado(presupuestoId);
     if (desglosados.length === 0) return [];
 
-    const inserts = desglosados.map(m => ({
-      presupuesto_id: presupuestoId,
-      nombre: m.nombre,
-      unidad: m.unidad,
-      cantidad_estimada: m.cantidad_estimada,
-      costo_unitario: m.costo_unitario,
-      cantidad_utilizada: 0,
-      proveedor: null,
-    }));
+    // Obtener materiales existentes
+    const existentes = await this.getMateriales(presupuestoId);
+    const existentesPorNombre = new Map(
+      existentes.map(m => [m.nombre?.toLowerCase() || '', m])
+    );
 
-    const { data, error } = await supabase
-      .from('materiales_proyecto')
-      .insert(inserts)
-      .select();
-    if (error) throw error;
-    return (data || []) as Material[];
+    const actualizaciones: Promise<any>[] = [];
+    const inserciones: typeof desglosados = [];
+
+    // Comparar desglosados actuales con existentes
+    for (const desg of desglosados) {
+      const nombre = desg.nombre?.trim() || 'Material sin nombre';
+      const key = nombre.toLowerCase();
+      const existente = existentesPorNombre.get(key);
+
+      if (existente) {
+        // Actualizar si cambió la cantidad o costo
+        if (
+          existente.cantidad_estimada !== desg.cantidad_estimada ||
+          existente.costo_unitario !== desg.costo_unitario ||
+          existente.unidad !== desg.unidad
+        ) {
+          actualizaciones.push(
+            supabase
+              .from('materiales_proyecto')
+              .update({
+                cantidad_estimada: desg.cantidad_estimada,
+                costo_unitario: desg.costo_unitario,
+                unidad: desg.unidad,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', existente.id)
+          );
+        }
+      } else {
+        // Insertar si no existe
+        inserciones.push({
+          presupuesto_id: presupuestoId,
+          nombre: desg.nombre,
+          unidad: desg.unidad,
+          cantidad_estimada: desg.cantidad_estimada,
+          costo_unitario: desg.costo_unitario,
+          cantidad_utilizada: 0,
+          proveedor: null,
+        });
+      }
+    }
+
+    // Ejecutar actualizaciones
+    if (actualizaciones.length > 0) {
+      const resultados = await Promise.all(actualizaciones);
+      resultados.forEach(r => {
+        if (r.error) console.error('Error actualizando material:', r.error);
+      });
+    }
+
+    // Insertar nuevos materiales
+    let insertados: Material[] = [];
+    if (inserciones.length > 0) {
+      const { data, error } = await supabase
+        .from('materiales_proyecto')
+        .insert(inserciones)
+        .select();
+      if (error) {
+        console.error('Error insertando materiales:', error);
+      } else {
+        insertados = (data || []) as Material[];
+      }
+    }
+
+    // Retornar todos los materiales (existentes + insertados)
+    return [...existentes, ...insertados];
   },
 
   async addMaterial(material: Partial<Material>) {

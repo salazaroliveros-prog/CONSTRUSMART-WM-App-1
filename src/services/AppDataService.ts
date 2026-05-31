@@ -31,15 +31,18 @@ function applyFilters<T extends TableName>(
 export const AppDataService = {
   // Carga múltiples tablas para el usuario y devuelve un mapa de resultados
   async loadAll(userId: string, pageSize = 200): Promise<QueryResultMap> {
-    const tables: TableName[] = [
+    const tablesWithUserId: TableName[] = [
       'clientes', 'proyectos', 'presupuestos', 'transacciones',
       'actividades', 'equipos', 'equipo_miembros', 'proveedores',
-      'ordenes_compra', 'notificaciones'
+      'ordenes_compra', 'notificaciones', 'empleados', 'conciliaciones',
+      'bitacora_avance', 'recepcion_oc', 'caja_proyecto', 
+      'movimientos_caja', 'transacciones_recurrentes'
     ];
 
     const result: QueryResultMap = {};
 
-    for (const tableName of tables) {
+    // 1. Cargar tablas con user_id
+    for (const tableName of tablesWithUserId) {
       try {
         const { data, error } = await supabase
           .from(tableName)
@@ -54,6 +57,51 @@ export const AppDataService = {
         console.warn(`Error loading table ${tableName}:`, e);
         result[tableName] = [];
       }
+    }
+
+    // 2. Cargar tablas dependientes (sin user_id directo)
+    // Cargar items de OC si hay OCs
+    const ocIds = result['ordenes_compra']?.map(oc => oc.id) || [];
+    if (ocIds.length > 0) {
+      try {
+        const { data, error } = await supabase
+          .from('orden_compra_items')
+          .select('*')
+          .in('orden_compra_id', ocIds);
+        if (!error) result['orden_compra_items'] = data as any[];
+      } catch (e) { console.warn('Error loading OC items:', e); }
+    }
+
+    // Cargar materiales de proyectos/presupuestos
+    const presuIds = result['presupuestos']?.map(p => p.id) || [];
+    if (presuIds.length > 0) {
+      try {
+        const { data, error } = await supabase
+          .from('materiales_proyecto')
+          .select('*')
+          .in('presupuesto_id', presuIds);
+        if (!error) {
+          result['materiales_proyecto'] = data as any[];
+          // Cargar movimientos de materiales
+          const matIds = data.map(m => m.id);
+          if (matIds.length > 0) {
+            const { data: movs, error: movErr } = await supabase
+              .from('movimientos_materiales')
+              .select('*')
+              .in('material_id', matIds);
+            if (!movErr) result['movimientos_materiales'] = movs as any[];
+          }
+        }
+      } catch (e) { console.warn('Error loading materiales:', e); }
+
+      // Checklist items
+      try {
+        const { data, error } = await supabase
+          .from('checklist_items')
+          .select('*')
+          .in('presupuesto_id', presuIds);
+        if (!error) result['checklist_items'] = data as any[];
+      } catch (e) { console.warn('Error loading checklist items:', e); }
     }
 
     return result;

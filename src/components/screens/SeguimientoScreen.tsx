@@ -32,22 +32,72 @@ interface ChartDef {
 }
 
 const SeguimientoScreen: React.FC = () => {
-  const { presupuestos, transacciones, transicionFase, addTransaccion } = useAppContext();
+  const { presupuestos, transacciones, transicionFase, addTransaccion, empleados } = useAppContext();
   const [selectedProyecto, setSelectedProyecto] = useState<string | null>(null);
   const [pagina, setPagina] = useState(0);
   const [hiddenCharts, setHiddenCharts] = useState<Set<string>>(new Set());
+  
+  const [showPagoForm, setShowPagoForm] = useState(false);
+  const [pagoForm, setPagoForm] = useState({
+    empleadoId: '', monto: 0, fecha: new Date().toISOString().split('T')[0], descripcion: ''
+  });
+  const [pagoLoading, setPagoLoading] = useState(false);
+
+  const handleRegistrarPago = async () => {
+    if (!selectedProyecto) { toast.error('Seleccione un proyecto primero'); return; }
+    if (!pagoForm.empleadoId) { toast.error('Seleccione un empleado'); return; }
+    if (pagoForm.monto <= 0) { toast.error('Ingrese un monto válido'); return; }
+
+    setPagoLoading(true);
+    try {
+      const { PlanillaService } = await import('@/services/seguimiento/PlanillaService');
+      const tx = await PlanillaService.registrarPago(
+        'currentUser', // el servicio lo maneja o usa addTransaccion
+        { 
+          ...pagoForm, 
+          proyectoId: selectedProyecto 
+        }
+      );
+      
+      // El contexto se actualiza automáticamente si usamos addTransaccion
+      // Pero PlanillaService.registrarPago usa FinancieroService directo.
+      // Así que lo agregamos manualmente al contexto para que sea reactivo.
+      await addTransaccion({
+        tipo: 'gasto',
+        descripcion: tx.descripcion,
+        cantidad: tx.cantidad,
+        unidad: tx.unidad,
+        categoria: 'mano-obra',
+        costoUnitario: tx.costoUnitario,
+        costoTotal: tx.costoTotal,
+        fecha: tx.fecha,
+        proyectoId: tx.proyectoId,
+        empleadoId: tx.empleadoId
+      });
+
+      toast.success('Pago de planilla registrado');
+      setShowPagoForm(false);
+      setPagoForm({ empleadoId: '', monto: 0, fecha: new Date().toISOString().split('T')[0], descripcion: '' });
+    } catch (err) {
+      console.error(err);
+      toast.error('Error al registrar pago');
+    } finally {
+      setPagoLoading(false);
+    }
+  };
+
   const [chartOrder, setChartOrder] = useState<string[][]>(() => {
     try {
       const saved = localStorage.getItem('seg_charts');
       return saved ? JSON.parse(saved) : [
         ['kpi', 'avance-bar', 'fase-donut', 'presup-vs-real', 'evo-avance', 'costos-acum'],
         ['flujo-caja', 'gastos-cat', 'comp-mensual', 'ingresos-proy', 'margen-mensual'],
-        ['gantt', 'ruta-critica', 'planilla', 'presup-vs-planilla', 'avance-semanal'],
+        ['gantt', 'ruta-critica', 'planilla', 'bitacora', 'presup-vs-planilla', 'avance-semanal'],
       ];
     } catch { return [
       ['kpi', 'avance-bar', 'fase-donut', 'presup-vs-real', 'evo-avance', 'costos-acum'],
       ['flujo-caja', 'gastos-cat', 'comp-mensual', 'ingresos-proy', 'margen-mensual'],
-      ['gantt', 'ruta-critica', 'planilla', 'presup-vs-planilla', 'avance-semanal'],
+      ['gantt', 'ruta-critica', 'planilla', 'bitacora', 'presup-vs-planilla', 'avance-semanal'],
     ]; }
   });
 
@@ -432,14 +482,23 @@ const SeguimientoScreen: React.FC = () => {
     },
     'planilla': {
       id: 'planilla', title: 'Control de Planilla', icon: <Users className="w-3.5 h-3.5 text-emerald-600" />,
-      span: 'col-span-12 sm:col-span-6 lg:col-span-5', height: 'min-h-[200px]',
+      span: 'col-span-12 sm:col-span-6 lg:col-span-4', height: 'min-h-[240px]',
       render: () => (
         <div className="p-2 space-y-2 overflow-y-auto h-full">
           {selectedProyecto ? (
             <>
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-center">
-                <div className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-semibold">Total Invertido</div>
-                <div className="text-xl font-bold text-blue-900 dark:text-blue-100">{fmtQ(gastosPersonal)}</div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex-1 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-center">
+                  <div className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-semibold">Total Invertido</div>
+                  <div className="text-xl font-bold text-blue-900 dark:text-blue-100">{fmtQ(gastosPersonal)}</div>
+                </div>
+                <button 
+                  onClick={() => setShowPagoForm(true)}
+                  className="p-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors flex flex-col items-center justify-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="text-[9px] font-bold uppercase">Pago</span>
+                </button>
               </div>
               <div className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Últimos Pagos</div>
               {transacciones.filter(t => t.proyectoId === selectedProyecto && t.categoria === 'mano-obra').slice(0, 4).map(t => (
@@ -451,6 +510,22 @@ const SeguimientoScreen: React.FC = () => {
             </>
           ) : (
             <div className="text-center py-8 text-muted-foreground text-xs">Seleccione un proyecto arriba</div>
+          )}
+        </div>
+      ),
+    },
+    'bitacora': {
+      id: 'bitacora', title: 'Bitácora de Avance', icon: <Activity className="w-3.5 h-3.5 text-emerald-600" />,
+      span: 'col-span-12 sm:col-span-6 lg:col-span-4', height: 'min-h-[240px]',
+      render: () => (
+        <div className="h-full overflow-hidden">
+          {selectedProyecto ? (
+            <BitacoraAvancePanel 
+              presupuestoId={selectedProyecto} 
+              onAvanceChange={async (af) => { await updatePresupuesto(selectedProyecto, { avanceFisico: af }); }} 
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted-foreground text-xs">Seleccione un proyecto arriba</div>
           )}
         </div>
       ),
@@ -534,6 +609,91 @@ const SeguimientoScreen: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Modal: Registrar Pago de Planilla */}
+      {showPagoForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-card dark:bg-card rounded-2xl shadow-2xl w-full max-w-md animate-scaleIn overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-border">
+              <h2 className="text-lg font-bold text-card-foreground flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-emerald-500" />
+                Registrar Pago Planilla
+              </h2>
+              <button onClick={() => setShowPagoForm(false)} className="p-1 text-muted-foreground hover:bg-accent rounded-full transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Colaborador</label>
+                <select 
+                  value={pagoForm.empleadoId} 
+                  onChange={e => {
+                    const emp = empleados.find(emp => emp.id === e.target.value);
+                    setPagoForm({
+                      ...pagoForm, 
+                      empleadoId: e.target.value,
+                      monto: emp?.salario_diario || 0,
+                      descripcion: emp ? `Pago a ${emp.nombre} - ${emp.puesto}` : ''
+                    });
+                  }}
+                  className="select-standard w-full"
+                >
+                  <option value="">Seleccionar empleado...</option>
+                  {empleados.filter(e => e.activo).map(e => (
+                    <option key={e.id} value={e.id}>{e.nombre} ({e.puesto})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Monto (Q)</label>
+                  <input 
+                    type="number" 
+                    value={pagoForm.monto || ''} 
+                    onChange={e => setPagoForm({...pagoForm, monto: parseFloat(e.target.value) || 0})}
+                    className="input-standard w-full text-right"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Fecha</label>
+                  <input 
+                    type="date" 
+                    value={pagoForm.fecha} 
+                    onChange={e => setPagoForm({...pagoForm, fecha: e.target.value})}
+                    className="input-standard w-full"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Descripción / Concepto</label>
+                <input 
+                  type="text" 
+                  value={pagoForm.descripcion} 
+                  onChange={e => setPagoForm({...pagoForm, descripcion: e.target.value})}
+                  className="input-standard w-full"
+                  placeholder="Ej: Pago quincena 1 de Mayo"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-5 border-t border-border bg-muted/30">
+              <button onClick={() => setShowPagoForm(false)} className="btn-secondary text-sm">Cancelar</button>
+              <button 
+                onClick={handleRegistrarPago} 
+                disabled={pagoLoading || !pagoForm.empleadoId} 
+                className="btn-primary text-sm px-6"
+              >
+                {pagoLoading ? 'Procesando...' : <><Save className="w-4 h-4 mr-2" /> Confirmar Pago</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 };
