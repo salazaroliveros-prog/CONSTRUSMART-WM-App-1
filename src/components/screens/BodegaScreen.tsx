@@ -156,6 +156,10 @@ const BodegaScreen: React.FC = () => {
 
   const generarOC = async () => {
     if (!session?.user?.id) return;
+    if (!selectedPresupuesto) {
+      toast.error('Selecciona un proyecto primero');
+      return;
+    }
     const sinComprar = filtered.filter(m => m.comprado === 0 && m.cantidad_estimada > 0);
     if (sinComprar.length === 0) {
       toast.info('Todos los materiales ya tienen compras registradas');
