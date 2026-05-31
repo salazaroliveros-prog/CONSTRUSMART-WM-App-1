@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { LayoutGrid, Users, Calculator, Folder, LineChart, Wallet, Package, FileText, ShoppingCart, ChevronLeft, ChevronRight, LogOut, CheckSquare } from 'lucide-react';
+import { LayoutGrid, Users, Calculator, Folder, LineChart, Wallet, Package, FileText, ShoppingCart, ChevronLeft, ChevronRight, LogOut, CheckSquare, BarChart3, ClipboardCheck, History, BrainCircuit, FileBarChart } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { ViewType } from '@/types/supabase';
 
@@ -19,6 +19,11 @@ const modules = [
   { id: 'compras' as ViewType, label: 'Compras', icon: ShoppingCart },
   { id: 'empleados' as ViewType, label: 'Personal', icon: Users },
   { id: 'aprobaciones' as ViewType, label: 'Aprobaciones', icon: CheckSquare },
+  { id: 'dashboard_financiero' as ViewType, label: 'Analítica Fin.', icon: BarChart3 },
+  { id: 'trazabilidad' as ViewType, label: 'Trazabilidad', icon: History },
+  { id: 'calidad' as ViewType, label: 'Calidad', icon: ClipboardCheck },
+  { id: 'apu_predictor' as ViewType, label: 'Predictor APU', icon: BrainCircuit },
+  { id: 'reportes' as ViewType, label: 'Reportes', icon: FileBarChart },
 ];
 
 export const sidebarWidthVar = (collapsed: boolean) =>

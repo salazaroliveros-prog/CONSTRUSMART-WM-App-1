@@ -709,7 +709,7 @@ export interface DBRenglonPrecioHistorial {
   created_at?: string;
 }
 
-export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'bodega' | 'cotizacion' | 'compras' | 'empleados' | 'aprobaciones';
+export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'bodega' | 'cotizacion' | 'compras' | 'empleados' | 'aprobaciones' | 'dashboard_financiero' | 'trazabilidad' | 'calidad' | 'conciliacion' | 'apu_predictor' | 'reportes';
 
 export interface User {
   nombre: string;
