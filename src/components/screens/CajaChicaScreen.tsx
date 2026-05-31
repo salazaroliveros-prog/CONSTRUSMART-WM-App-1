@@ -1,7 +1,7 @@
 /**
  * CajaChicaScreen - Gestión de caja chica por proyecto
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -58,28 +58,13 @@ const CajaChicaScreen: React.FC = () => {
   const [nuevoMonto, setNuevoMonto] = useState('');
   const [nuevoSubtipo, setNuevoSubtipo] = useState<TipoMovimiento>('entrada');
 
-  useEffect(() => {
-    if (!userId) return;
-    cargarProyectos();
-  }, [userId]);
-
-  useEffect(() => {
-    if (!proyectoSeleccionado || !userId) {
-      setCaja(null);
-      setMovimientos([]);
-      return;
-    }
-    cargarCaja();
-    cargarMovimientos();
-  }, [proyectoSeleccionado, userId]);
-
-  const cargarProyectos = async () => {
+  const cargarProyectos = useCallback(async () => {
     if (!userId) return;
     const { data } = await supabase.from('proyectos').select('id, nombre').eq('user_id', userId).order('nombre');
     if (data) setProyectos(data);
-  };
+  }, [userId]);
 
-  const cargarCaja = async () => {
+  const cargarCaja = useCallback(async () => {
     if (!proyectoSeleccionado || !userId) return;
     setLoading(true);
     const { data } = await supabase
@@ -91,9 +76,9 @@ const CajaChicaScreen: React.FC = () => {
     if (data) setCaja(data as CajaProyecto);
     else setCaja(null);
     setLoading(false);
-  };
+  }, [proyectoSeleccionado, userId]);
 
-  const cargarMovimientos = async () => {
+  const cargarMovimientos = useCallback(async () => {
     if (!proyectoSeleccionado || !userId || !caja?.id) {
       setMovimientos([]);
       return;
@@ -104,7 +89,22 @@ const CajaChicaScreen: React.FC = () => {
       .eq('caja_id', caja.id)
       .order('created_at', { ascending: false });
     if (data) setMovimientos(data as MovimientoCaja[]);
-  };
+  }, [proyectoSeleccionado, userId, caja?.id]);
+
+  useEffect(() => {
+    if (!userId) return;
+    cargarProyectos();
+  }, [userId, cargarProyectos]);
+
+  useEffect(() => {
+    if (!proyectoSeleccionado || !userId) {
+      setCaja(null);
+      setMovimientos([]);
+      return;
+    }
+    cargarCaja();
+    cargarMovimientos();
+  }, [proyectoSeleccionado, userId, cargarCaja, cargarMovimientos]);
 
   const inicializarCaja = async () => {
     if (!userId || !proyectoSeleccionado) return;

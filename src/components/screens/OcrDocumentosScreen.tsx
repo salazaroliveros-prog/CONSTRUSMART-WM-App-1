@@ -1,7 +1,7 @@
 /**
  * OcrDocumentosScreen - gestión de documentos OCR cargados (facturas/comprobantes)
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -23,12 +23,7 @@ const OcrDocumentosScreen: React.FC = () => {
   const [filtro, setFiltro] = useState<EstadoFiltro>('todos');
   const [procesandoId, setProcesandoId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!userId) return;
-    cargarDocumentos();
-  }, [userId, filtro]);
-
-  const cargarDocumentos = async () => {
+  const cargarDocumentos = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
     let query = supabase.from('ocr_documentos').select('*, proyectos:proyecto_id(nombre)').eq('user_id', userId).order('created_at', { ascending: false });
@@ -45,7 +40,12 @@ const OcrDocumentosScreen: React.FC = () => {
       setDocumentos(mapeados as (OcrDoc & { proyecto_nombre?: string })[]);
     }
     setLoading(false);
-  };
+  }, [userId, filtro]);
+
+  useEffect(() => {
+    if (!userId) return;
+    cargarDocumentos();
+  }, [userId, filtro, cargarDocumentos]);
 
   const aprobar = async (id: string) => {
     if (!userId) return;

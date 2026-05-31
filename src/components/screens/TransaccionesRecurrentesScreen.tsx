@@ -1,7 +1,7 @@
 /**
  * TransaccionesRecurrentesScreen - gestión de transacciones automáticas
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -41,26 +41,13 @@ const TransaccionesRecurrentesScreen: React.FC = () => {
   const [monto, setMonto] = useState('');
   const [frecuencia, setFrecuencia] = useState<string>('mensual');
 
-  useEffect(() => {
-    if (!userId) return;
-    cargarPresupuestos();
-  }, [userId]);
-
-  useEffect(() => {
-    if (!presupuestoId || !userId) {
-      setItems([]);
-      return;
-    }
-    cargarRecurrentes();
-  }, [presupuestoId, userId]);
-
-  const cargarPresupuestos = async () => {
+  const cargarPresupuestos = useCallback(async () => {
     if (!userId) return;
     const { data } = await supabase.from('presupuestos').select('id, proyecto').eq('user_id', userId).order('created_at', { ascending: false });
     if (data) setPresupuestos(data.map(p => ({ id: p.id, nombre: p.proyecto })));
-  };
+  }, [userId]);
 
-  const cargarRecurrentes = async () => {
+  const cargarRecurrentes = useCallback(async () => {
     if (!userId) return;
     const { data } = await supabase
       .from('transacciones_recurrentes')
@@ -69,7 +56,20 @@ const TransaccionesRecurrentesScreen: React.FC = () => {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (data) setItems(data as TransaccionRecurrente[]);
-  };
+  }, [userId, presupuestoId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    cargarPresupuestos();
+  }, [userId, cargarPresupuestos]);
+
+  useEffect(() => {
+    if (!presupuestoId || !userId) {
+      setItems([]);
+      return;
+    }
+    cargarRecurrentes();
+  }, [presupuestoId, userId, cargarRecurrentes]);
 
   const crearRecurrente = async () => {
     if (!userId || !presupuestoId || !descripcion.trim() || !monto || Number(monto) <= 0) {
