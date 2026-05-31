@@ -1,9 +1,9 @@
-import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import type { Presupuesto, Transaccion, Cliente } from '@/types/supabase';
+import { addJsonSheet, createWorkbook, saveWorkbook } from './excelUtils';
 
-export function exportPresupuestos(presupuestos: Presupuesto[], filename = 'presupuestos.xlsx') {
-  const data = presupuestos.map(p => ({
+export async function exportPresupuestos(presupuestos: Presupuesto[], filename = 'presupuestos.xlsx') {
+  const data = presupuestos.map((p) => ({
     Proyecto: p.proyecto,
     Cliente: p.cliente,
     Ubicacion: p.ubicacion || '',
@@ -18,16 +18,20 @@ export function exportPresupuestos(presupuestos: Presupuesto[], filename = 'pres
     Pendiente_Aportar: p.pendienteAportar,
     Utilidad: p.total > 0 ? (((p.ingresos || 0) - (p.gastos || 0)) / p.total * 100).toFixed(1) + '%' : '0%',
   }));
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(data);
-  XLSX.utils.book_append_sheet(wb, ws, 'Presupuestos');
-  XLSX.writeFile(wb, filename);
+
+  const wb = createWorkbook();
+  addJsonSheet(wb, 'Presupuestos', data);
+  await saveWorkbook(wb, filename);
   toast.success(`Exportado: ${filename}`);
 }
 
-export function exportTransacciones(transacciones: Transaccion[], presupuestos: Presupuesto[], filename = 'transacciones.xlsx') {
-  const mapProyecto = Object.fromEntries(presupuestos.map(p => [p.id, p.proyecto]));
-  const data = transacciones.map(t => ({
+export async function exportTransacciones(
+  transacciones: Transaccion[],
+  presupuestos: Presupuesto[],
+  filename = 'transacciones.xlsx',
+) {
+  const mapProyecto = Object.fromEntries(presupuestos.map((p) => [p.id, p.proyecto]));
+  const data = transacciones.map((t) => ({
     Proyecto: mapProyecto[t.proyectoId] || t.proyectoId,
     Tipo: t.tipo,
     Fecha: t.fecha,
@@ -38,17 +42,22 @@ export function exportTransacciones(transacciones: Transaccion[], presupuestos: 
     Costo_Unitario: t.costoUnitario,
     Costo_Total: t.costoTotal,
   }));
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(data);
-  XLSX.utils.book_append_sheet(wb, ws, 'Transacciones');
-  XLSX.writeFile(wb, filename);
+
+  const wb = createWorkbook();
+  addJsonSheet(wb, 'Transacciones', data);
+  await saveWorkbook(wb, filename);
   toast.success(`Exportado: ${filename}`);
 }
 
-export function exportCompleto(presupuestos: Presupuesto[], transacciones: Transaccion[], clientes: Cliente[], filename = 'exportacion_completa.xlsx') {
-  const wb = XLSX.utils.book_new();
+export async function exportCompleto(
+  presupuestos: Presupuesto[],
+  transacciones: Transaccion[],
+  clientes: Cliente[],
+  filename = 'exportacion_completa.xlsx',
+) {
+  const wb = createWorkbook();
 
-  const presData = presupuestos.map(p => ({
+  const presData = presupuestos.map((p) => ({
     Proyecto: p.proyecto,
     Cliente: p.cliente,
     Ubicacion: p.ubicacion || '',
@@ -61,10 +70,10 @@ export function exportCompleto(presupuestos: Presupuesto[], transacciones: Trans
     Gastos: p.gastos,
     Pendiente: p.pendienteAportar,
   }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(presData), 'Presupuestos');
+  addJsonSheet(wb, 'Presupuestos', presData);
 
-  const mapProyecto = Object.fromEntries(presupuestos.map(p => [p.id, p.proyecto]));
-  const txData = transacciones.map(t => ({
+  const mapProyecto = Object.fromEntries(presupuestos.map((p) => [p.id, p.proyecto]));
+  const txData = transacciones.map((t) => ({
     Proyecto: mapProyecto[t.proyectoId] || t.proyectoId,
     Tipo: t.tipo,
     Fecha: t.fecha,
@@ -75,9 +84,9 @@ export function exportCompleto(presupuestos: Presupuesto[], transacciones: Trans
     Costo_Unitario: t.costoUnitario,
     Monto: t.costoTotal,
   }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txData), 'Transacciones');
+  addJsonSheet(wb, 'Transacciones', txData);
 
-  const cliData = clientes.map(c => ({
+  const cliData = clientes.map((c) => ({
     Nombre: c.nombre,
     Telefono: c.telefono || '',
     Email: c.email || '',
@@ -86,8 +95,8 @@ export function exportCompleto(presupuestos: Presupuesto[], transacciones: Trans
     Estado: c.estado || '',
     Notas: c.notas || '',
   }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cliData), 'Clientes');
+  addJsonSheet(wb, 'Clientes', cliData);
 
-  XLSX.writeFile(wb, filename);
+  await saveWorkbook(wb, filename);
   toast.success(`Exportación completa: ${filename}`);
 }

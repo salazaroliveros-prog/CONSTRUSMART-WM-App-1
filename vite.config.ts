@@ -79,7 +79,6 @@ export default defineConfig(({ mode }) => ({
           'vendor-dates': ['date-fns'],
           'vendor-motion': ['framer-motion'],
           'vendor-pdf': ['jspdf', 'jspdf-autotable', 'html2pdf.js'],
-          'vendor-xlsx': ['xlsx'],
         },
       },
     },

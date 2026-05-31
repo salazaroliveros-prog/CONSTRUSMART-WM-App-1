@@ -28,8 +28,7 @@ export const ReportesAutomaticosPanel: React.FC<ReportesAutomaticosPanelProps> =
   const generarReporteCierre = async () => {
     setLoading(true);
     try {
-      reporteCierreFase(presupuesto, transacciones);
-      toast.success(`Reporte de cierre generado: ${presupuesto.proyecto}`);
+      await reporteCierreFase(presupuesto, transacciones);
     } catch (error) {
       toast.error('Error al generar reporte de cierre');
       console.error(error);
@@ -41,8 +40,7 @@ export const ReportesAutomaticosPanel: React.FC<ReportesAutomaticosPanelProps> =
   const generarReporteSemanal = async () => {
     setLoading(true);
     try {
-      reporteSemanal(presupuestos, transacciones);
-      toast.success('Reporte semanal generado exitosamente');
+      await reporteSemanal(presupuestos, transacciones);
     } catch (error) {
       toast.error('Error al generar reporte semanal');
       console.error(error);
@@ -59,8 +57,7 @@ export const ReportesAutomaticosPanel: React.FC<ReportesAutomaticosPanelProps> =
 
     setLoading(true);
     try {
-      reporteBatch(presupuestos, Array.from(idsSeleccionados), transacciones);
-      toast.success(`Exportación batch: ${idsSeleccionados.size} presupuestos`);
+      await reporteBatch(presupuestos, Array.from(idsSeleccionados), transacciones);
       setIdsSeleccionados(new Set());
     } catch (error) {
       toast.error('Error al generar reportes batch');
