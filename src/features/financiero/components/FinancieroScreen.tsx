@@ -446,7 +446,7 @@ const FinancieroScreen: React.FC = () => {
         );
       },
     },
-  }), [porCategoria, stats, operativosAdmin, tendenciaGastos, acumulado, flujoMensual, proyeccion, ingresosPorOrigen, distribOperativos, margenPorProyecto, evoBalance, saludFinanciera, presupuestos, transacciones]);
+  }), [porCategoria, stats, operativosAdmin, tendenciaGastos, acumulado, flujoMensual, proyeccion, ingresosPorOrigen, distribOperativos, margenPorProyecto, evoBalance, saludFinanciera, presupuestos, filtered]);
 
   return (
     <PageShell showHome={false} title="Control Financiero">
