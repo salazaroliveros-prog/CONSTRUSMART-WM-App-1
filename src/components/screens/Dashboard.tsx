@@ -155,12 +155,12 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     let activo = true;
     const cargarAlertas = async () => {
-      const resultados = await Promise.all(presupuestos.map(p => AgenteInteligente.diagnosticarProyecto(p, transacciones)));
+      const resultados = await Promise.all(presupuestosFiltrados.map(p => AgenteInteligente.diagnosticarProyecto(p, transaccionesFiltradas)));
       if (activo) setAlertas(resultados.flat());
     };
     cargarAlertas();
     return () => { activo = false; };
-  }, [presupuestos, transacciones]);
+  }, [presupuestosFiltrados, transaccionesFiltradas]);
 
   const currentPageCharts = useMemo(() => chartOrder[pagina] || [], [chartOrder, pagina]);
   const totalPaginas = chartOrder.length;

@@ -33,7 +33,6 @@ interface ChartDef {
 
 const FinancieroScreen: React.FC = () => {
   const { transacciones, presupuestos, proyectos, deleteTransaccion, addTransaccion, session } = useAppContext();
-  const proyeccion = useMemo(() => CoreEngineService.proyectarTendencia(transacciones), [transacciones]);
   const [filterTipo, setFilterTipo] = useState<'todos' | 'ingreso' | 'gasto'>('todos');
   const [filterCat, setFilterCat] = useState<string>('todos');
   const [filterProy, setFilterProy] = useState<string>('todos');
@@ -68,6 +67,8 @@ const FinancieroScreen: React.FC = () => {
     return true;
   });
 
+  const proyeccion = useMemo(() => CoreEngineService.proyectarTendencia(filtered), [filtered]);
+
   const stats = useMemo(() => {
     const ingresos = filtered.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
     const gastos = filtered.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
@@ -79,9 +80,9 @@ const FinancieroScreen: React.FC = () => {
 
   const porCategoria = useMemo(() => {
     const data: Record<string, number> = {};
-    transacciones.filter(t => t.tipo === 'gasto').forEach(t => { data[t.categoria] = (data[t.categoria] || 0) + t.costoTotal; });
+    filtered.filter(t => t.tipo === 'gasto').forEach(t => { data[t.categoria] = (data[t.categoria] || 0) + t.costoTotal; });
     return Object.entries(data).map(([k, v]) => ({ name: categoriaLabels[k] || k, value: v }));
-  }, [transacciones]);
+  }, [filtered]);
 
   const operativosAdmin = useMemo(() => {
     return [
@@ -93,16 +94,16 @@ const FinancieroScreen: React.FC = () => {
 
   const tendenciaGastos = useMemo(() => {
     const map: Record<string, number> = {};
-    transacciones.filter(t => t.tipo === 'gasto').forEach(t => {
+    filtered.filter(t => t.tipo === 'gasto').forEach(t => {
       const mes = t.fecha?.slice(0, 7);
       if (mes) map[mes] = (map[mes] || 0) + t.costoTotal;
     });
     return Object.entries(map).sort(([a], [b]) => a.localeCompare(b)).map(([mes, total]) => ({ mes, total }));
-  }, [transacciones]);
+  }, [filtered]);
 
   const flujoMensual = useMemo(() => {
     const map: Record<string, { ingresos: number; gastos: number }> = {};
-    transacciones.forEach(t => {
+    filtered.forEach(t => {
       const mes = t.fecha?.slice(0, 7);
       if (!mes) return;
       if (!map[mes]) map[mes] = { ingresos: 0, gastos: 0 };
@@ -110,7 +111,7 @@ const FinancieroScreen: React.FC = () => {
       else map[mes].gastos += t.costoTotal;
     });
     return Object.entries(map).sort(([a], [b]) => a.localeCompare(b)).map(([mes, v]) => ({ mes, ...v }));
-  }, [transacciones]);
+  }, [filtered]);
 
   const acumulado = useMemo(() => {
     let acumi = 0; let acumg = 0;
@@ -119,26 +120,26 @@ const FinancieroScreen: React.FC = () => {
 
   const ingresosPorOrigen = useMemo(() => {
     const map: Record<string, number> = {};
-    transacciones.filter(t => t.tipo === 'ingreso').forEach(t => {
+    filtered.filter(t => t.tipo === 'ingreso').forEach(t => {
       const key = presupuestos.find(p => p.id === t.proyectoId)?.proyecto || 'Admin';
       map[key] = (map[key] || 0) + t.costoTotal;
     });
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-  }, [presupuestos, transacciones]);
+  }, [presupuestos, filtered]);
 
   const distribOperativos = useMemo(() => {
     const cats = ['materiales', 'mano-obra', 'herramienta', 'sub-contrato', 'transporte'];
-    const data = cats.map(c => ({ name: categoriaLabels[c], value: transacciones.filter(t => t.tipo === 'gasto' && t.categoria === c).reduce((s, t) => s + t.costoTotal, 0) }));
+    const data = cats.map(c => ({ name: categoriaLabels[c], value: filtered.filter(t => t.tipo === 'gasto' && t.categoria === c).reduce((s, t) => s + t.costoTotal, 0) }));
     return data.filter(d => d.value > 0);
-  }, [transacciones]);
+  }, [filtered]);
 
   const margenPorProyecto = useMemo(() => {
     return presupuestos.map(p => {
-      const ing = transacciones.filter(t => t.proyectoId === p.id && t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
-      const gas = transacciones.filter(t => t.proyectoId === p.id && t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
+      const ing = filtered.filter(t => t.proyectoId === p.id && t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
+      const gas = filtered.filter(t => t.proyectoId === p.id && t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
       return { name: p.proyecto.slice(0, 14), margen: ing === 0 ? 0 : ((ing - gas) / ing) * 100, ingreso: ing, gasto: gas };
     });
-  }, [presupuestos, transacciones]);
+  }, [presupuestos, filtered]);
 
   const evoBalance = useMemo(() => {
     let bal = 0;
@@ -171,7 +172,7 @@ const FinancieroScreen: React.FC = () => {
   }, []);
   const handleRemove = useCallback((id: string) => { setHiddenCharts(prev => new Set(prev).add(id)); }, []);
 
-  const saludFinanciera = useMemo(() => CoreEngineService.analizarSaludFinanciera(transacciones), [transacciones]);
+  const saludFinanciera = useMemo(() => CoreEngineService.analizarSaludFinanciera(filtered), [filtered]);
 
   const handleSaveTransaction = async () => {
     if (!session?.user?.id) { toast.error('Sesión no encontrada'); return; }
@@ -369,7 +370,7 @@ const FinancieroScreen: React.FC = () => {
     'profit-report': {
       id: 'profit-report', title: 'Profit Report', icon: <Target className="w-3.5 h-3.5 text-blue-700" />,
       span: 'col-span-12 lg:col-span-7', height: 'min-h-[220px]',
-      render: () => <ProfitReport transacciones={transacciones} presupuestos={presupuestos} />,
+      render: () => <ProfitReport transacciones={filtered} presupuestos={presupuestos} />,
     },
     'margen-proy': {
       id: 'margen-proy', title: 'Margen por Proyecto', icon: <Percent className="w-3.5 h-3.5 text-blue-700" />,
