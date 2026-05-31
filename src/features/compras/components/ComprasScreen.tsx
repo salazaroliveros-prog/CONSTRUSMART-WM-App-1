@@ -41,7 +41,7 @@ const estatusIcon: Record<string, React.ComponentType<{ className?: string }>> =
 };
 
 const ComprasScreen: React.FC = () => {
-  const { session, proveedores, proyectos, presupuestos, addOrdenCompra, refreshOrdenesCompra } = useAppContext();
+  const { session, proveedores, proyectos, presupuestos, ordenesCompra, addOrdenCompra, refreshOrdenesCompra, updateOrdenCompra, deleteOrdenCompra } = useAppContext();
   const userId = session?.user?.id;
 
   const [tab, setTab] = useState<Tab>('proveedores');
@@ -56,7 +56,6 @@ const ComprasScreen: React.FC = () => {
   const [saveLoading, setSaveLoading] = useState(false);
   const [proveedoresLocal, setProveedoresLocal] = useState<Proveedor[]>([]);
 
-  const [ordenes, setOrdenes] = useState<OrdenCompra[]>([]);
   const [selectedOC, setSelectedOC] = useState<OrdenCompra | null>(null);
   const [ocItems, setOcItems] = useState<(OrdenCompraItem & { materialId?: string })[]>([]);
   const [showOCForm, setShowOCForm] = useState(false);
@@ -75,11 +74,6 @@ const ComprasScreen: React.FC = () => {
     if (!userId) return;
     setProveedoresLocal(proveedores);
   }, [proveedores, userId]);
-
-  useEffect(() => {
-    if (!userId) return;
-    OrdenesCompraService.listar(userId).then(setOrdenes).catch(() => {});
-  }, [userId]);
 
   useEffect(() => {
     const loadProjectMaterials = async () => {
@@ -118,13 +112,13 @@ const ComprasScreen: React.FC = () => {
   }, [proveedoresLocal, search]);
 
   const ordenesFiltradas = useMemo(() => {
-    if (!search.trim()) return ordenes;
+    if (!search.trim()) return ordenesCompra;
     const q = search.toLowerCase();
-    return ordenes.filter(o =>
+    return ordenesCompra.filter(o =>
       o.folio.toLowerCase().includes(q) ||
       proveedoresLocal.find(p => p.id === o.proveedorId)?.nombre.toLowerCase().includes(q)
     );
-  }, [ordenes, search, proveedoresLocal]);
+  }, [ordenesCompra, search, proveedoresLocal]);
 
   const proveedorNombre = (id?: string) => proveedoresLocal.find(p => p.id === id)?.nombre || '—';
 
@@ -205,7 +199,7 @@ const ComprasScreen: React.FC = () => {
       const ivaAmount = itemsTotal * 0.12; 
       const totalAmount = itemsTotal + ivaAmount;
       
-      const oc = await OrdenesCompraService.crear({
+      const oc = await addOrdenCompra({
         ...ocForm, 
         folio, 
         subtotal: itemsTotal, 
@@ -213,16 +207,16 @@ const ComprasScreen: React.FC = () => {
         total: totalAmount,
         proveedorId: cleanProveedorId,
         proyectoId: ocForm.proyectoId || undefined,
-      }, userId);
+      });
       
-      await OrdenesCompraService.crearItems(
-        ocItemForms.map(i => ({ ...i, ordenCompraId: oc.id }))
-      );
-      
-      setOrdenes(p => [oc, ...p]);
-      toast.success(`OC ${folio} creada con éxito`);
-      resetOCForm();
-      await refreshOrdenesCompra();
+      if (oc) {
+        await OrdenesCompraService.crearItems(
+          ocItemForms.map(i => ({ ...i, ordenCompraId: oc.id }))
+        );
+        toast.success(`OC ${folio} creada con éxito`);
+        resetOCForm();
+        await refreshOrdenesCompra();
+      }
     } catch (err) {
       toast.error('Error al crear orden de compra');
       console.error(err);
@@ -324,11 +318,14 @@ const ComprasScreen: React.FC = () => {
 
       const totalPendiente = ocItems.reduce((s, i) => s + (i.cantidad - i.cantidadRecibida - (recepcionCantidades[i.id] || 0)), 0);
       const nuevoEstatus = totalPendiente <= 0 ? 'recibida' : 'recibida_parcial';
-      await OrdenesCompraService.actualizarEstatusOC(selectedOC.id, nuevoEstatus);
-      setOrdenes(p => p.map(o => o.id === selectedOC.id ? { ...o, estatus: nuevoEstatus } : o));
+      
+      // Usar el contexto para actualizar la OC y mantener sincronizada la UI
+      await updateOrdenCompra(selectedOC.id, { estatus: nuevoEstatus });
+      
       toast.success('Recepción registrada');
       setShowRecepcion(false);
       setSelectedOC(null);
+      await refreshOrdenesCompra(); // Recargar para ver los cambios en items (cantidades recibidas)
     } catch (err) {
       toast.error('Error al registrar recepción');
       console.error(err);

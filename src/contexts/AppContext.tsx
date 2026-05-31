@@ -126,6 +126,10 @@ interface DataContextType {
   addEquipoMiembro: (em: CreateEquipoMiembro) => Promise<void>;
   updateEquipoMiembro: (id: string, em: UpdateEquipoMiembro) => Promise<void>;
   deleteEquipoMiembro: (id: string) => Promise<void>;
+  empleados: Empleado[];
+  addEmpleado: (e: CreateEmpleado) => Promise<void>;
+  updateEmpleado: (id: string, e: UpdateEmpleado) => Promise<void>;
+  deleteEmpleado: (id: string) => Promise<void>;
   proveedores: Proveedor[];
   addProveedor: (p: CreateProveedor) => Promise<void>;
   updateProveedor: (id: string, p: UpdateProveedor) => Promise<void>;
@@ -183,6 +187,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    const [actividades, setActividades] = useState<Actividad[]>([]);
    const [equipos, setEquipos] = useState<Equipo[]>([]);
    const [equipoMiembros, setEquipoMiembros] = useState<EquipoMiembro[]>([]);
+   const [empleados, setEmpleados] = useState<Empleado[]>([]);
    const [proveedores, setProveedores] = useState<Proveedor[]>([]);
    const [ordenesCompra, setOrdenesCompra] = useState<OrdenCompra[]>([]);
    const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -225,6 +230,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
          mapAndSet('actividades', setActividades, dbToActividad);
          mapAndSet('equipos', setEquipos, dbToEquipo);
          mapAndSet('equipo_miembros', setEquipoMiembros, dbToEquipoMiembro);
+         mapAndSet('empleados', setEmpleados, dbToEmpleado);
          mapAndSet('proveedores', setProveedores, dbToProveedor);
          mapAndSet('ordenes_compra', setOrdenesCompra, dbToOrdenCompra);
          mapAndSet('notificaciones', setNotifications, dbToNotification);
@@ -268,6 +274,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
              case 'equipo_miembros': {
                const cached = loadCachedData<EquipoMiembro>(t, userId);
                if (cached) { anyCache = true; setEquipoMiembros(cached); }
+               break;
+             }
+             case 'empleados': {
+               const cached = loadCachedData<Empleado>(t, userId);
+               if (cached) { anyCache = true; setEmpleados(cached); }
                break;
              }
              case 'proveedores': {
@@ -1075,8 +1086,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         gastos: 0,
         pendiente_aportar: 0,
         costo_directo: p.costo_directo ?? 0,
-        fecha_inicio: null,
-        fecha_fin: null,
+        fecha_inicio: p.fechaInicio ? new Date(p.fechaInicio).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        fecha_fin: p.fechaFin ? new Date(p.fechaFin).toISOString().split('T')[0] : null,
+        area_construccion: p.areaConstruccion ?? 0,
+        nivel_calidad: p.nivelCalidad ?? 'basico',
       };
 
       if (!isOnline) {
@@ -1318,6 +1331,72 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toast.success('Miembro removido del equipo');
   };
 
+  // ---------- CRUD Empleados ----------
+  const addEmpleado = async (e: CreateEmpleado) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
+    try {
+      const dbRecord = { ...empleadoToDb(e), user_id: userId };
+      if (!isOnline) {
+        addPendingMutation({ table: 'empleados', action: 'INSERT', data: dbRecord, userId });
+        const optimistic = dbToEmpleado({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
+        setEmpleados(p => [optimistic, ...p]);
+        saveCachedData('empleados', userId, [optimistic, ...empleados]);
+        setPendingCount(getPendingCount(userId));
+        toast.success('Empleado guardado localmente (sin conexión)');
+        return;
+      }
+      const { EmpleadoService } = await import('@/services/seguimiento/EmpleadoService');
+      const data = await EmpleadoService.crear(dbRecord);
+      setEmpleados(p => [data, ...p]);
+      saveCachedData('empleados', userId, [data, ...empleados]);
+      toast.success('Empleado registrado');
+    } catch (error) {
+      console.error('Error al agregar empleado:', error);
+      toast.error('Error al registrar empleado');
+      throw error;
+    }
+  };
+
+  const updateEmpleado = async (id: string, e: UpdateEmpleado) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
+    try {
+      const dbRecord = empleadoToDb(e);
+      if (!isOnline) {
+        addPendingMutation({ table: 'empleados', action: 'UPDATE', data: dbRecord, filters: { id, user_id: userId }, userId });
+        setEmpleados(p => { const updated = p.map(x => x.id === id ? { ...x, ...e } : x); saveCachedData('empleados', userId, updated); return updated; });
+        setPendingCount(getPendingCount(userId));
+        toast.success('Actualizado localmente (sin conexión)');
+        return;
+      }
+      const { EmpleadoService } = await import('@/services/seguimiento/EmpleadoService');
+      const data = await EmpleadoService.actualizar(id, userId, dbRecord);
+      setEmpleados(p => { const updated = p.map(x => x.id === id ? data : x); saveCachedData('empleados', userId, updated); return updated; });
+      toast.success('Empleado actualizado');
+    } catch (error) {
+      console.error('Error al actualizar empleado:', error);
+      toast.error('Error al actualizar empleado');
+      throw error;
+    }
+  };
+
+  const deleteEmpleado = async (id: string) => {
+    if (!session) { toast.error('Sesión no encontrada'); return; }
+    const userId = session.user.id;
+    if (!isOnline) {
+      addPendingMutation({ table: 'empleados', action: 'DELETE', data: {}, filters: { id, user_id: userId }, userId });
+      setEmpleados(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('empleados', userId, filtered); return filtered; });
+      setPendingCount(getPendingCount(userId));
+      toast.success('Eliminado localmente (sin conexión)');
+      return;
+    }
+    const { EmpleadoService } = await import('@/services/seguimiento/EmpleadoService');
+    await EmpleadoService.eliminar(id, userId);
+    setEmpleados(p => { const filtered = p.filter(x => x.id !== id); saveCachedData('empleados', userId, filtered); return filtered; });
+    toast.success('Empleado eliminado');
+  };
+
   const { theme } = useTheme();
   const darkMode = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   const toggleDarkMode = useCallback(() => setTheme(theme === 'dark' ? 'light' : 'dark'), [theme, setTheme]);
@@ -1391,6 +1470,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     presupuestos, addPresupuesto, updatePresupuesto, deletePresupuesto, transicionFase,
     equipos, addEquipo, updateEquipo, deleteEquipo,
     equipoMiembros, addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
+    empleados, addEmpleado, updateEmpleado, deleteEmpleado,
     proveedores, addProveedor, updateProveedor, deleteProveedor,
     ordenesCompra, addOrdenCompra, refreshOrdenesCompra, updateOrdenCompra, deleteOrdenCompra,
     notifications, markNotificationAsRead, deleteNotification,
@@ -1398,7 +1478,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    
   }), [
     clientes, proyectos, transacciones, actividades, presupuestos,
-    equipos, equipoMiembros, proveedores, ordenesCompra, notifications,
+    equipos, equipoMiembros, empleados, proveedores, ordenesCompra, notifications,
     addCliente, updateCliente, deleteCliente,
     addProyecto, updateProyecto, deleteProyecto,
     addTransaccion, updateTransaccion, deleteTransaccion,
@@ -1406,6 +1486,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addPresupuesto, updatePresupuesto, deletePresupuesto, transicionFase,
     addEquipo, updateEquipo, deleteEquipo,
     addEquipoMiembro, updateEquipoMiembro, deleteEquipoMiembro,
+    addEmpleado, updateEmpleado, deleteEmpleado,
     addProveedor, updateProveedor, deleteProveedor,
     addOrdenCompra, refreshOrdenesCompra, updateOrdenCompra, deleteOrdenCompra,
     markNotificationAsRead, deleteNotification,

@@ -7,6 +7,7 @@ import { Play, PauseCircle, CheckCircle, Folder, Filter, Edit3, Save, Trash2, X,
 import { downloadCSV } from '@/lib/exporters';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { PresupuestosService } from '@/services/presupuestos/PresupuestosService';
 
 type Fase = Presupuesto['fase'];
 const nextFase: Record<Fase, { label: string; icon: React.ComponentType<{ className?: string }>; color: string; fase: Fase } | null> = {
@@ -157,9 +158,8 @@ const ProyectosScreen: React.FC = () => {
         },
       ];
 
-      // Insertar en presupuestos (la tabla que lee la UI)
-      const { error } = await supabase.from('presupuestos').insert(presupuestosData);
-      if (error) throw error;
+      // Insertar en presupuestos (la tabla que lee la UI) usando el servicio
+      await Promise.all(presupuestosData.map(p => PresupuestosService.addPresupuesto(p)));
 
       // Recargar para sincronizar el contexto
       window.location.reload();

@@ -57,18 +57,69 @@ export const OrdenesCompraService = {
   },
 
   // ====== Generar folio ======
+  // Genera folio seguro con reintentos para evitar colisiones
   async generarFolio(userId: string): Promise<string> {
-    const { data, error } = await supabase
-      .from('ordenes_compra')
-      .select('folio')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1);
-    if (error) throw error;
-    const rows = data as any[];
-    const ultimo = rows?.[0]?.folio as string || 'OC-0000';
-    const num = parseInt(ultimo.replace('OC-', ''), 10) + 1;
-    return `OC-${String(num).padStart(4, '0')}`;
+    const maxReintentos = 3;
+    let intento = 0;
+
+    while (intento < maxReintentos) {
+      try {
+        // Leer último folio para este usuario
+        const { data, error } = await supabase
+          .from('ordenes_compra')
+          .select('folio')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) throw error;
+
+        const rows = data as any[];
+        const ultimo = rows?.[0]?.folio as string || 'OC-202600001';
+        
+        // Extraer número y año-mes del folio: OC-YYYYMM-XXXXX
+        let proximoFolio: string;
+        const ahora = new Date();
+        const anioMes = `${ahora.getFullYear()}${String(ahora.getMonth() + 1).padStart(2, '0')}`;
+
+        // Si el último folio es del mes actual, incrementar el contador
+        if (ultimo.includes(anioMes)) {
+          const partes = ultimo.split('-');
+          if (partes.length === 3) {
+            const contador = parseInt(partes[2], 10) || 0;
+            proximoFolio = `OC-${anioMes}-${String(contador + 1).padStart(5, '0')}`;
+          } else {
+            // Fallback: folio mal formado, generar nuevo
+            proximoFolio = `OC-${anioMes}-00001`;
+          }
+        } else {
+          // Nuevo mes, resetear contador
+          proximoFolio = `OC-${anioMes}-00001`;
+        }
+
+        // Verificar unicidad antes de retornar
+        const { data: existente, error: checkError } = await supabase
+          .from('ordenes_compra')
+          .select('id')
+          .eq('folio', proximoFolio)
+          .limit(1);
+
+        if (checkError) throw checkError;
+
+        if (!existente || existente.length === 0) {
+          return proximoFolio;
+        }
+
+        // Si existe, reintentar (incrementar para la próxima iteración)
+        intento++;
+      } catch (err) {
+        console.error(`Intento ${intento + 1} de generar folio falló:`, err);
+        intento++;
+        if (intento >= maxReintentos) throw err;
+      }
+    }
+
+    throw new Error('No se pudo generar un folio único después de varios intentos');
   },
 
   // ====== Items ======

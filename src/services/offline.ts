@@ -2,7 +2,14 @@ import type { Database, TableName } from '@/types/supabase';
 
 const CACHE_PREFIX = 'offline_';
 const PENDING_KEY = 'offline_pending';
-const TABLES = ['clientes', 'proyectos', 'presupuestos', 'transacciones', 'actividades', 'equipos', 'equipo_miembros', 'ordenes_compra', 'orden_compra_items', 'recepcion_oc', 'materiales_proyecto', 'movimientos_materiales', 'proveedores'] as const;
+const TABLES = [
+  'clientes', 'proyectos', 'presupuestos', 'transacciones', 'actividades', 
+  'equipos', 'equipo_miembros', 'ordenes_compra', 'orden_compra_items', 
+  'recepcion_oc', 'recepcion_oc_items', 'materiales_proyecto', 
+  'movimientos_materiales', 'proveedores', 'empleados', 'conciliaciones', 
+  'partidas_conciliacion', 'bitacora_avance', 'checklist_items',
+  'caja_proyecto', 'movimientos_caja', 'transacciones_recurrentes'
+] as const;
 
 function cacheKey(table: string, userId: string) {
   return `${CACHE_PREFIX}${table}_${userId}`;
