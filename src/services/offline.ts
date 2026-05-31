@@ -3,6 +3,9 @@ import type { Database, TableName } from '@/types/supabase';
 const CACHE_PREFIX = 'offline_';
 const PENDING_KEY = 'offline_pending';
 
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+
 // IMPORTANT: Keep this list synchronized with AppDataService.loadAll() table list
 // Tables that have user_id and are user-scoped
 const USER_SCOPED_TABLES = [
@@ -155,11 +158,18 @@ export async function processPendingMutations(
 
 export async function checkOnline(): Promise<boolean> {
   if (!navigator.onLine) return false;
+  if (!supabaseUrl || !supabaseKey) return false;
+
   try {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), 3000);
-    await fetch('https://arkemshnmyfokhmbsvpv.supabase.co/auth/v1/health', {
-      method: 'HEAD',
+    const healthUrl = `${supabaseUrl.replace(/\/$/, '')}/auth/v1/health`;
+    await fetch(healthUrl, {
+      method: 'GET',
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+      },
       signal: controller.signal,
     });
     clearTimeout(id);

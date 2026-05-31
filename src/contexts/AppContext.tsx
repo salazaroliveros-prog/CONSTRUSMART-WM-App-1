@@ -309,7 +309,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
            }
          } else {
            console.warn('Supabase reachable but data load failed:', e);
-           toast.error('No se pudo cargar datos de Supabase. Verifica la conexión o las políticas de RLS.');
+           toast.error('No se pudieron cargar los datos de Supabase. Verifica la conexión, la URL/API key y las políticas RLS. Revisa la consola para más detalles.');
          }
        } finally {
          loadingRef.current = false;
@@ -603,15 +603,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!isOnline) {
         addPendingMutation({ table: 'clientes', action: 'INSERT', data: dbRecord, userId });
         const optimistic = dbToCliente({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
-        setClientes(p => [optimistic, ...p]);
-        saveCachedData('clientes', userId, [optimistic, ...clientes]);
+        setClientes(p => {
+          const next = [optimistic, ...p];
+          saveCachedData('clientes', userId, next);
+          return next;
+        });
         setPendingCount(getPendingCount(userId));
         toast.success('Guardado localmente (sin conexión)');
         return;
       }
       const mapped = await ClientesService.addCliente(c as CreateCliente, userId);
-      setClientes(p => [mapped, ...p]);
-      saveCachedData('clientes', userId, [mapped, ...clientes]);
+      setClientes(p => {
+        const next = [mapped, ...p];
+        saveCachedData('clientes', userId, next);
+        return next;
+      });
       toast.success('Cliente guardado');
     } catch (error) {
       console.error('Error al agregar cliente:', error);
@@ -680,16 +686,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!isOnline) {
         addPendingMutation({ table: 'proyectos', action: 'INSERT', data: dbRecord, userId });
         const optimistic = dbToProyecto({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
-        setProyectos(prev => [optimistic, ...prev]);
-        saveCachedData('proyectos', userId, [optimistic, ...proyectos]);
+        setProyectos(prev => {
+          const next = [optimistic, ...prev];
+          saveCachedData('proyectos', userId, next);
+          return next;
+        });
         setPendingCount(getPendingCount(userId));
         toast.success('Guardado localmente (sin conexión)');
         return;
       }
       const data = await ProyectosService.addProyecto(dbRecord);
       const mapped = dbToProyecto(data);
-      setProyectos(prev => [mapped, ...prev]);
-      saveCachedData('proyectos', userId, [mapped, ...proyectos]);
+      setProyectos(prev => {
+        const next = [mapped, ...prev];
+        saveCachedData('proyectos', userId, next);
+        return next;
+      });
       toast.success('Proyecto guardado');
     } catch (error) {
       console.error('Error al agregar proyecto:', error);
@@ -778,8 +790,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!isOnline) {
         addPendingMutation({ table: 'transacciones', action: 'INSERT', data: dbRecord, userId });
         const optimistic = dbToTransaccion({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
-        setTransacciones(p => [optimistic, ...p]);
-        saveCachedData('transacciones', userId, [optimistic, ...transacciones]);
+        setTransacciones(p => {
+          const next = [optimistic, ...p];
+          saveCachedData('transacciones', userId, next);
+          return next;
+        });
         setPendingCount(getPendingCount(userId));
         toast.success('Guardado localmente (sin conexión)');
         return;
@@ -788,8 +803,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const data = await FinancieroService.registrarTransaccion(dbRecord as CreateTransaccion, userId);
       if (data) {
         const mapped = dbToTransaccion(data);
-        setTransacciones(p => [mapped, ...p]);
-        saveCachedData('transacciones', userId, [mapped, ...transacciones]);
+        setTransacciones(p => {
+          const next = [mapped, ...p];
+          saveCachedData('transacciones', userId, next);
+          return next;
+        });
         toast.success('Transacción registrada');
       }
     } catch (error) {
@@ -863,16 +881,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!isOnline) {
         addPendingMutation({ table: 'actividades', action: 'INSERT', data: dbRecord, userId });
         const optimistic = dbToActividad({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
-        setActividades(p => [optimistic, ...p]);
-        saveCachedData('actividades', userId, [optimistic, ...actividades]);
+        setActividades(p => {
+          const next = [optimistic, ...p];
+          saveCachedData('actividades', userId, next);
+          return next;
+        });
         setPendingCount(getPendingCount(userId));
         toast.success('Guardado localmente (sin conexión)');
         return;
       }
       const data = await ActividadesService.addActividad(dbRecord);
       const mapped = dbToActividad(data);
-      setActividades(p => [mapped, ...p]);
-      saveCachedData('actividades', userId, [mapped, ...actividades]);
+      setActividades(p => {
+        const next = [mapped, ...p];
+        saveCachedData('actividades', userId, next);
+        return next;
+      });
       toast.success('Actividad guardada');
     } catch (error) {
       console.error('Error al agregar actividad:', error);
@@ -929,15 +953,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!isOnline) {
         addPendingMutation({ table: 'proveedores', action: 'INSERT', data: { ...dbRecord, user_id: userId }, userId });
         const optimistic = dbToProveedor({ ...dbRecord, id: crypto.randomUUID(), user_id: userId, created_at: new Date().toISOString() });
-        setProveedores(prev => [optimistic, ...prev]);
-        saveCachedData('proveedores', userId, [optimistic, ...proveedores]);
+        setProveedores(prev => {
+          const next = [optimistic, ...prev];
+          saveCachedData('proveedores', userId, next);
+          return next;
+        });
         setPendingCount(getPendingCount(userId));
         toast.success('Proveedor guardado localmente (sin conexión)');
         return;
       }
       const created = await ProveedoresService.crear(p, userId);
-      setProveedores(prev => [created, ...prev]);
-      saveCachedData('proveedores', userId, [created, ...proveedores]);
+      setProveedores(prev => {
+        const next = [created, ...prev];
+        saveCachedData('proveedores', userId, next);
+        return next;
+      });
       toast.success('Proveedor guardado');
     } catch (error) {
       console.error('Error al agregar proveedor:', error);
@@ -1047,8 +1077,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return optimistic;
       }
       const creada = await OrdenesCompraService.crear(oc, userId);
-      setOrdenesCompra(prev => [creada, ...prev]);
-      saveCachedData('ordenes_compra', userId, [creada, ...ordenesCompra]);
+      setOrdenesCompra(prev => {
+        const next = [creada, ...prev];
+        saveCachedData('ordenes_compra', userId, next);
+        return next;
+      });
       toast.success('Orden de compra creada');
       return creada;
     } catch (error) {
@@ -1215,16 +1248,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!isOnline) {
         addPendingMutation({ table: 'equipos', action: 'INSERT', data: dbRecord, userId });
         const optimistic = dbToEquipo({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
-        setEquipos(p => [optimistic, ...p]);
-        saveCachedData('equipos', userId, [optimistic, ...equipos]);
+        setEquipos(p => {
+          const next = [optimistic, ...p];
+          saveCachedData('equipos', userId, next);
+          return next;
+        });
         setPendingCount(getPendingCount(userId));
         toast.success('Guardado localmente (sin conexión)');
         return;
       }
       const data = await EquiposService.addEquipo(dbRecord);
       const mapped = dbToEquipo(data);
-      setEquipos(p => [mapped, ...p]);
-      saveCachedData('equipos', userId, [mapped, ...equipos]);
+      setEquipos(p => {
+        const next = [mapped, ...p];
+        saveCachedData('equipos', userId, next);
+        return next;
+      });
       toast.success('Equipo guardado');
     } catch (error) {
       console.error('Error al agregar equipo:', error);
@@ -1286,16 +1325,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!isOnline) {
         addPendingMutation({ table: 'equipo_miembros', action: 'INSERT', data: dbRecord, userId });
         const optimistic = dbToEquipoMiembro({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
-        setEquipoMiembros(p => [optimistic, ...p]);
-        saveCachedData('equipo_miembros', userId, [optimistic, ...equipoMiembros]);
+        setEquipoMiembros(p => {
+          const next = [optimistic, ...p];
+          saveCachedData('equipo_miembros', userId, next);
+          return next;
+        });
         setPendingCount(getPendingCount(userId));
         toast.success('Guardado localmente (sin conexión)');
         return;
       }
       const data = await EquiposService.addMiembro(dbRecord);
       const mapped = dbToEquipoMiembro(data);
-      setEquipoMiembros(p => [mapped, ...p]);
-      saveCachedData('equipo_miembros', userId, [mapped, ...equipoMiembros]);
+      setEquipoMiembros(p => {
+        const next = [mapped, ...p];
+        saveCachedData('equipo_miembros', userId, next);
+        return next;
+      });
       toast.success('Miembro agregado al equipo');
     } catch (error) {
       console.error('Error al agregar miembro:', error);
@@ -1352,16 +1397,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!isOnline) {
         addPendingMutation({ table: 'empleados', action: 'INSERT', data: dbRecord, userId });
         const optimistic = dbToEmpleado({ ...dbRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() });
-        setEmpleados(p => [optimistic, ...p]);
-        saveCachedData('empleados', userId, [optimistic, ...empleados]);
+        setEmpleados(p => {
+          const next = [optimistic, ...p];
+          saveCachedData('empleados', userId, next);
+          return next;
+        });
         setPendingCount(getPendingCount(userId));
         toast.success('Empleado guardado localmente (sin conexión)');
         return;
       }
       const { EmpleadoService } = await import('@/services/seguimiento/EmpleadoService');
       const data = await EmpleadoService.crear(dbRecord);
-      setEmpleados(p => [data, ...p]);
-      saveCachedData('empleados', userId, [data, ...empleados]);
+      setEmpleados(p => {
+        const next = [data, ...p];
+        saveCachedData('empleados', userId, next);
+        return next;
+      });
       toast.success('Empleado registrado');
     } catch (error) {
       console.error('Error al agregar empleado:', error);
