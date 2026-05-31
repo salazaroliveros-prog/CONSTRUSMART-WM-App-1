@@ -54,66 +54,84 @@ const SeguimientoScreen: React.FC = () => {
   // Save chart order
   useEffect(() => { localStorage.setItem('seg_charts', JSON.stringify(chartOrder)); }, [chartOrder]);
 
-  // Data computations
-  const ejecucion = presupuestos.filter(p => p.fase === 'ejecución');
-  const planeacion = presupuestos.filter(p => p.fase === 'planeación');
-  const pausa = presupuestos.filter(p => p.fase === 'pausa');
-  const finalizados = presupuestos.filter(p => p.fase === 'finalizado');
+  // Filtrar transacciones según proyecto seleccionado
+  const transaccionesFiltradas = useMemo(() => {
+    if (!selectedProyecto) return transacciones;
+    return transacciones.filter(t => t.proyectoId === selectedProyecto);
+  }, [transacciones, selectedProyecto]);
 
+  const presupuestosFiltrados = useMemo(() => {
+    if (!selectedProyecto) return presupuestos;
+    return presupuestos.filter(p => p.id === selectedProyecto);
+  }, [presupuestos, selectedProyecto]);
+
+  // Data computations
+  const ejecucion = presupuestosFiltrados.filter(p => p.fase === 'ejecución');
+  const planeacion = presupuestosFiltrados.filter(p => p.fase === 'planeación');
+  const pausa = presupuestosFiltrados.filter(p => p.fase === 'pausa');
+  const finalizados = presupuestosFiltrados.filter(p => p.fase === 'finalizado');
+
+   
+   
   const stats = useMemo(() => {
-    const ingresos = transacciones.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
-    const gastos = transacciones.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
+    const ingresos = transaccionesFiltradas.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
+    const gastos = transaccionesFiltradas.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
     const avancePromedio = ejecucion.length > 0 ? ejecucion.reduce((s, p) => s + (p.avanceFisico || 0), 0) / ejecucion.length : 0;
-    return { ingresos, gastos, totalPresupuestado: presupuestos.reduce((s, p) => s + (p.total || 0), 0), avancePromedio, activos: ejecucion.length + planeacion.length, balance: ingresos - gastos };
-  }, [presupuestos, transacciones, ejecucion, planeacion.length]);
+    return { ingresos, gastos, totalPresupuestado: presupuestosFiltrados.reduce((s, p) => s + (p.total || 0), 0), avancePromedio, activos: ejecucion.length + planeacion.length, balance: ingresos - gastos };
+  }, [presupuestosFiltrados, transaccionesFiltradas, ejecucion.length, planeacion.length]);
 
   const flujoMensual = useMemo(() => {
     const data: Record<string, { mes: string; ingresos: number; gastos: number }> = {};
-    transacciones.forEach(t => {
-      const mes = t.fecha.slice(0, 7);
+    transaccionesFiltradas.forEach(t => {
+      const mes = (t.fecha || '').slice(0, 7);
+      if (!mes) return;
       if (!data[mes]) data[mes] = { mes, ingresos: 0, gastos: 0 };
       if (t.tipo === 'ingreso') data[mes].ingresos += t.costoTotal;
       else data[mes].gastos += t.costoTotal;
     });
     return Object.values(data).sort((a, b) => a.mes.localeCompare(b.mes));
-  }, [transacciones]);
+  }, [transaccionesFiltradas]);
 
+   
   const avanceProyectos = useMemo(() => {
     if (ejecucion.length === 0) return [{ name: 'Sin datos', fisico: 0, financiero: 0 }];
     return ejecucion.slice(0, 10).map(p => ({
       name: p.proyecto.slice(0, 14), fisico: p.avanceFisico ?? 0, financiero: p.avanceFinanciero ?? 0,
     }));
-  }, [ejecucion]);
+  }, [ejecucion.length]);
 
   const gastosPorCategoria = useMemo(() => {
     const cats: Record<string, number> = {};
-    transacciones.filter(t => t.tipo === 'gasto').forEach(t => { cats[t.categoria] = (cats[t.categoria] || 0) + t.costoTotal; });
+    transaccionesFiltradas.filter(t => t.tipo === 'gasto').forEach(t => { cats[t.categoria] = (cats[t.categoria] || 0) + t.costoTotal; });
     return Object.entries(cats).map(([name, value]) => ({ name, value }));
-  }, [transacciones]);
+  }, [transaccionesFiltradas]);
 
-  const faseDistribucion = useMemo(() => {
+   
+   
+   const faseDistribucion = useMemo(() => {
     const map: Record<string, number> = {};
-    presupuestos.forEach(p => { map[p.fase] = (map[p.fase] || 0) + 1; });
+    presupuestosFiltrados.forEach(p => { map[p.fase] = (map[p.fase] || 0) + 1; });
     return Object.entries(map).map(([name, value]) => ({ name, value }));
-  }, [presupuestos]);
+  }, [presupuestosFiltrados.length]);
 
   // Presupuesto vs Real por proyecto
+   
   const presupuestoVsReal = useMemo(() => {
-    return presupuestos.slice(0, 10).map(p => {
-      const real = transacciones.filter(t => t.proyectoId === p.id && t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
+    return presupuestosFiltrados.slice(0, 10).map(p => {
+      const real = transaccionesFiltradas.filter(t => t.proyectoId === p.id && t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
       return { name: p.proyecto.slice(0, 12), presupuesto: p.total || 0, real };
     });
-  }, [presupuestos, transacciones]);
+  }, [presupuestosFiltradas, transaccionesFiltradas]);
 
   // Ingresos por proyecto
   const ingresosPorProyecto = useMemo(() => {
     const map: Record<string, number> = {};
-    transacciones.filter(t => t.tipo === 'ingreso').forEach(t => {
-      const key = presupuestos.find(p => p.id === t.proyectoId)?.proyecto || 'Admin';
+    transaccionesFiltradas.filter(t => t.tipo === 'ingreso').forEach(t => {
+      const key = presupuestosFiltrados.find(p => p.id === t.proyectoId)?.proyecto || 'Admin';
       map[key] = (map[key] || 0) + t.costoTotal;
     });
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-  }, [presupuestos, transacciones]);
+  }, [presupuestosFiltrados, transaccionesFiltradas]);
 
   // Margen mensual
   const margenMensual = useMemo(() => {

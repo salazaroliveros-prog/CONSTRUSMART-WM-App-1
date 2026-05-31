@@ -69,13 +69,13 @@ const FinancieroScreen: React.FC = () => {
   });
 
   const stats = useMemo(() => {
-    const ingresos = transacciones.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
-    const gastos = transacciones.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
-    const operativos = transacciones.filter(t => t.tipo === 'gasto' && ['materiales', 'mano-obra', 'herramienta', 'sub-contrato', 'transporte'].includes(t.categoria)).reduce((s, t) => s + t.costoTotal, 0);
-    const administrativos = transacciones.filter(t => t.tipo === 'gasto' && ['administrativo', 'fijos'].includes(t.categoria)).reduce((s, t) => s + t.costoTotal, 0);
-    const personales = transacciones.filter(t => t.tipo === 'gasto' && ['personal', 'hogar'].includes(t.categoria)).reduce((s, t) => s + t.costoTotal, 0);
+    const ingresos = filtered.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
+    const gastos = filtered.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
+    const operativos = filtered.filter(t => t.tipo === 'gasto' && ['materiales', 'mano-obra', 'herramienta', 'sub-contrato', 'transporte'].includes(t.categoria)).reduce((s, t) => s + t.costoTotal, 0);
+    const administrativos = filtered.filter(t => t.tipo === 'gasto' && ['administrativo', 'fijos'].includes(t.categoria)).reduce((s, t) => s + t.costoTotal, 0);
+    const personales = filtered.filter(t => t.tipo === 'gasto' && ['personal', 'hogar'].includes(t.categoria)).reduce((s, t) => s + t.costoTotal, 0);
     return { ingresos, gastos, operativos, administrativos, personales, balance: ingresos - gastos };
-  }, [transacciones]);
+  }, [filtered]);
 
   const porCategoria = useMemo(() => {
     const data: Record<string, number> = {};

@@ -247,7 +247,7 @@ const PresupuestoScreen: React.FC = () => {
       if (prev.find(l => l.id === scaled.id)) return prev;
       return [...prev, scaled];
     });
-    setExpanded(prev => new Set(prev).add(scaled.id));
+    // Renglón se agrega colapsado — el usuario lo expande con click
   }, [meta.nivelCalidad, meta.areaConstruccion]);
 
   const updateLinea = useCallback((id: string, field: keyof LineaPresupuesto, value: any) => {
