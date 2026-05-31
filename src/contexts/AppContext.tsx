@@ -220,7 +220,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
            const rows = (data[name] || []) as Database[T][];
            const mapped = rows.map(mapper);
            setter(mapped);
-           if (rows.length > 0) saveCachedData(name, userId, mapped);
+          saveCachedData(name, userId, mapped);
          };
 
          mapAndSet('clientes', setClientes, dbToCliente);

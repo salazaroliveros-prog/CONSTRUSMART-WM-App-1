@@ -158,6 +158,7 @@ const Sidebar: React.FC = () => {
       </button>
 
       {/* Logo */}
+      <div className="flex items-center gap-2 px-3 py-3">
               <span className="block w-5 h-0.5 bg-white rounded-full transition-transform duration-200" />
               <span className="block w-5 h-0.5 bg-white rounded-full transition-opacity duration-200" />
               <span className="block w-5 h-0.5 bg-white rounded-full transition-transform duration-200" />
@@ -175,7 +176,6 @@ const Sidebar: React.FC = () => {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto p-1.5 space-y-0.5 mt-1 stagger-children">
-          id="mobile-sidebar"
         {modules.map((m, i) => (
           <div
             key={m.id}

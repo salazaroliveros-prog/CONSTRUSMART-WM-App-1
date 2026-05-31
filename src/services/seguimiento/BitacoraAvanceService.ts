@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { SessionService } from '@/services/SessionService';
 import type { Avance } from '@/lib/schemas';
 import type { DBBitacoraAvance } from '@/types/supabase';
 
@@ -22,10 +23,10 @@ export const BitacoraAvanceService = {
     notas: string;
     fecha: string;
   }): Promise<Avance> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const userId = await SessionService.getUserId();
     const { data, error } = await supabase
       .from(TABLE)
-      .insert({ ...payload, user_id: user?.id } satisfies Partial<DBBitacoraAvance>)
+      .insert({ ...payload, user_id: userId } satisfies Partial<DBBitacoraAvance>)
       .select()
       .single<DBBitacoraAvance>();
 

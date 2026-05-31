@@ -2,14 +2,24 @@ import type { Database, TableName } from '@/types/supabase';
 
 const CACHE_PREFIX = 'offline_';
 const PENDING_KEY = 'offline_pending';
-const TABLES = [
+
+// IMPORTANT: Keep this list synchronized with AppDataService.loadAll() table list
+// Tables that have user_id and are user-scoped
+const USER_SCOPED_TABLES = [
   'clientes', 'proyectos', 'presupuestos', 'transacciones', 'actividades', 
-  'equipos', 'equipo_miembros', 'ordenes_compra', 'orden_compra_items', 
-  'recepcion_oc', 'recepcion_oc_items', 'materiales_proyecto', 
-  'movimientos_materiales', 'proveedores', 'empleados', 'conciliaciones', 
-  'partidas_conciliacion', 'bitacora_avance', 'checklist_items',
+  'equipos', 'equipo_miembros', 'proveedores', 'ordenes_compra', 'notificaciones',
+  'empleados', 'conciliaciones', 'bitacora_avance', 'recepcion_oc', 
   'caja_proyecto', 'movimientos_caja', 'transacciones_recurrentes'
 ] as const;
+
+// Tables that are dependent or global
+const DEPENDENT_TABLES = [
+  'orden_compra_items', 'recepcion_oc_items', 'materiales_proyecto', 
+  'movimientos_materiales', 'partidas_conciliacion', 'checklist_items',
+  'renglon_usage', 'renglon_precios_historial', 'cambios_presupuesto', 'renglones'
+] as const;
+
+const TABLES = [...USER_SCOPED_TABLES, ...DEPENDENT_TABLES] as const;
 
 function cacheKey(table: string, userId: string) {
   return `${CACHE_PREFIX}${table}_${userId}`;
@@ -25,9 +35,15 @@ export function loadCachedData<T>(table: string, userId: string): T[] | null {
   }
 }
 
-export function saveCachedData<T>(table: string, userId: string, data: T[]): void {
+export function saveCachedData<T>(table: string, userId: string, data: T[] | null): void {
   try {
-    localStorage.setItem(cacheKey(table, userId), JSON.stringify(data));
+    if (data === null) {
+      // Explicitly clear cache if data is null
+      localStorage.removeItem(cacheKey(table, userId));
+    } else if (data && Array.isArray(data)) {
+      // Save cache even if array is empty - this indicates the table was successfully synced
+      localStorage.setItem(cacheKey(table, userId), JSON.stringify(data));
+    }
   } catch (e) {
     console.error(`Error caching ${table}:`, e);
   }
@@ -35,7 +51,11 @@ export function saveCachedData<T>(table: string, userId: string, data: T[]): voi
 
 export function clearUserCache(userId: string): void {
   TABLES.forEach(t => {
-    try { localStorage.removeItem(cacheKey(t, userId)); } catch { }
+    try {
+      localStorage.removeItem(cacheKey(t as string, userId));
+    } catch (e) {
+      console.warn(`Error clearing cache for ${t}:`, e);
+    }
   });
 }
 

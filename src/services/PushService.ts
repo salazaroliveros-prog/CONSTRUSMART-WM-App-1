@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { SessionService } from './SessionService';
 
 const urlBase64ToUint8Array = (base64String: string) => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -53,18 +54,25 @@ export const PushService = {
   },
 
   async saveToken(token: string) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const userId = await SessionService.getUserId();
+    if (!userId) {
+      console.warn('[PushService] No user authenticated, skipping token save');
+      return;
+    }
 
     const { error } = await supabase
       .from('device_tokens')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         token,
         platform: 'web'
       });
 
-    if (error) console.error('Error saving device token:', error);
+    if (error) {
+      console.error('[PushService] Error saving device token:', error);
+    } else {
+      console.log('[PushService] Device token saved successfully');
+    }
   },
 
   async unsubscribe() {
@@ -74,12 +82,12 @@ export const PushService = {
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
         await subscription.unsubscribe();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
+        const userId = await SessionService.getUserId();
+        if (userId) {
           await supabase
             .from('device_tokens')
             .delete()
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .eq('token', JSON.stringify(subscription));
         }
         toast.success('Suscripción a notificaciones cancelada');

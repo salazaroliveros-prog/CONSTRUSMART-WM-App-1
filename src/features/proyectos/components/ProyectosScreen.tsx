@@ -6,8 +6,8 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Play, PauseCircle, CheckCircle, Folder, Filter, Edit3, Save, Trash2, X, ChevronDown, ChevronRight, DollarSign, TrendingUp, TrendingDown, Ruler, Percent, AlertTriangle, Download, Database } from 'lucide-react';
 import { downloadCSV } from '@/lib/exporters';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
 import { PresupuestosService } from '@/services/presupuestos/PresupuestosService';
+import { SeedDataService } from '@/services/SeedDataService';
 
 type Fase = Presupuesto['fase'];
 const nextFase: Record<Fase, { label: string; icon: React.ComponentType<{ className?: string }>; color: string; fase: Fase } | null> = {
@@ -74,99 +74,15 @@ const ProyectosScreen: React.FC = () => {
   const seedTestData = useCallback(async () => {
     setSeeding(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error('Debes iniciar sesión primero'); return; }
-
-      // La UI de Proyectos lee de la tabla PRESUPUESTOS, no proyectos
-      // Insertamos en presupuestos con todos los campos que espera la UI
-      const presupuestosData = [
-        {
-          user_id: user.id,
-          proyecto: 'CONSTRUCCIÓN RESIDENCIAL VISTA AL LAGO',
-          cliente: 'Carlos Méndez',
-          tipologia: 'residencial',
-          fase: 'planeación',
-          total: 250000,
-          avance_fisico: 0,
-          avance_financiero: 0,
-          ingresos: 0,
-          gastos: 0,
-          pendiente_aportar: 250000,
-          fecha_inicio: '2026-06-15',
-          fecha_fin: '2026-12-30',
-          factor_indirectos: 15,
-          factor_administrativos: 10,
-          factor_imprevistos: 5,
-          factor_utilidad: 10,
-        },
-        {
-          user_id: user.id,
-          proyecto: 'OFICINAS COMERCIALES ZONA 10',
-          cliente: 'Empresa Constructora XYZ',
-          tipologia: 'comercial',
-          fase: 'ejecución',
-          total: 500000,
-          avance_fisico: 70,
-          avance_financiero: 60,
-          ingresos: 300000,
-          gastos: 250000,
-          pendiente_aportar: 200000,
-          fecha_inicio: '2026-01-10',
-          fecha_fin: '2026-09-30',
-          factor_indirectos: 15,
-          factor_administrativos: 10,
-          factor_imprevistos: 5,
-          factor_utilidad: 10,
-        },
-        {
-          user_id: user.id,
-          proyecto: 'CENTRO COMERCIAL SAN MIGUEL',
-          cliente: 'Inversiones del Sur',
-          tipologia: 'comercial',
-          fase: 'pausa',
-          total: 800000,
-          avance_fisico: 80,
-          avance_financiero: 82,
-          ingresos: 656000,
-          gastos: 500000,
-          pendiente_aportar: 144000,
-          fecha_inicio: '2025-11-01',
-          fecha_fin: '2026-08-15',
-          factor_indirectos: 15,
-          factor_administrativos: 10,
-          factor_imprevistos: 5,
-          factor_utilidad: 10,
-        },
-        {
-          user_id: user.id,
-          proyecto: 'BODEGA INDUSTRIAL ZONA 14',
-          cliente: 'Logística Express',
-          tipologia: 'industrial',
-          fase: 'finalizado',
-          total: 350000,
-          avance_fisico: 100,
-          avance_financiero: 100,
-          ingresos: 350000,
-          gastos: 320000,
-          pendiente_aportar: 0,
-          fecha_inicio: '2025-06-01',
-          fecha_fin: '2026-02-28',
-          factor_indirectos: 15,
-          factor_administrativos: 10,
-          factor_imprevistos: 5,
-          factor_utilidad: 10,
-        },
-      ];
-
-      // Insertar en presupuestos (la tabla que lee la UI) usando el servicio
-      await Promise.all(presupuestosData.map(p => PresupuestosService.addPresupuesto(p)));
-
-      // Recargar para sincronizar el contexto
+      // Use centralized SeedDataService instead of direct supabase calls
+      await SeedDataService.seedTestProjects({ verbose: true });
+      
+      // Reload the page to sync the context with new data
       window.location.reload();
       toast.success('4 proyectos de prueba cargados correctamente');
     } catch (err) {
       console.error('Seed error:', err);
-      toast.error('Error al cargar datos de prueba: ' + (err as Error).message);
+      toast.error((err as Error).message);
     } finally {
       setSeeding(false);
     }

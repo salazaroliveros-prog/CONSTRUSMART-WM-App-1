@@ -57,7 +57,7 @@ const mapAndCache = <T extends keyof typeof tableMappers>(
 ) => {
   const mapper = tableMappers[tableName];
   const mapped = rows.map(mapper) as unknown as AppUserData[typeof tableName extends 'equipo_miembros' ? 'equipoMiembros' : typeof tableName extends 'ordenes_compra' ? 'ordenesCompra' : typeof tableName];
-  if (rows.length > 0) saveCachedData(tableName, userId, mapped);
+  saveCachedData(tableName, userId, mapped);
   return mapped;
 };
 
