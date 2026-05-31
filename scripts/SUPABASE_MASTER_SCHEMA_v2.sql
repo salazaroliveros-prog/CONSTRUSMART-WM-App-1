@@ -391,6 +391,7 @@ CREATE TABLE IF NOT EXISTS public.materiales_proyecto (
 -- 3.16. movimientos_materiales
 CREATE TABLE IF NOT EXISTS public.movimientos_materiales (
   id               uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  presupuesto_id   uuid REFERENCES public.presupuestos(id) ON DELETE CASCADE,
   proyecto_id      uuid NOT NULL REFERENCES public.proyectos(id) ON DELETE CASCADE,
   material_id      uuid NOT NULL REFERENCES public.materiales_proyecto(id) ON DELETE CASCADE,
   subrenglon_id    uuid REFERENCES public.subrenglones(id) ON DELETE SET NULL,
@@ -418,6 +419,7 @@ CREATE TABLE IF NOT EXISTS public.cambios_presupuesto (
 -- 3.18. bitacora_avance
 CREATE TABLE IF NOT EXISTS public.bitacora_avance (
   id               uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id          uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   presupuesto_id   uuid NOT NULL REFERENCES public.presupuestos(id) ON DELETE CASCADE,
   proyecto_id      uuid REFERENCES public.proyectos(id) ON DELETE SET NULL,
   usuario_id       uuid REFERENCES auth.users(id),
@@ -431,6 +433,7 @@ CREATE TABLE IF NOT EXISTS public.bitacora_avance (
 -- 3.19. actividades
 CREATE TABLE IF NOT EXISTS public.actividades (
   id               uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id          uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   presupuesto_id   uuid NOT NULL REFERENCES public.presupuestos(id) ON DELETE CASCADE,
   usuario_id       uuid REFERENCES auth.users(id),
   titulo           text,
@@ -607,6 +610,7 @@ CREATE INDEX IF NOT EXISTS idx_equipo_miembros_equipo_id ON public.equipo_miembr
 CREATE INDEX IF NOT EXISTS idx_empleados_user_id ON public.empleados(user_id);
 CREATE INDEX IF NOT EXISTS idx_materiales_proyecto_id ON public.materiales_proyecto(proyecto_id);
 CREATE INDEX IF NOT EXISTS idx_movimientos_materiales_proyecto_id ON public.movimientos_materiales(proyecto_id);
+CREATE INDEX IF NOT EXISTS idx_movimientos_materiales_presupuesto_id ON public.movimientos_materiales(presupuesto_id);
 CREATE INDEX IF NOT EXISTS idx_movimientos_materiales_material_id ON public.movimientos_materiales(material_id);
 CREATE INDEX IF NOT EXISTS idx_ordenes_compra_user_id ON public.ordenes_compra(user_id);
 CREATE INDEX IF NOT EXISTS idx_ordenes_compra_proyecto_id ON public.ordenes_compra(proyecto_id);
@@ -829,27 +833,32 @@ CREATE POLICY "proveedores_delete" ON public.proveedores
 -- POLÍTICAS: bitacora_avance
 CREATE POLICY "bitacora_avance_select" ON public.bitacora_avance
   FOR SELECT USING (
+    auth.uid() = user_id OR
     presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())
   );
 
 CREATE POLICY "bitacora_avance_insert" ON public.bitacora_avance
   FOR INSERT WITH CHECK (
+    auth.uid() = user_id OR
     presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())
   );
 
 -- POLÍTICAS: actividades
 CREATE POLICY "actividades_select" ON public.actividades
   FOR SELECT USING (
+    auth.uid() = user_id OR
     presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())
   );
 
 CREATE POLICY "actividades_insert" ON public.actividades
   FOR INSERT WITH CHECK (
+    auth.uid() = user_id OR
     presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())
   );
 
 CREATE POLICY "actividades_delete" ON public.actividades
   FOR DELETE USING (
+    auth.uid() = user_id OR
     presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())
   );
 
