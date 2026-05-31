@@ -691,7 +691,7 @@ export interface DBRenglonPrecioHistorial {
   created_at?: string;
 }
 
-export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'equipos' | 'bodega' | 'cotizacion' | 'compras' | 'aprobacion';
+export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'bodega' | 'cotizacion' | 'compras';
 
 export interface User {
   nombre: string;

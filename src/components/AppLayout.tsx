@@ -13,11 +13,9 @@ const ProyectosScreen = lazy(() => import('@/features/proyectos/components/Proye
 const PresupuestoScreen = lazy(() => import('@/features/presupuestos/components/PresupuestoScreen'));
 const FinancieroScreen = lazy(() => import('@/features/financiero/components/FinancieroScreen'));
 const SeguimientoScreen = lazy(() => import('@/components/screens/SeguimientoScreen'));
-const TeamsScreen = lazy(() => import('@/components/screens/TeamsScreen'));
 const BodegaScreen = lazy(() => import('@/components/screens/BodegaScreen'));
 const CotizacionScreen = lazy(() => import('@/components/screens/CotizacionScreen'));
 const ComprasScreen = lazy(() => import('@/features/compras/components/ComprasScreen'));
-const AprobacionScreen = lazy(() => import('@/components/screens/AprobacionScreen'));
 
 import CommandPalette from '@/components/shared/CommandPalette';
 import OfflineBanner from '@/components/shared/OfflineBanner';
@@ -32,11 +30,9 @@ const viewMappings: Record<ViewType, React.LazyExoticComponent<React.ComponentTy
   proyectos: ProyectosScreen,
   seguimiento: SeguimientoScreen,
   financiero: FinancieroScreen,
-  equipos: TeamsScreen,
   bodega: BodegaScreen,
   cotizacion: CotizacionScreen,
   compras: ComprasScreen,
-  aprobacion: AprobacionScreen,
 };
 
 const AppLayout: React.FC = () => {
