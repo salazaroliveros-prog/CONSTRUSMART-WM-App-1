@@ -27,6 +27,7 @@ import {
   dbToTransaccion, dbToActividad, dbToPresupuesto, presupuestoToDb,
   dbToEquipo, equipoToDb, dbToEquipoMiembro, equipoMiembroToDb,
   dbToProveedor, dbToOrdenCompra, proveedorToDb, ordenCompraToDb, actividadToDb,
+  dbToEmpleado,
   Database
 } from '@/types/supabase';
 import {
