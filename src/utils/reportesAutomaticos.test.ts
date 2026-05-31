@@ -15,7 +15,7 @@ vi.mock('sonner', () => ({
 }));
 
 describe('reporteSemanal', () => {
-  it('debería calcular correctamente las métricas semanales', () => {
+  it('debería calcular correctamente las métricas semanales', async () => {
     const presupuestos: Presupuesto[] = [
       { id: '1', fase: 'ejecución' } as unknown as Presupuesto,
       { id: '2', fase: 'planeación' } as unknown as Presupuesto,

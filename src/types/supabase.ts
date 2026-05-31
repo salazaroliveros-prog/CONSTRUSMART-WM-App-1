@@ -1,462 +1,693 @@
 // =====================================================================
-// TIPOS DE SUPABASE BASADOS EN EL ESQUEMA DE BASE DE DATOS
+// TIPOS DE SUPABASE ALINEADOS CON EL ESQUEMA DE MIGRACIÓN REAL
 // =====================================================================
 
 import { z } from 'zod';
+import { Session } from '@supabase/supabase-js';
 
 // Database type for createClient generic (Supabase schema shape)
 export interface Database {
-  clientes: DBCliente;
-  proyectos: DBProyecto;
-  transacciones: DBTransaccion;
   actividades: DBActividad;
-  presupuestos: DBPresupuesto;
-  equipos: DBEquipo;
+  audit_log: DBAuditLog;
+  bitacora_avance: DBBitacoraAvance;
+  caja_proyecto: DBCajaProyecto;
+  cambios_presupuesto: DBCambioPresupuesto;
+  checklist_items: DBChecklistItem;
+  clientes: DBCliente;
+  conciliaciones: DBConciliacion;
+  device_tokens: DBDeviceToken;
+  empleados: DBEmpleado;
   equipo_miembros: DBEquipoMiembro;
-  proveedores: DBProveedor;
-  ordenes_compra: DBOrdenCompra;
+  equipos: DBEquipo;
+  materiales_proyecto: DBMaterialProyecto;
+  movimientos_caja: DBMovimientoCaja;
+  movimientos_materiales: DBMovimientoMaterial;
+  notificaciones: DBNotificacion;
+  ocr_documentos: DBOcrDocumento;
   orden_compra_items: DBOrdenCompraItem;
+  ordenes_compra: DBOrdenCompra;
+  partidas_conciliacion: DBPartidaConciliacion;
+  presupuestos: DBPresupuesto;
+  proveedores: DBProveedor;
+  proyectos: DBProyecto;
   recepcion_oc: DBRecepcionOC;
   recepcion_oc_items: DBRecepcionOCItem;
-  ocr_documentos: DBOcrDocumento;
-  device_tokens: DBDeviceToken;
-  notificaciones: DBNotificacion;
-  cambios_presupuesto: CambiosPresupuesto;
-  bitacora_avance: DBBitacoraAvance;
-  materiales_proyecto: DBMaterial;
-  movimientos_materiales: DBMovimientoMaterial;
-  subrenglones: DBSubrenglon;
-  subrenglon_materiales: DBSubrenglonMaterial;
-  subrenglon_mano_obra: DBSubrenglonManoObra;
-  subrenglon_equipos: DBSubrenglonEquipo;
-  renglones: DBRenglon;
-  renglon_usage: DBRenglonUsage;
   renglon_precios_historial: DBRenglonPrecioHistorial;
+  renglon_usage: DBRenglonUsage;
+  renglones: DBRenglon;
+  subrenglon_equipos: DBSubrenglonEquipo;
+  subrenglon_mano_obra: DBSubrenglonManoObra;
+  subrenglon_materiales: DBSubrenglonMaterial;
+  subrenglones: DBSubrenglon;
+  transacciones: DBTransaccion;
+  transacciones_recurrentes: DBTransaccionRecurrente;
 }
 
-// ====== Tipos auxiliares enumerables ======
-export const TRANSACCION_TIPO = ['ingreso', 'gasto'] as const;
-export type TipoTransaccion = typeof TRANSACCION_TIPO[number];
-
-export const TRANSACCION_CATEGORIA = [
-  'materiales', 'mano-obra', 'herramienta', 'sub-contrato',
-  'administrativo', 'personal', 'transporte', 'fijos',
-  'hogar', 'aporte', 'trabajos-extra'
-] as const;
-export type CategoriaTransaccion = typeof TRANSACCION_CATEGORIA[number];
-
-// Categorías agrupadas para análisis financiero
-export const CAT_OPERATIVO = ['materiales', 'mano-obra', 'herramienta', 'sub-contrato', 'transporte'] as const;
-export const CAT_ADMIN = ['administrativo', 'fijos'] as const;
-export const CAT_PERSONAL = ['personal', 'hogar'] as const;
-
-// Guardias de tipo
-export function isOperativo(cat: string): cat is typeof CAT_OPERATIVO[number] {
-  return CAT_OPERATIVO.includes(cat as typeof CAT_OPERATIVO[number]);
-}
-export function isAdmin(cat: string): cat is typeof CAT_ADMIN[number] {
-  return CAT_ADMIN.includes(cat as typeof CAT_ADMIN[number]);
-}
-export function isPersonal(cat: string): cat is typeof CAT_PERSONAL[number] {
-  return CAT_PERSONAL.includes(cat as typeof CAT_PERSONAL[number]);
-}
-
-// ====== Esquemas de validación Zod ======
-const ClienteSchema = z.object({
-  id: z.string().optional(),
-  user_id: z.string().min(1, 'user_id requerido'),
-  nombre: z.string().min(1, 'El nombre es requerido'),
-  telefono: z.string().optional(),
-  email: z.string().email('Email inválido').optional().or(z.literal('')),
-  direccion: z.string().optional(),
-  tipo_proyecto: z.string().default('Residencial'),
-  estado: z.enum(['Potencial', 'Activo', 'Cerrado']).default('Potencial'),
-  notas: z.string().optional(),
-  fecha: z.string().default(new Date().toISOString().split('T')[0]),
-  created_at: z.string().optional(),
-});
-
-const ProyectoSchema = z.object({
-  id: z.string().optional(),
-  user_id: z.string().min(1, 'user_id requerido'),
-  nombre: z.string().min(1, 'El nombre es requerido'),
-  cliente: z.string().optional(),
-  tipo: z.string().optional(),
-  estado: z.enum(['Planeación', 'Ejecución', 'Finalizado', 'Evaluación', 'Parado']).default('Planeación'),
-  presupuesto_total: z.number().default(0),
-  avance_fisico: z.number().min(0).max(100).default(0),
-  avance_financiero: z.number().min(0).max(100).default(0),
-  ingresos: z.number().default(0),
-  gastos: z.number().default(0),
-  pendiente_aportar: z.number().default(0),
-  fecha_inicio: z.string().optional().or(z.literal('')),
-  fecha_fin: z.string().optional().or(z.literal('')),
-  created_at: z.string().optional(),
-});
-
-const TransaccionSchema = z.object({
-  id: z.string().optional(),
-  user_id: z.string().min(1, 'user_id requerido'),
-  tipo: z.enum(['ingreso', 'gasto']),
-  descripcion: z.string().optional(),
-  cantidad: z.number().min(0).default(1),
-  unidad: z.string().optional(),
-  categoria: z.enum([
-    'materiales', 'mano-obra', 'herramienta', 'sub-contrato',
-    'administrativo', 'personal', 'transporte', 'fijos',
-    'hogar', 'aporte', 'trabajos-extra'
-  ]),
-  costo_unitario: z.number().min(0).default(0),
-  costo_total: z.number().min(0).default(0),
-  fecha: z.string().default(new Date().toISOString().split('T')[0]),
-  proyecto_id: z.string().default('admin'),
-  created_at: z.string().optional(),
-});
+// ====== Esquemas de validación y tipos DB ======
 
 const ActividadSchema = z.object({
-  id: z.string().optional(),
-  user_id: z.string().min(1, 'user_id requerido'),
-  titulo: z.string().min(1, 'El título es requerido'),
+  id: z.string(),
+  user_id: z.string(),
+  titulo: z.string(),
   fecha: z.string(),
-  hora: z.string().optional(),
-  descripcion: z.string().optional(),
-  presupuesto_id: z.string().optional(),
-  created_at: z.string().optional(),
+  hora: z.string().nullable(),
+  descripcion: z.string().nullable(),
+  presupuesto_id: z.string().nullable(),
+  created_at: z.string().nullable(),
 });
+export type DBActividad = z.infer<typeof ActividadSchema>;
 
-const PresupuestoSchema = z.object({
-  id: z.string().optional(),
-  user_id: z.string().min(1, 'user_id requerido'),
-  proyecto: z.string().min(1, 'El nombre del proyecto es requerido'),
-  cliente: z.string().optional(),
-  ubicacion: z.string().optional(),
-  tipologia: z.string().optional(),
-  fase: z.enum(['planeación', 'ejecución', 'pausa', 'finalizado']).default('planeación'),
-  proyecto_id: z.string().optional(),
-  factor_indirectos: z.number().min(0).default(0),
-  factor_administrativos: z.number().min(0).default(0),
-  factor_imprevistos: z.number().min(0).default(0),
-  factor_utilidad: z.number().min(0).default(0),
-  lineas: z.array(z.record(z.unknown())).default([]),
-  avance_fisico: z.number().min(0).max(100).default(0),
-  avance_financiero: z.number().min(0).max(100).default(0),
-  ingresos: z.number().default(0),
-  gastos: z.number().default(0),
-  pendiente_aportar: z.number().default(0),
-  total: z.number().default(0),
-  fecha_inicio: z.string().optional().or(z.literal('')),
-  fecha_fin: z.string().optional().or(z.literal('')),
-  created_at: z.string().optional(),
-  updated_at: z.string().optional(),
+const AuditLogSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  tabla: z.string(),
+  registro_id: z.string(),
+  accion: z.string(),
+  valor_anterior: z.record(z.unknown()).nullable(),
+  valor_nuevo: z.record(z.unknown()).nullable(),
+  created_at: z.string().nullable(),
 });
+export type DBAuditLog = z.infer<typeof AuditLogSchema>;
 
-const EquipoSchema = z.object({
-  id: z.string().optional(),
-  nombre: z.string().min(1, 'El nombre es requerido'),
-  user_id: z.string().min(1, 'user_id requerido'),
-  estado: z.enum(['activo', 'inactivo']).default('activo'),
-  descripcion: z.string().optional(),
-  created_at: z.string().optional(),
+const BitacoraAvanceSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  presupuesto_id: z.string(),
+  fecha: z.string().nullable(),
+  avance: z.number(),
+  notas: z.string().nullable(),
+  recursos_usados: z.record(z.unknown()).nullable(),
+  created_at: z.string().nullable(),
 });
+export type DBBitacoraAvance = z.infer<typeof BitacoraAvanceSchema>;
 
-const EquipoMiembroSchema = z.object({
-  id: z.string().optional(),
-  equipo_id: z.string().min(1, 'equipo_id requerido'),
-  user_id: z.string().min(1, 'user_id requerido'),
-  rol: z.enum(['admin', 'miembro', 'visor']).default('miembro'),
-  created_at: z.string().optional(),
+const CajaProyectoSchema = z.object({
+  id: z.string(),
+  proyecto_id: z.string(),
+  user_id: z.string(),
+  saldo_inicial: z.number(),
+  saldo_sistema_actual: z.number().nullable(),
+  saldo_real_actual: z.number().nullable(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
 });
+export type DBCajaProyecto = z.infer<typeof CajaProyectoSchema>;
 
-// ====== Zod schemas: Compras ======
-const ProveedorSchema = z.object({
-  id: z.string().optional(),
-  user_id: z.string().min(1, 'user_id requerido'),
-  nombre: z.string().min(1, 'El nombre del proveedor es requerido'),
-  contacto: z.string().optional(),
-  telefono: z.string().optional(),
-  email: z.string().optional(),
-  direccion: z.string().optional(),
-  rfc: z.string().optional(),
-  notas: z.string().optional(),
-  activo: z.boolean().default(true),
-  created_at: z.string().optional(),
-  updated_at: z.string().optional(),
+const CambioPresupuestoSchema = z.object({
+  id: z.string(),
+  presupuesto_id: z.string().nullable(),
+  version: z.number(),
+  cambios: z.record(z.unknown()),
+  motivo: z.string(),
+  aprobado_por: z.string().nullable(),
+  estado: z.string().nullable(),
+  created_at: z.string().nullable(),
 });
+export type DBCambioPresupuesto = z.infer<typeof CambioPresupuestoSchema>;
 
-const OrdenCompraSchema = z.object({
-  id: z.string().optional(),
-  user_id: z.string().min(1, 'user_id requerido'),
-  folio: z.string().min(1, 'Folio requerido'),
-  proveedor_id: z.string().optional(),
-  proyecto_id: z.string().optional(),
-  fecha_emision: z.string().default(() => new Date().toISOString().split('T')[0]),
-  fecha_entrega: z.string().optional(),
-  estatus: z.enum(['pendiente', 'aprobada', 'recibida_parcial', 'recibida', 'cancelada']).default('pendiente'),
-  subtotal: z.number().default(0),
-  iva: z.number().default(0),
-  total: z.number().default(0),
-  notas: z.string().optional(),
-  created_at: z.string().optional(),
-  updated_at: z.string().optional(),
+const ChecklistItemSchema = z.object({
+  id: z.string(),
+  presupuesto_id: z.string().nullable(),
+  fase: z.string(),
+  item: z.string(),
+  completado: z.boolean().nullable(),
+  foto_url: z.string().nullable(),
+  completado_por: z.string().nullable(),
+  completado_en: z.string().nullable(),
+  created_at: z.string().nullable(),
 });
+export type DBChecklistItem = z.infer<typeof ChecklistItemSchema>;
 
-const OrdenCompraItemSchema = z.object({
-  id: z.string().optional(),
-  orden_compra_id: z.string().min(1, 'orden_compra_id requerido'),
-  descripcion: z.string().min(1, 'La descripción es requerida'),
-  cantidad: z.number().positive('La cantidad debe ser mayor a 0'),
-  unidad: z.string().default('pza'),
-  material_id: z.string().optional(),
-  precio_unitario: z.number().min(0).default(0),
-  importe: z.number().default(0),
-  cantidad_recibida: z.number().default(0),
-  created_at: z.string().optional(),
+const ClienteSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  nombre: z.string(),
+  telefono: z.string().nullable(),
+  email: z.string().nullable(),
+  direccion: z.string().nullable(),
+  tipo_proyecto: z.string().nullable(),
+  estado: z.string().nullable(),
+  notas: z.string().nullable(),
+  fecha: z.string().nullable(),
+  created_at: z.string().nullable(),
 });
+export type DBCliente = z.infer<typeof ClienteSchema>;
 
-const RecepcionOCSchema = z.object({
-  id: z.string().optional(),
-  orden_compra_id: z.string().min(1, 'orden_compra_id requerido'),
-  user_id: z.string().min(1, 'user_id requerido'),
-  fecha_recepcion: z.string().default(() => new Date().toISOString().split('T')[0]),
-  observaciones: z.string().optional(),
-  created_at: z.string().optional(),
+const ConciliacionSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  banco: z.string(),
+  periodo: z.string(),
+  saldo_libros: z.number().nullable(),
+  saldo_banco: z.number().nullable(),
+  diferencia: z.number().nullable(),
+  conciliado: z.boolean().nullable(),
+  notas: z.string().nullable(),
+  proyecto_id: z.string().nullable(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
 });
-
-const RecepcionOCItemSchema = z.object({
-  id: z.string().optional(),
-  recepcion_id: z.string().min(1, 'recepcion_id requerido'),
-  orden_compra_item_id: z.string().min(1, 'orden_compra_item_id requerido'),
-  cantidad_recibida: z.number().positive('La cantidad debe ser mayor a 0'),
-  created_at: z.string().optional(),
-});
-
-const OcrDocumentoSchema = z.object({
-  id: z.string().optional(),
-  user_id: z.string().min(1, 'user_id requerido'),
-  file_url: z.string().min(1, 'file_url requerido'),
-  ocr_data: z.any().optional(),
-  status: z.enum(['pending', 'processing', 'completed', 'failed']).default('pending'),
-  created_at: z.string().optional(),
-});
+export type DBConciliacion = z.infer<typeof ConciliacionSchema>;
 
 const DeviceTokenSchema = z.object({
-  id: z.string().optional(),
-  user_id: z.string().min(1, 'user_id requerido'),
-  token: z.string().min(1, 'token requerido'),
-  created_at: z.string().optional(),
+  id: z.string(),
+  user_id: z.string(),
+  token: z.string(),
+  created_at: z.string().nullable(),
 });
+export type DBDeviceToken = z.infer<typeof DeviceTokenSchema>;
 
 const EmpleadoSchema = z.object({
-  id: z.string().optional(),
-  user_id: z.string().min(1, 'user_id requerido'),
-  nombre: z.string().min(1, 'El nombre es requerido'),
-  puesto: z.string().default('Operario'),
-  telefono: z.string().optional(),
-  salario_diario: z.number().min(0).default(0),
-  activo: z.boolean().default(true),
-  created_at: z.string().optional(),
+  id: z.string(),
+  user_id: z.string(),
+  nombre: z.string(),
+  puesto: z.string(),
+  telefono: z.string().nullable(),
+  salario_diario: z.number().nullable(),
+  activo: z.boolean().nullable(),
+  created_at: z.string().nullable(),
 });
-
-// ====== Tipos TypeScript inferidos de Zod ======
-export type DBCliente = z.infer<typeof ClienteSchema>;
-export type DBProyecto = z.infer<typeof ProyectoSchema>;
-export type DBTransaccion = z.infer<typeof TransaccionSchema>;
-export type DBActividad = z.infer<typeof ActividadSchema>;
-export type DBPresupuesto = z.infer<typeof PresupuestoSchema>;
-export type DBEquipo = z.infer<typeof EquipoSchema>;
-export type DBEquipoMiembro = z.infer<typeof EquipoMiembroSchema>;
-export type DBProveedor = z.infer<typeof ProveedorSchema>;
-export type DBOrdenCompra = z.infer<typeof OrdenCompraSchema>;
-export type DBOrdenCompraItem = z.infer<typeof OrdenCompraItemSchema>;
-export type DBRecepcionOC = z.infer<typeof RecepcionOCSchema>;
-export type DBRecepcionOCItem = z.infer<typeof RecepcionOCItemSchema>;
-export type DBOcrDocumento = z.infer<typeof OcrDocumentoSchema>;
-export type DBDeviceToken = z.infer<typeof DeviceTokenSchema>;
 export type DBEmpleado = z.infer<typeof EmpleadoSchema>;
 
-export interface OcrDocumento {
-  id: string;
-  user_id: string;
-  file_url: string;
-  ocr_data?: any;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  created_at?: string;
-}
+const EquipoMiembroSchema = z.object({
+  id: z.string(),
+  equipo_id: z.string(),
+  user_id: z.string(),
+  rol: z.string().nullable(),
+  created_at: z.string().nullable(),
+});
+export type DBEquipoMiembro = z.infer<typeof EquipoMiembroSchema>;
 
-export interface DeviceToken {
-  id: string;
-  user_id: string;
-  token: string;
-  created_at?: string;
-}
+const EquipoSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  nombre: z.string(),
+  descripcion: z.string().nullable(),
+  estado: z.string().nullable(),
+  created_at: z.string().nullable(),
+});
+export type DBEquipo = z.infer<typeof EquipoSchema>;
 
-export type UpdateOcrDocumento = Partial<Omit<OcrDocumento, 'id' | 'created_at'>>;
-export type UpdateDeviceToken = Partial<Omit<DeviceToken, 'id' | 'created_at'>>;
-
-// ====== Tipos de interfaz para la aplicación (transformados) ======
-export interface Cliente {
-  id: string;
-  nombre: string;
-  telefono: string;
-  email: string;
-  direccion: string;
-  tipoProyecto: string;
-  estado: 'Potencial' | 'Activo' | 'Cerrado';
-  notas: string;
-  fecha: string;
-}
-
-export interface Proyecto {
-  id: string;
-  nombre: string;
-  cliente: string;
-  tipo: string;
-  estado: 'Planeación' | 'Ejecución' | 'Finalizado' | 'Evaluación' | 'Parado';
-  presupuestoTotal: number;
-  avanceFisico: number;
-  avanceFinanciero: number;
-  ingresos: number;
-  gastos: number;
-  pendienteAportar: number;
-  fechaInicio: string;
-  fechaFin: string;
-}
-
-export interface Transaccion {
-  id: string;
-  tipo: 'ingreso' | 'gasto';
-  descripcion: string;
-  cantidad: number;
-  unidad: string;
-  categoria: 'materiales' | 'mano-obra' | 'herramienta' | 'sub-contrato' |
-             'administrativo' | 'personal' | 'transporte' | 'fijos' |
-             'hogar' | 'aporte' | 'trabajos-extra';
-  costoUnitario: number;
-  costoTotal: number;
-  fecha: string;
-  proyectoId: string;
-  empleadoId?: string;
-}
-
-export interface Empleado {
-  id: string;
-  user_id: string;
-  nombre: string;
-  puesto: string;
-  telefono: string;
-  salario_diario: number;
-  activo: boolean;
-  created_at: string;
-}
-
-export type CreateEmpleado = Omit<Empleado, 'id' | 'user_id' | 'created_at'>;
-
-export interface Actividad {
-  id: string;
-  titulo: string;
-  fecha: string;
-  hora: string;
-  descripcion: string;
-  presupuestoId?: string;
-}
-
-export interface Presupuesto {
-  id: string;
-  user_id: string;
-  proyecto: string;
-  cliente?: string;
-  ubicacion?: string;
-  tipologia?: string;
-  fase: 'planeación' | 'ejecución' | 'pausa' | 'finalizado';
-  proyectoId?: string;
-  costo_directo?: number;
-  costo_material?: number;
-  costo_mano_obra?: number;
-  costo_herramienta?: number;
-  factor_indirectos: number;
-  factor_administrativos: number;
-  factor_imprevistos: number;
-  factor_utilidad: number;
-  lineas: unknown[];
-  avanceFisico?: number;
-  avanceFinanciero?: number;
-  ingresos?: number;
-  gastos?: number;
-  pendienteAportar?: number;
-  total: number;
-  fechaInicio: string;
-  fechaFin: string;
-  areaConstruccion?: number;
-  nivelCalidad?: 'basico' | 'moderado' | 'premium';
-  created_at?: string;
-  updated_at?: string;
-}
-
-/**
- * M6: CAMBIOS DE PRESUPUESTO (CHANGE ORDERS)
- */
-export interface CambiosPresupuesto {
-  id: string;
-  presupuesto_id: string;
-  version: number;
-  cambios: Record<string, { anterior: number; nuevo: number; motivo: string }>;
-  descripcion_cambios?: string;
-  usuario_creador: string;
-  aprobado_por?: string;
-  estado: 'pendiente' | 'aprobado' | 'rechazado';
-  impacto_presupuesto: number; // Diferencia total
-  porcentaje_impacto: number; // % cambio
-  created_at: string;
-  approved_at?: string;
-}
-
-/**
- * M9: TRAZABILIDAD DE MATERIALES
- */
-export interface ConsumoMateriales {
-  id: string;
-  presupuesto_id: string;
-  renglon_codigo: string;
-  descripcion_material?: string;
-  unidad: string;
-  cantidad_presupuestada: number;
-  cantidad_comprada: number;
-  cantidad_consumida: number;
-  costo_unitario_presupuestado?: number;
-  costo_total_presupuestado?: number;
-  costo_total_comprado?: number;
-  desperdicio_porcentaje: number; // (comprado - consumido) / presupuestado
-  desperdicio_alerta: boolean; // true si desperdicio > 10%
-  proveedor?: string;
-  fecha_compra?: string;
-  fecha_consumo?: string;
-  notas?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export type CreateCliente = Omit<Cliente, 'id'>;
-export type CreateProyecto = Omit<Proyecto, 'id'>;
-export type CreateTransaccion = Omit<Transaccion, 'id'>;
-export type CreateActividad = Omit<Actividad, 'id'>;
-export type CreatePresupuesto = Omit<Presupuesto, 'id'>;
-export type CreateEquipo = Omit<Equipo, 'id' | 'created_at'>;
-export type CreateEquipoMiembro = Omit<EquipoMiembro, 'id' | 'created_at'>;
-
-export type UpdateCliente = Partial<CreateCliente>;
-export type UpdateProyecto = Partial<CreateProyecto>;
-export type UpdateTransaccion = Partial<CreateTransaccion>;
-export type UpdateActividad = Partial<CreateActividad>;
-export type UpdatePresupuesto = Partial<CreatePresupuesto>;
+// App-level Equipo types
+export type Equipo = DBEquipo;
+export type CreateEquipo = Omit<DBEquipo, 'id' | 'created_at'>;
 export type UpdateEquipo = Partial<CreateEquipo>;
-export type UpdateEquipoMiembro = Partial<CreateEquipoMiembro>;
+export const dbToEquipo = (_db: DBEquipo): Equipo => _db;
+export const equipoToDb = (app: CreateEquipo | UpdateEquipo): Partial<DBEquipo> => app;
 
-export interface CreatePresupuestoInput {
-  proyecto: string;
+// App-level EquipoMiembro types
+export type EquipoMiembro = DBEquipoMiembro;
+export type CreateEquipoMiembro = Omit<DBEquipoMiembro, 'id' | 'created_at'>;
+export type UpdateEquipoMiembro = Partial<CreateEquipoMiembro>;
+export const dbToEquipoMiembro = (_db: DBEquipoMiembro): EquipoMiembro => _db;
+export const equipoMiembroToDb = (app: CreateEquipoMiembro | UpdateEquipoMiembro): Partial<DBEquipoMiembro> => app;
+
+const MaterialProyectoSchema = z.object({
+  id: z.string(),
+  presupuesto_id: z.string().nullable(),
+  nombre: z.string(),
+  codigo: z.string().nullable(),
+  unidad: z.string().nullable(),
+  cantidad_estimada: z.number().nullable(),
+  cantidad_utilizada: z.number().nullable(),
+  costo_unitario: z.number().nullable(),
+  proveedor: z.string().nullable(),
+  created_at: z.string().nullable(),
+});
+export type DBMaterialProyecto = z.infer<typeof MaterialProyectoSchema>;
+
+const MovimientoCajaSchema = z.object({
+  id: z.string(),
+  caja_id: z.string(),
+  user_id: z.string(),
+  fecha: z.string(),
+  descripcion: z.string(),
+  subtipo: z.string(),
+  concepto: z.string().nullable(),
+  monto: z.number(),
+  saldo_sistema_antes: z.number(),
+  saldo_sistema_despues: z.number(),
+  saldo_real_confirmado: z.number().nullable(),
+  diferencia: z.number().nullable(),
+  conciliado_fecha: z.string().nullable(),
+  motivo_diferencia: z.string().nullable(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
+});
+export type DBMovimientoCaja = z.infer<typeof MovimientoCajaSchema>;
+
+const MovimientoMaterialSchema = z.object({
+  id: z.string(),
+  material_id: z.string().nullable(),
+  tipo: z.string(),
+  cantidad: z.number(),
+  ubicacion: z.string().nullable(),
+  referencia: z.string().nullable(),
+  user_id: z.string().nullable(),
+  created_at: z.string().nullable(),
+});
+export type DBMovimientoMaterial = z.infer<typeof MovimientoMaterialSchema>;
+
+const NotificacionSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  tipo: z.string(),
+  titulo: z.string(),
+  mensaje: z.string().nullable(),
+  leido: z.boolean().nullable(),
+  created_at: z.string().nullable(),
+});
+export type DBNotificacion = z.infer<typeof NotificacionSchema>;
+
+const OcrDocumentoSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  file_url: z.string(),
+  ocr_data: z.record(z.unknown()).nullable(),
+  status: z.string().nullable(),
+  created_at: z.string().nullable(),
+  proyecto_id: z.string().nullable(),
+  proveedor: z.string().nullable(),
+  monto: z.number().nullable(),
+  fecha_factura: z.string().nullable(),
+  notas: z.string().nullable(),
+  estado: z.string().nullable(),
+  revisado_por: z.string().nullable(),
+});
+export type DBOcrDocumento = z.infer<typeof OcrDocumentoSchema>;
+
+const OrdenCompraItemSchema = z.object({
+  id: z.string(),
+  orden_compra_id: z.string(),
+  descripcion: z.string(),
+  cantidad: z.number(),
+  unidad: z.string().nullable(),
+  material_id: z.string().nullable(),
+  precio_unitario: z.number().nullable(),
+  importe: z.number().nullable(),
+  cantidad_recibida: z.number().nullable(),
+  created_at: z.string().nullable(),
+});
+export type DBOrdenCompraItem = z.infer<typeof OrdenCompraItemSchema>;
+
+const OrdenCompraSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  folio: z.string(),
+  proveedor_id: z.string().nullable(),
+  proyecto_id: z.string().nullable(),
+  fecha_emision: z.string().nullable(),
+  fecha_entrega: z.string().nullable(),
+  estatus: z.string().nullable(),
+  subtotal: z.number().nullable(),
+  iva: z.number().nullable(),
+  total: z.number().nullable(),
+  notas: z.string().nullable(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
+});
+export type DBOrdenCompra = z.infer<typeof OrdenCompraSchema>;
+
+const PartidaConciliacionSchema = z.object({
+  id: z.string(),
+  conciliacion_id: z.string().nullable(),
+  tipo: z.string(),
+  monto: z.number(),
+  descripcion: z.string().nullable(),
+  fecha: z.string().nullable(),
+  aplicado: z.boolean().nullable(),
+  created_at: z.string().nullable(),
+});
+export type DBPartidaConciliacion = z.infer<typeof PartidaConciliacionSchema>;
+
+const PresupuestoSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  proyecto: z.string(),
+  cliente: z.string().nullable(),
+  ubicacion: z.string().nullable(),
+  tipologia: z.string().nullable(),
+  fase: z.string().nullable(),
+  proyecto_id: z.string().nullable(),
+  factor_indirectos: z.number().nullable(),
+  factor_administrativos: z.number().nullable(),
+  factor_imprevistos: z.number().nullable(),
+  factor_utilidad: z.number().nullable(),
+  lineas: z.record(z.unknown()).nullable(),
+  avance_fisico: z.number().nullable(),
+  avance_financiero: z.number().nullable(),
+  ingresos: z.number().nullable(),
+  gastos: z.number().nullable(),
+  pendiente_aportar: z.number().nullable(),
+  total: z.number().nullable(),
+  costo_directo: z.number().nullable(),
+  fecha_inicio: z.string().nullable(),
+  fecha_fin: z.string().nullable(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
+  proyecto_id_uuid: z.string().nullable(),
+});
+export type DBPresupuesto = z.infer<typeof PresupuestoSchema>;
+
+const ProveedorSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  nombre: z.string(),
+  contacto: z.string().nullable(),
+  telefono: z.string().nullable(),
+  email: z.string().nullable(),
+  direccion: z.string().nullable(),
+  rfc: z.string().nullable(),
+  notas: z.string().nullable(),
+  activo: z.boolean().nullable(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
+});
+export type DBProveedor = z.infer<typeof ProveedorSchema>;
+
+const ProyectoSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  nombre: z.string(),
+  cliente: z.string().nullable(),
+  tipo: z.string().nullable(),
+  estado: z.string().nullable(),
+  presupuesto_total: z.number().nullable(),
+  avance_fisico: z.number().nullable(),
+  avance_financiero: z.number().nullable(),
+  ingresos: z.number().nullable(),
+  gastos: z.number().nullable(),
+  pendiente_aportar: z.number().nullable(),
+  fecha_inicio: z.string().nullable(),
+  fecha_fin: z.string().nullable(),
+  created_at: z.string().nullable(),
+  fase: z.string().nullable(),
+  total: z.number().nullable(),
+  updated_at: z.string().nullable(),
+});
+export type DBProyecto = z.infer<typeof ProyectoSchema>;
+
+const RecepcionOCSchema = z.object({
+  id: z.string(),
+  orden_compra_id: z.string(),
+  user_id: z.string(),
+  fecha_recepcion: z.string().nullable(),
+  observaciones: z.string().nullable(),
+  created_at: z.string().nullable(),
+});
+export type DBRecepcionOC = z.infer<typeof RecepcionOCSchema>;
+
+const RecepcionOCItemSchema = z.object({
+  id: z.string(),
+  recepcion_id: z.string(),
+  orden_compra_item_id: z.string(),
+  cantidad_recibida: z.number(),
+  created_at: z.string().nullable(),
+});
+export type DBRecepcionOCItem = z.infer<typeof RecepcionOCItemSchema>;
+
+const RenglonPrecioHistorialSchema = z.object({
+  id: z.string(),
+  renglon_id: z.string().nullable(),
+  fecha: z.string().nullable(),
+  costo: z.number(),
+  variacion: z.number().nullable(),
+});
+export type DBRenglonPrecioHistorial = z.infer<typeof RenglonPrecioHistorialSchema>;
+
+const RenglonUsageSchema = z.object({
+  id: z.string(),
+  renglon_id: z.string().nullable(),
+  presupuesto_id: z.string().nullable(),
+  user_id: z.string().nullable(),
+  created_at: z.string().nullable(),
+});
+export type DBRenglonUsage = z.infer<typeof RenglonUsageSchema>;
+
+const RenglonSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  codigo: z.string(),
+  descripcion: z.string(),
+  tipo_renglon: z.string().nullable(),
+  unidad: z.string().nullable(),
+  rendimiento: z.number().nullable(),
+  costo_material: z.number().nullable(),
+  costo_mano_obra: z.number().nullable(),
+  costo_herramienta: z.number().nullable(),
+  subrenglones: z.record(z.unknown()).nullable(),
+  materiales: z.record(z.unknown()).nullable(),
+  mano_obra: z.record(z.unknown()).nullable(),
+  equipos: z.record(z.unknown()).nullable(),
+  categoria: z.string().nullable(),
+  etiquetas: z.record(z.unknown()).nullable(),
+  tipologia: z.string().nullable(),
+  estimacion_tiempo: z.number().nullable(),
+  dificultad: z.string().nullable(),
+  equipo_requerido: z.record(z.unknown()).nullable(),
+  notas: z.string().nullable(),
+  favorito: z.boolean().nullable(),
+  frecuencia_uso: z.number().nullable(),
+  ultimo_uso: z.string().nullable(),
+  activo: z.boolean().nullable(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
+});
+export type DBRenglon = z.infer<typeof RenglonSchema>;
+
+const SubrenglonEquipoSchema = z.object({
+  id: z.string(),
+  subrenglon_id: z.string(),
+  descripcion: z.string(),
+  cantidad: z.number().nullable(),
+  costo_hora: z.number().nullable(),
+  horas_uso: z.number().nullable(),
+  subtotal: z.number().nullable(),
+  created_at: z.string().nullable(),
+});
+export type DBSubrenglonEquipo = z.infer<typeof SubrenglonEquipoSchema>;
+
+const SubrenglonManoObraSchema = z.object({
+  id: z.string(),
+  subrenglon_id: z.string(),
+  descripcion: z.string(),
+  cantidad_personas: z.number().nullable(),
+  jornal: z.number().nullable(),
+  rendimiento_especifico: z.number().nullable(),
+  costo_unidad: z.number().nullable(),
+  created_at: z.string().nullable(),
+});
+export type DBSubrenglonManoObra = z.infer<typeof SubrenglonManoObraSchema>;
+
+const SubrenglonMaterialSchema = z.object({
+  id: z.string(),
+  subrenglon_id: z.string(),
+  material_id: z.string().nullable(),
+  nombre: z.string(),
+  unidad: z.string().nullable(),
+  cantidad: z.number().nullable(),
+  costo_unitario: z.number().nullable(),
+  desperdicio: z.number().nullable(),
+  subtotal: z.number().nullable(),
+  created_at: z.string().nullable(),
+});
+export type DBSubrenglonMaterial = z.infer<typeof SubrenglonMaterialSchema>;
+
+const SubrenglonSchema = z.object({
+  id: z.string(),
+  presupuesto_id: z.string(),
+  renglon_id: z.string().nullable(),
+  codigo: z.string().nullable(),
+  descripcion: z.string(),
+  unidad: z.string().nullable(),
+  cantidad: z.number().nullable(),
+  rendimiento: z.number().nullable(),
+  costo_material_total: z.number().nullable(),
+  costo_mano_obra_total: z.number().nullable(),
+  costo_equipos_total: z.number().nullable(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
+});
+export type DBSubrenglon = z.infer<typeof SubrenglonSchema>;
+
+const TransaccionSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  tipo: z.string(),
+  descripcion: z.string().nullable(),
+  cantidad: z.number().nullable(),
+  unidad: z.string().nullable(),
+  categoria: z.string().nullable(),
+  costo_unitario: z.number().nullable(),
+  costo_total: z.number().nullable(),
+  fecha: z.string().nullable(),
+  proyecto_id: z.string().nullable(),
+  empleado_id: z.string().nullable(),
+  created_at: z.string().nullable(),
+  presupuesto_id_uuid: z.string().nullable(),
+  proyecto_id_uuid: z.string().nullable(),
+  empleado_id_uuid: z.string().nullable(),
+});
+export type DBTransaccion = z.infer<typeof TransaccionSchema>;
+
+const TransaccionRecurrenteSchema = z.object({
+  id: z.string(),
+  presupuesto_id: z.string(),
+  user_id: z.string(),
+  descripcion: z.string(),
+  tipo: z.string(),
+  monto: z.number(),
+  frecuencia: z.string(),
+  activa: z.boolean().nullable(),
+  proxima_fecha: z.string().nullable(),
+  ultima_fecha: z.string().nullable(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
+});
+export type DBTransaccionRecurrente = z.infer<typeof TransaccionRecurrenteSchema>;
+
+// ====== View Types y App Types ======
+
+export type ViewType = 
+  | 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' 
+  | 'financiero' | 'proyectos' | 'bodega' | 'cotizacion' | 'compras' 
+  | 'empleados' | 'aprobaciones'
+  | 'conciliacion' | 'trazabilidad' | 'calidad' | 'apu_predictor' | 'reportes'
+  | 'caja_chica' | 'transacciones_recurrentes' | 'ocr_documentos';
+
+export interface User {
+  nombre: string;
+  empresa: string;
+  avatar: string;
+}
+
+// ====== Mapper Functions ======
+export const dbToCliente = (db: DBCliente): DBCliente => db;
+export const clienteToDb = (input: Partial<DBCliente>): Partial<DBCliente> => input;
+export type Cliente = DBCliente;
+export type CreateCliente = Omit<DBCliente, 'id' | 'created_at'>;
+export type UpdateCliente = Partial<CreateCliente>;
+
+export const dbToProveedor = (db: DBProveedor): DBProveedor => db;
+export const proveedorToDb = (input: Partial<DBProveedor>): Partial<DBProveedor> => input;
+export type Proveedor = DBProveedor;
+export type CreateProveedor = Omit<DBProveedor, 'id' | 'created_at' | 'updated_at'>;
+export type UpdateProveedor = Partial<CreateProveedor>;
+
+export const dbToProyecto = (db: DBProyecto): DBProyecto => db;
+export const proyectoToDb = (input: Partial<DBProyecto>): Partial<DBProyecto> => input;
+export type Proyecto = DBProyecto;
+export type CreateProyecto = Omit<DBProyecto, 'id' | 'created_at' | 'updated_at'>;
+export type UpdateProyecto = Partial<CreateProyecto>;
+
+export const dbToActividad = (db: DBActividad): DBActividad => db;
+export const actividadToDb = (input: Partial<DBActividad>): Partial<DBActividad> => input;
+export type CreateActividad = Omit<DBActividad, 'id' | 'created_at'>;
+export type UpdateActividad = Partial<CreateActividad>;
+
+export const dbToEmpleado = (db: DBEmpleado): DBEmpleado => db;
+export type Empleado = DBEmpleado;
+export type CreateEmpleado = Omit<DBEmpleado, 'id' | 'created_at'>;
+export type UpdateEmpleado = Partial<CreateEmpleado>;
+
+export const dbToSubrenglon = (db: DBSubrenglon): DBSubrenglon => db;
+export const subrenglonToDb = (input: Partial<DBSubrenglon>): Partial<DBSubrenglon> => input;
+export type Subrenglon = DBSubrenglon;
+export type CreateSubrenglon = Omit<DBSubrenglon, 'id' | 'created_at' | 'updated_at'>;
+export type UpdateSubrenglon = Partial<CreateSubrenglon>;
+
+export const dbToSubrenglonMaterial = (db: DBSubrenglonMaterial): DBSubrenglonMaterial => db;
+export const subrenglonMaterialToDb = (input: Partial<DBSubrenglonMaterial>): Partial<DBSubrenglonMaterial> => input;
+
+export const dbToSubrenglonManoObra = (db: DBSubrenglonManoObra): DBSubrenglonManoObra => db;
+export const subrenglonManoObraToDb = (input: Partial<DBSubrenglonManoObra>): Partial<DBSubrenglonManoObra> => input;
+
+export const dbToSubrenglonEquipo = (db: DBSubrenglonEquipo): DBSubrenglonEquipo => db;
+export const subrenglonEquipoToDb = (input: Partial<DBSubrenglonEquipo>): Partial<DBSubrenglonEquipo> => input;
+
+export const dbToChecklistItem = (db: DBChecklistItem): DBChecklistItem => db;
+export const checklistItemToDb = (input: Partial<DBChecklistItem>): Partial<DBChecklistItem> => input;
+export type ChecklistItem = DBChecklistItem;
+export type CreateChecklistItem = Omit<DBChecklistItem, 'id' | 'created_at' | 'completado' | 'completado_por' | 'completado_en'>;
+export type UpdateChecklistItem = Partial<CreateChecklistItem>;
+
+export const dbToCambioPresupuesto = (db: DBCambioPresupuesto): DBCambioPresupuesto => db;
+export const cambioPresupuestoToDb = (input: Partial<DBCambioPresupuesto>): Partial<DBCambioPresupuesto> => input;
+export type CambiosPresupuesto = DBCambioPresupuesto;
+
+export const dbToBitacoraAvance = (db: DBBitacoraAvance): DBBitacoraAvance => db;
+export const bitacoraAvanceToDb = (input: Partial<DBBitacoraAvance>): Partial<DBBitacoraAvance> => input;
+
+export const dbToMaterial = (db: DBMaterialProyecto): DBMaterialProyecto => db;
+export const materialToDb = (input: Partial<DBMaterialProyecto>): Partial<DBMaterialProyecto> => input;
+export type Material = DBMaterialProyecto;
+export type CreateMaterial = Omit<DBMaterialProyecto, 'id' | 'created_at'>;
+export type UpdateMaterial = Partial<CreateMaterial>;
+
+export const dbToOrdenCompra = (db: DBOrdenCompra): DBOrdenCompra => db;
+export const ordenCompraToDb = (input: Partial<DBOrdenCompra>): Partial<DBOrdenCompra> => input;
+
+export const dbToOrdenCompraItem = (db: DBOrdenCompraItem): DBOrdenCompraItem => db;
+export const ordenCompraItemToDb = (input: Partial<DBOrdenCompraItem>): Partial<DBOrdenCompraItem> => input;
+
+export const dbToRecepcionOC = (db: DBRecepcionOC): DBRecepcionOC => db;
+export const recepcionOCToDb = (input: Partial<DBRecepcionOC>): Partial<DBRecepcionOC> => input;
+export type RecepcionOC = DBRecepcionOC;
+export type CreateRecepcionOC = Omit<DBRecepcionOC, 'id' | 'created_at'>;
+export type UpdateRecepcionOC = Partial<CreateRecepcionOC>;
+
+export const dbToRecepcionOCItem = (db: DBRecepcionOCItem): DBRecepcionOCItem => db;
+export const recepcionOCItemToDb = (input: Partial<DBRecepcionOCItem>): Partial<DBRecepcionOCItem> => input;
+export type RecepcionOCItem = DBRecepcionOCItem;
+export type CreateRecepcionOCItem = Omit<DBRecepcionOCItem, 'id' | 'created_at'>;
+export type UpdateRecepcionOCItem = Partial<CreateRecepcionOCItem>;
+
+export type Presupuesto = DBPresupuesto;
+export const dbToPresupuesto = (db: DBPresupuesto): DBPresupuesto => db;
+export const presupuestoToDb = (input: Partial<DBPresupuesto>): Partial<DBPresupuesto> => input;
+export type CreatePresupuesto = Omit<DBPresupuesto, 'id' | 'created_at' | 'updated_at'>;
+export type UpdatePresupuesto = Partial<CreatePresupuesto>;
+
+export const dbToTransaccion = (db: DBTransaccion): DBTransaccion => db;
+export const transaccionToDb = (input: Partial<DBTransaccion>): Partial<DBTransaccion> => input;
+export type Transaccion = DBTransaccion;
+export type CreateTransaccion = Omit<DBTransaccion, 'id' | 'created_at'>;
+export type UpdateTransaccion = Partial<CreateTransaccion>;
+
+export type TableName = keyof Database;
+
+// Validation functions
+export const validateEquipo = (input: Partial<DBEquipo>): input is DBEquipo => {
+  return typeof input.nombre === 'string';
+};
+export const validateEquipoMiembro = (input: Partial<DBEquipoMiembro>): input is DBEquipoMiembro => {
+  return typeof input.equipo_id === 'string' && typeof input.user_id === 'string';
+};
+export const validateTransaccion = (input: Partial<DBTransaccion>): input is DBTransaccion => {
+  return typeof input.tipo === 'string' && typeof input.categoria === 'string';
+};
+export const validateCliente = (input: Partial<DBCliente>): input is DBCliente => {
+  return typeof input.nombre === 'string';
+};
+export const validateProyecto = (input: Partial<DBProyecto>): input is DBProyecto => {
+  return typeof input.nombre === 'string';
+};
+export const validatePresupuesto = (input: Partial<DBPresupuesto>): input is DBPresupuesto => {
+  return typeof input.proyecto === 'string';
+};
+
+// Additional types
+export type OrdenCompra = DBOrdenCompra;
+export type CreateOrdenCompra = Omit<DBOrdenCompra, 'id' | 'created_at' | 'updated_at' | 'folio'>;
+export type UpdateOrdenCompra = Partial<Omit<DBOrdenCompra, 'id' | 'created_at' | 'updated_at' | 'user_id'>>;
+
+export type CreatePresupuestoInput = {
+  proyecto?: string;
   cliente?: string;
   ubicacion?: string;
   tipologia?: string;
-  fase?: Presupuesto['fase'];
+  fase?: string;
+  proyectoId?: string;
   factor_indirectos?: number;
   factor_administrativos?: number;
   factor_imprevistos?: number;
@@ -467,649 +698,16 @@ export interface CreatePresupuestoInput {
   fechaInicio?: string;
   fechaFin?: string;
   areaConstruccion?: number;
-  nivelCalidad?: 'basico' | 'moderado' | 'premium';
-}
-
-export interface Equipo {
-  id: string;
-  nombre: string;
-  userId: string;
-  estado: 'activo' | 'inactivo';
-  descripcion?: string;
-  created_at?: string;
-}
-
-export interface EquipoMiembro {
-  id: string;
-  equipoId: string;
-  userId: string;
-  rol: 'admin' | 'miembro' | 'visor';
-  created_at?: string;
-}
-
-// ====== Proveedores ======
-export interface Proveedor {
-  id: string;
-  userId: string;
-  nombre: string;
-  contacto?: string;
-  telefono?: string;
-  email?: string;
-  direccion?: string;
-  rfc?: string;
-  notas?: string;
-  activo: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-export type CreateProveedor = Omit<Proveedor, 'id' | 'created_at' | 'updated_at'>;
-export type UpdateProveedor = Partial<CreateProveedor>;
-
-// ====== Órdenes de Compra ======
-export interface OrdenCompra {
-  id: string;
-  userId: string;
-  folio: string;
-  proveedorId?: string;
-  proyectoId?: string;
-  fechaEmision: string;
-  fechaEntrega?: string;
-  estatus: 'pendiente' | 'aprobada' | 'recibida_parcial' | 'recibida' | 'cancelada';
-  subtotal: number;
-  iva: number;
-  total: number;
-  notas?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-export type CreateOrdenCompra = Omit<OrdenCompra, 'id' | 'created_at' | 'updated_at'>;
-export type UpdateOrdenCompra = Partial<CreateOrdenCompra>;
-
-// ====== Items de Órdenes de Compra ======
-export interface OrdenCompraItem {
-  id: string;
-  ordenCompraId: string;
-  materialId?: string;
-  descripcion: string;
-  cantidad: number;
-  unidad: string;
-  precioUnitario: number;
-  importe: number;
-  cantidadRecibida: number;
-  created_at?: string;
-}
-export type CreateOrdenCompraItem = Omit<OrdenCompraItem, 'id' | 'created_at'>;
-export type UpdateOrdenCompraItem = Partial<CreateOrdenCompraItem>;
-
-// ====== Recepción de OC ======
-export interface RecepcionOC {
-  id: string;
-  ordenCompraId: string;
-  userId: string;
-  fechaRecepcion: string;
-  observaciones?: string;
-  created_at?: string;
-}
-export type CreateRecepcionOC = Omit<RecepcionOC, 'id' | 'created_at'>;
-export type UpdateRecepcionOC = Partial<CreateRecepcionOC>;
-
-// ====== Items de Recepción ======
-export interface RecepcionOCItem {
-  id: string;
-  recepcionId: string;
-  ordenCompraItemId: string;
-  cantidadRecibida: number;
-  created_at?: string;
-}
-export type CreateRecepcionOCItem = Omit<RecepcionOCItem, 'id' | 'created_at'>;
-
-export interface DBNotificacion {
-  id: string;
-  user_id: string;
-  tipo: TipoNotificacion;
-  titulo: string;
-  mensaje: string | null;
-  leido: boolean;
-  accion_url?: string | null;
-  created_at?: string;
-  updated_at?: string;
-}
+  nivelCalidad?: string;
+};
 
 export type TipoNotificacion = 'info' | 'alerta' | 'exito' | 'warning';
 
-export interface Notificacion {
-  id: string;
-  userId: string;
-  tipo: 'info' | 'alerta' | 'exito' | 'warning';
-  titulo: string;
-  mensaje?: string | null;
-  leido: boolean;
-  accionUrl?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-}
+// Category constants and helpers for transaction classification
+export const CAT_OPERATIVO = ['materiales', 'mano-obra', 'herramienta', 'sub-contrato', 'transporte'] as const;
+export const CAT_ADMIN = ['administrativo', 'fijos'] as const;
+export const CAT_PERSONAL = ['personal', 'hogar'] as const;
 
-export type CreateNotificacion = Omit<DBNotificacion, 'id' | 'created_at' | 'updated_at'>;
-export type UpdateNotificacion = Partial<CreateNotificacion>;
-
-export interface DBMaterial {
-  id: string;
-  presupuesto_id: string;
-  nombre: string;
-  unidad: string;
-  cantidad_estimada: number;
-  cantidad_utilizada: number;
-  costo_unitario: number;
-  proveedor?: string | null;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export type Material = DBMaterial;
-
-export interface DBMovimientoMaterial {
-  id: string;
-  material_id: string;
-  tipo: 'entrada' | 'salida';
-  cantidad: number;
-  fecha?: string;
-  nota?: string | null;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export type MovimientoMaterial = DBMovimientoMaterial;
-
-export interface DBBitacoraAvance {
-  id: string;
-  presupuesto_id: string;
-  actividad: string;
-  descripcion: string;
-  estado: string;
-  fecha: string;
-  avance: number;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export type BitacoraAvance = DBBitacoraAvance;
-
-export interface DBSubrenglon {
-  id: string;
-  presupuesto_id: string;
-  descripcion: string;
-  renglon_codigo?: string;
-  cantidad?: number;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface DBSubrenglonMaterial {
-  id: string;
-  subrenglon_id: string;
-  nombre: string;
-  unidad: string;
-  cantidad: number;
-  costo_unitario: number;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface DBSubrenglonManoObra {
-  id: string;
-  subrenglon_id: string;
-  descripcion: string;
-  cantidad_personas: number;
-  jornal: number;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface DBSubrenglonEquipo {
-  id: string;
-  subrenglon_id: string;
-  descripcion: string;
-  cantidad: number;
-  costo_hora: number;
-  created_at?: string;
-  updated_at?: string;
-}
-
-// ====== Tipos para tablas de renglones (catálogo APU) ======
-export interface DBRenglon {
-  id: string;
-  codigo: string;
-  descripcion: string;
-  unidad: string;
-  rendimiento: number;
-  costo_material: number;
-  costo_mano_obra: number;
-  costo_herramienta: number;
-  user_id?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface DBRenglonUsage {
-  id: string;
-  renglon_id: string;
-  presupuesto_id?: string;
-  user_id: string;
-  usado_en?: string;
-  created_at?: string;
-}
-
-export interface DBRenglonPrecioHistorial {
-  id: string;
-  renglon_id: string;
-  costo_material: number;
-  costo_mano_obra: number;
-  costo_herramienta: number;
-  user_id?: string;
-  created_at?: string;
-}
-
-export type ViewType = 'login' | 'dashboard' | 'clientes' | 'presupuesto' | 'seguimiento' | 'financiero' | 'proyectos' | 'bodega' | 'cotizacion' | 'compras' | 'empleados' | 'aprobaciones' | 'dashboard_financiero' | 'trazabilidad' | 'calidad' | 'conciliacion' | 'apu_predictor' | 'reportes';
-
-export interface User {
-  nombre: string;
-  empresa: string;
-  avatar: string;
-}
-
-import { Session } from '@supabase/supabase-js';
-
-export interface AppContextType {
-   view: ViewType;
-   setView: (v: ViewType) => void;
-   session: Session | null;
-   loading: boolean;
-   authError: string | null;
-   signIn: (email: string, password: string) => Promise<boolean>;
-   signUp: (email: string, password: string, nombre: string) => Promise<boolean>;
-   signInWithGoogle: () => Promise<void>;
-   signOut: () => Promise<void>;
-   user: User;
-  clientes: Cliente[];
-  addCliente: (c: CreateCliente) => Promise<void>;
-  updateCliente: (id: string, c: UpdateCliente) => Promise<void>;
-  deleteCliente: (id: string) => Promise<void>;
-  proyectos: Proyecto[];
-  addProyecto: (p: CreateProyecto) => Promise<void>;
-  updateProyecto: (id: string, p: UpdateProyecto) => Promise<void>;
-  transacciones: Transaccion[];
-  addTransaccion: (t: CreateTransaccion) => Promise<void>;
-  deleteTransaccion: (id: string) => Promise<void>;
-  actividades: Actividad[];
-  addActividad: (a: CreateActividad) => Promise<void>;
-  deleteActividad: (id: string) => Promise<void>;
-  presupuestos: Presupuesto[];
-  addPresupuesto: (p: CreatePresupuestoInput) => Promise<string | null>;
-  updatePresupuesto: (id: string, p: UpdatePresupuesto) => Promise<void>;
-  transicionFase: (id: string, nuevaFase: Presupuesto['fase']) => Promise<void>;
-  sidebarOpen: boolean;
-  toggleSidebar: () => void;
-  darkMode: boolean;
-  toggleDarkMode: () => void;
-}
-
-export const validateCliente = (data: unknown): DBCliente => ClienteSchema.parse(data);
-export const validateProyecto = (data: unknown): DBProyecto => ProyectoSchema.parse(data);
-export const validateTransaccion = (data: unknown): DBTransaccion => TransaccionSchema.parse(data);
-export const validateActividad = (data: unknown): DBActividad => ActividadSchema.parse(data);
-export const validatePresupuesto = (data: unknown): DBPresupuesto => PresupuestoSchema.parse(data);
-
-// DBRow se conserva temporalmente para compatibilidad con funciones legacy
-// TODO: migrar dbTo* y *ToDb para usar Database[T] directamente
-// Migrado: cada función dbTo* ahora acepta su tipo específico de Database
-
-// ====== Funciones de transformación DB <-> App ======
-export const dbToCliente = (db: DBRow): Cliente => ({
-  id: (db.id as string) || '',
-  nombre: (db.nombre as string) ?? '',
-  telefono: (db.telefono as string) ?? '',
-  email: (db.email as string) ?? '',
-  direccion: (db.direccion as string) ?? '',
-  tipoProyecto: (db.tipo_proyecto as string) ?? 'Residencial',
-  estado: (['Potencial', 'Activo', 'Cerrado'].includes(db.estado as string) ? db.estado : 'Potencial') as 'Potencial' | 'Activo' | 'Cerrado',
-  notas: (db.notas as string) ?? '',
-  fecha: (db.fecha as string) ?? new Date().toISOString().split('T')[0],
-});
-
-export const clienteToDb = (cliente: UpdateCliente): Partial<DBCliente> => {
-  const out: DBRow = {};
-  if (cliente.nombre !== undefined) out.nombre = cliente.nombre;
-  if (cliente.telefono !== undefined) out.telefono = cliente.telefono;
-  if (cliente.email !== undefined) out.email = cliente.email;
-  if (cliente.direccion !== undefined) out.direccion = cliente.direccion;
-  if (cliente.tipoProyecto !== undefined) out.tipo_proyecto = cliente.tipoProyecto;
-  if (cliente.estado !== undefined) out.estado = cliente.estado;
-  if (cliente.notas !== undefined) out.notas = cliente.notas;
-  out.fecha = cliente.fecha || null;
-  return out as Partial<DBCliente>;
-};
-
-export const dbToProyecto = (db: DBRow): Proyecto => ({
-  id: (db.id as string) || '',
-  nombre: (db.nombre as string) ?? '',
-  cliente: (db.cliente as string) ?? '',
-  tipo: (db.tipo as string) ?? '',
-  estado: (['Planeación', 'Ejecución', 'Finalizado', 'Evaluación', 'Parado'].includes(db.estado as string) ? db.estado : 'Planeación') as 'Planeación' | 'Ejecución' | 'Finalizado' | 'Evaluación' | 'Parado',
-  presupuestoTotal: typeof db.presupuesto_total === 'number' ? db.presupuesto_total : Number(db.presupuesto_total) || 0,
-  avanceFisico: typeof db.avance_fisico === 'number' ? db.avance_fisico : Number(db.avance_fisico) || 0,
-  avanceFinanciero: typeof db.avance_financiero === 'number' ? db.avance_financiero : Number(db.avance_financiero) || 0,
-  ingresos: typeof db.ingresos === 'number' ? db.ingresos : Number(db.ingresos) || 0,
-  gastos: typeof db.gastos === 'number' ? db.gastos : Number(db.gastos) || 0,
-  pendienteAportar: typeof db.pendiente_aportar === 'number' ? db.pendiente_aportar : Number(db.pendiente_aportar) || 0,
-  fechaInicio: (db.fecha_inicio as string) ?? '',
-  fechaFin: (db.fecha_fin as string) ?? '',
-});
-
-export const proyectoToDb = (proyecto: UpdateProyecto): Partial<DBProyecto> => {
-  const out: DBRow = {};
-  if (proyecto.nombre !== undefined) out.nombre = proyecto.nombre;
-  if (proyecto.cliente !== undefined) out.cliente = proyecto.cliente;
-  if (proyecto.tipo !== undefined) out.tipo = proyecto.tipo;
-  if (proyecto.estado !== undefined) out.estado = proyecto.estado;
-  if (proyecto.presupuestoTotal !== undefined) out.presupuesto_total = proyecto.presupuestoTotal;
-  if (proyecto.avanceFisico !== undefined) out.avance_fisico = proyecto.avanceFisico;
-  if (proyecto.avanceFinanciero !== undefined) out.avance_financiero = proyecto.avanceFinanciero;
-  if (proyecto.ingresos !== undefined) out.ingresos = proyecto.ingresos;
-  if (proyecto.gastos !== undefined) out.gastos = proyecto.gastos;
-  if (proyecto.pendienteAportar !== undefined) out.pendiente_aportar = proyecto.pendienteAportar;
-  out.fecha_inicio = proyecto.fechaInicio || null;
-  out.fecha_fin = proyecto.fechaFin || null;
-  return out as Partial<DBProyecto>;
-};
-
-export const dbToTransaccion = (db: DBRow): Transaccion => ({
-  id: (db.id as string) || '',
-  tipo: (db.tipo as 'ingreso' | 'gasto') ?? 'gasto',
-  descripcion: (db.descripcion as string) ?? '',
-  cantidad: typeof db.cantidad === 'number' ? db.cantidad : Number(db.cantidad) || 0,
-  unidad: (db.unidad as string) ?? '',
-  categoria: (db.categoria as Transaccion['categoria']) ?? 'materiales',
-  costoUnitario: typeof db.costo_unitario === 'number' ? db.costo_unitario : Number(db.costo_unitario) || 0,
-  costoTotal: typeof db.costo_total === 'number' ? db.costo_total : Number(db.costo_total) || 0,
-  fecha: (db.fecha as string) ?? new Date().toISOString().split('T')[0],
-  proyectoId: (db.proyecto_id as string) ?? 'admin',
-  empleadoId: (db.empleado_id as string) ?? undefined,
-});
-
-export const transaccionToDb = (transaccion: UpdateTransaccion): Partial<DBTransaccion> => {
-  const out: DBRow = {};
-  if (transaccion.tipo !== undefined) out.tipo = transaccion.tipo;
-  if (transaccion.descripcion !== undefined) out.descripcion = transaccion.descripcion;
-  if (transaccion.cantidad !== undefined) out.cantidad = transaccion.cantidad;
-  if (transaccion.unidad !== undefined) out.unidad = transaccion.unidad;
-  if (transaccion.categoria !== undefined) out.categoria = transaccion.categoria;
-  if (transaccion.costoUnitario !== undefined) out.costo_unitario = transaccion.costoUnitario;
-  if (transaccion.costoTotal !== undefined) out.costo_total = transaccion.costoTotal;
-  if (transaccion.fecha !== undefined) out.fecha = transaccion.fecha;
-  if (transaccion.proyectoId !== undefined) out.proyecto_id = transaccion.proyectoId;
-  if (transaccion.empleadoId !== undefined) out.empleado_id = transaccion.empleadoId;
-  return out as Partial<DBTransaccion>;
-};
-
-export const dbToActividad = (db: DBRow): Actividad => ({
-  id: (db.id as string) || '',
-  titulo: (db.titulo as string) ?? '',
-  fecha: (db.fecha as string) ?? new Date().toISOString().split('T')[0],
-  hora: (db.hora as string) ?? '',
-  descripcion: (db.descripcion as string) ?? '',
-  presupuestoId: (db.presupuesto_id as string) ?? undefined,
-});
-
-export const actividadToDb = (actividad: UpdateActividad): Partial<DBActividad> => {
-  const out: DBRow = {};
-  if (actividad.titulo !== undefined) out.titulo = actividad.titulo;
-  if (actividad.fecha !== undefined) out.fecha = actividad.fecha;
-  if (actividad.hora !== undefined) out.hora = actividad.hora;
-  if (actividad.descripcion !== undefined) out.descripcion = actividad.descripcion;
-  out.presupuesto_id = actividad.presupuestoId || null;
-  return out as Partial<DBActividad>;
-};
-
-export const dbToPresupuesto = (db: DBRow): Presupuesto => ({
-  id: (db.id as string) || '',
-  user_id: (db.user_id as string) ?? '',
-  proyecto: (db.proyecto as string) ?? '',
-  cliente: (db.cliente as string) ?? '',
-  ubicacion: (db.ubicacion as string) ?? '',
-  tipologia: (db.tipologia as string) ?? '',
-  fase: (db.fase as 'planeación' | 'ejecución' | 'pausa' | 'finalizado') ?? 'planeación',
-  proyectoId: (db.proyecto_id as string) ?? undefined,
-  factor_indirectos: typeof db.factor_indirectos === 'number' ? db.factor_indirectos : Number(db.factor_indirectos) || 0,
-  factor_administrativos: typeof db.factor_administrativos === 'number' ? db.factor_administrativos : Number(db.factor_administrativos) || 0,
-  factor_imprevistos: typeof db.factor_imprevistos === 'number' ? db.factor_imprevistos : Number(db.factor_imprevistos) || 0,
-  factor_utilidad: typeof db.factor_utilidad === 'number' ? db.factor_utilidad : Number(db.factor_utilidad) || 0,
-  lineas: Array.isArray(db.lineas) ? db.lineas : [],
-  avanceFisico: typeof db.avance_fisico === 'number' ? db.avance_fisico : Number(db.avance_fisico) || 0,
-  avanceFinanciero: typeof db.avance_financiero === 'number' ? db.avance_financiero : Number(db.avance_financiero) || 0,
-  ingresos: typeof db.ingresos === 'number' ? db.ingresos : Number(db.ingresos) || 0,
-  gastos: typeof db.gastos === 'number' ? db.gastos : Number(db.gastos) || 0,
-  pendienteAportar: typeof db.pendiente_aportar === 'number' ? db.pendiente_aportar : Number(db.pendiente_aportar) || 0,
-  costo_directo: typeof db.costo_directo === 'number' ? db.costo_directo : Number(db.costo_directo) || 0,
-  total: typeof db.total === 'number' ? db.total : Number(db.total) || 0,
-  fechaInicio: (db.fecha_inicio as string) ?? '',
-  fechaFin: (db.fecha_fin as string) ?? '',
-  areaConstruccion: typeof db.area_construccion === 'number' ? db.area_construccion : Number(db.area_construccion) || 0,
-  nivelCalidad: (db.nivel_calidad as 'basico' | 'moderado' | 'premium') ?? 'basico',
-  created_at: (db.created_at as string) ?? undefined,
-  updated_at: (db.updated_at as string) ?? undefined,
-});
-
-export const presupuestoToDb = (presupuesto: UpdatePresupuesto): Partial<DBPresupuesto> => {
-  const out: DBRow = {};
-  if (presupuesto.proyecto !== undefined) out.proyecto = presupuesto.proyecto;
-  if (presupuesto.cliente !== undefined) out.cliente = presupuesto.cliente;
-  if (presupuesto.ubicacion !== undefined) out.ubicacion = presupuesto.ubicacion;
-  if (presupuesto.tipologia !== undefined) out.tipologia = presupuesto.tipologia;
-  if (presupuesto.fase !== undefined) out.fase = presupuesto.fase;
-  out.proyecto_id = presupuesto.proyectoId || null;
-  if (presupuesto.factor_indirectos !== undefined) out.factor_indirectos = presupuesto.factor_indirectos;
-  if (presupuesto.factor_administrativos !== undefined) out.factor_administrativos = presupuesto.factor_administrativos;
-  if (presupuesto.factor_imprevistos !== undefined) out.factor_imprevistos = presupuesto.factor_imprevistos;
-  if (presupuesto.factor_utilidad !== undefined) out.factor_utilidad = presupuesto.factor_utilidad;
-  if (presupuesto.lineas !== undefined) out.lineas = presupuesto.lineas;
-  if (presupuesto.avanceFisico !== undefined) out.avance_fisico = presupuesto.avanceFisico;
-  if (presupuesto.avanceFinanciero !== undefined) out.avance_financiero = presupuesto.avanceFinanciero;
-  if (presupuesto.ingresos !== undefined) out.ingresos = presupuesto.ingresos;
-  if (presupuesto.gastos !== undefined) out.gastos = presupuesto.gastos;
-  if (presupuesto.pendienteAportar !== undefined) out.pendiente_aportar = presupuesto.pendienteAportar;
-  if (presupuesto.total !== undefined) out.total = presupuesto.total;
-  if (presupuesto.costo_directo !== undefined) out.costo_directo = presupuesto.costo_directo;
-  out.fecha_inicio = presupuesto.fechaInicio || null;
-  out.fecha_fin = presupuesto.fechaFin || null;
-  if (presupuesto.areaConstruccion !== undefined) out.area_construccion = presupuesto.areaConstruccion;
-  if (presupuesto.nivelCalidad !== undefined) out.nivel_calidad = presupuesto.nivelCalidad;
-  return out as Partial<DBPresupuesto>;
-};
-
-// ====== Validadores para Equipos ======
-export const validateEquipo = (data: unknown): DBEquipo => {
-  return EquipoSchema.parse(data);
-};
-
-export const validateEquipoMiembro = (data: unknown): DBEquipoMiembro => {
-  return EquipoMiembroSchema.parse(data);
-};
-
-// ====== Transformadores para Equipos ======
-export const dbToEquipo = (db: DBRow): Equipo => ({
-  id: (db.id as string) || '',
-  nombre: (db.nombre as string) ?? '',
-  userId: (db.user_id as string) ?? '',
-  estado: (db.estado as 'activo' | 'inactivo') ?? 'activo',
-  descripcion: (db.descripcion as string) ?? '',
-  created_at: (db.created_at as string) ?? undefined,
-});
-
-export const equipoToDb = (equipo: UpdateEquipo): Partial<DBEquipo> => {
-  const out: DBRow = {};
-  if (equipo.nombre !== undefined) out.nombre = equipo.nombre;
-  if (equipo.estado !== undefined) out.estado = equipo.estado;
-  if (equipo.descripcion !== undefined) out.descripcion = equipo.descripcion;
-  if (equipo.userId !== undefined) out.user_id = equipo.userId;
-  return out as Partial<DBEquipo>;
-};
-
-export const dbToEquipoMiembro = (db: DBRow): EquipoMiembro => ({
-  id: (db.id as string) || '',
-  equipoId: (db.equipo_id as string) ?? '',
-  userId: (db.user_id as string) ?? '',
-  rol: (db.rol as 'admin' | 'miembro' | 'visor') ?? 'miembro',
-  created_at: (db.created_at as string) ?? undefined,
-});
-
-export const equipoMiembroToDb = (miembro: UpdateEquipoMiembro): Partial<DBEquipoMiembro> => {
-  const out: DBRow = {};
-  if (miembro.rol !== undefined) out.rol = miembro.rol;
-  if (miembro.equipoId !== undefined) out.equipo_id = miembro.equipoId;
-  if (miembro.userId !== undefined) out.user_id = miembro.userId;
-  return out as Partial<DBEquipoMiembro>;
-};
-
-// ====== Validadores para Compras ======
-export const validateProveedor = (data: unknown): DBProveedor => ProveedorSchema.parse(data);
-export const validateOrdenCompra = (data: unknown): DBOrdenCompra => OrdenCompraSchema.parse(data);
-export const validateOrdenCompraItem = (data: unknown): DBOrdenCompraItem => OrdenCompraItemSchema.parse(data);
-export const validateRecepcionOC = (data: unknown): DBRecepcionOC => RecepcionOCSchema.parse(data);
-export const validateRecepcionOCItem = (data: unknown): DBRecepcionOCItem => RecepcionOCItemSchema.parse(data);
-
-// ====== Transformadores para Compras ======
-export const dbToProveedor = (db: DBRow): Proveedor => ({
-  id: (db.id as string) || '',
-  userId: (db.user_id as string) ?? '',
-  nombre: (db.nombre as string) ?? '',
-  contacto: (db.contacto as string) ?? undefined,
-  telefono: (db.telefono as string) ?? undefined,
-  email: (db.email as string) ?? undefined,
-  direccion: (db.direccion as string) ?? undefined,
-  rfc: (db.rfc as string) ?? undefined,
-  notas: (db.notas as string) ?? undefined,
-  activo: (db.activo as boolean) ?? true,
-  created_at: (db.created_at as string) ?? undefined,
-  updated_at: (db.updated_at as string) ?? undefined,
-});
-
-export const proveedorToDb = (prov: UpdateProveedor): Partial<DBProveedor> => {
-  const out: DBRow = {};
-  if (prov.nombre !== undefined) out.nombre = prov.nombre;
-  if (prov.contacto !== undefined) out.contacto = prov.contacto;
-  if (prov.telefono !== undefined) out.telefono = prov.telefono;
-  if (prov.email !== undefined) out.email = prov.email;
-  if (prov.direccion !== undefined) out.direccion = prov.direccion;
-  if (prov.rfc !== undefined) out.rfc = prov.rfc;
-  if (prov.notas !== undefined) out.notas = prov.notas;
-  if (prov.activo !== undefined) out.activo = prov.activo;
-  return out as Partial<DBProveedor>;
-};
-
-export const dbToOrdenCompra = (db: DBRow): OrdenCompra => ({
-  id: (db.id as string) || '',
-  userId: (db.user_id as string) ?? '',
-  folio: (db.folio as string) ?? '',
-  proveedorId: (db.proveedor_id as string) ?? undefined,
-  proyectoId: (db.proyecto_id as string) ?? undefined,
-  fechaEmision: (db.fecha_emision as string) ?? '',
-  fechaEntrega: (db.fecha_entrega as string) ?? undefined,
-  estatus: (db.estatus as OrdenCompra['estatus']) ?? 'pendiente',
-  subtotal: Number(db.subtotal) || 0,
-  iva: Number(db.iva) || 0,
-  total: Number(db.total) || 0,
-  notas: (db.notas as string) ?? undefined,
-  created_at: (db.created_at as string) ?? undefined,
-  updated_at: (db.updated_at as string) ?? undefined,
-});
-
-export const ordenCompraToDb = (oc: UpdateOrdenCompra): Partial<DBOrdenCompra> => {
-  const out: DBRow = {};
-  if (oc.folio !== undefined) out.folio = oc.folio;
-  if (oc.proveedorId !== undefined) out.proveedor_id = oc.proveedorId;
-  if (oc.proyectoId !== undefined) out.proyecto_id = oc.proyectoId;
-  if (oc.fechaEmision !== undefined) out.fecha_emision = oc.fechaEmision;
-  if (oc.fechaEntrega !== undefined) out.fecha_entrega = oc.fechaEntrega;
-  if (oc.estatus !== undefined) out.estatus = oc.estatus;
-  if (oc.subtotal !== undefined) out.subtotal = oc.subtotal;
-  if (oc.iva !== undefined) out.iva = oc.iva;
-  if (oc.total !== undefined) out.total = oc.total;
-  if (oc.notas !== undefined) out.notas = oc.notas;
-  return out as Partial<DBOrdenCompra>;
-};
-
-export const dbToOrdenCompraItem = (db: DBRow): OrdenCompraItem => ({
-  id: (db.id as string) || '',
-  ordenCompraId: (db.orden_compra_id as string) ?? '',
-  materialId: (db.material_id as string) ?? undefined,
-  descripcion: (db.descripcion as string) ?? '',
-  cantidad: Number(db.cantidad) || 0,
-  unidad: (db.unidad as string) ?? 'pza',
-  precioUnitario: Number(db.precio_unitario) || 0,
-  importe: Number(db.importe) || 0,
-  cantidadRecibida: Number(db.cantidad_recibida) || 0,
-  created_at: (db.created_at as string) ?? undefined,
-});
-
-export const ordenCompraItemToDb = (item: UpdateOrdenCompraItem): Partial<DBOrdenCompraItem> => {
-  const out: DBRow = {};
-  if (item.descripcion !== undefined) out.descripcion = item.descripcion;
-  if (item.cantidad !== undefined) out.cantidad = item.cantidad;
-  if (item.unidad !== undefined) out.unidad = item.unidad;
-  if (item.precioUnitario !== undefined) out.precio_unitario = item.precioUnitario;
-  if (item.importe !== undefined) out.importe = item.importe;
-  if (item.cantidadRecibida !== undefined) out.cantidad_recibida = item.cantidadRecibida;
-  if (item.materialId !== undefined) out.material_id = item.materialId;
-  return out as Partial<DBOrdenCompraItem>;
-};
-
-export const dbToRecepcionOC = (db: DBRow): RecepcionOC => ({
-  id: (db.id as string) || '',
-  ordenCompraId: (db.orden_compra_id as string) ?? '',
-  userId: (db.user_id as string) ?? '',
-  fechaRecepcion: (db.fecha_recepcion as string) ?? '',
-  observaciones: (db.observaciones as string) ?? undefined,
-  created_at: (db.created_at as string) ?? undefined,
-});
-
-export const recepcionOCToDb = (rec: UpdateRecepcionOC): Partial<DBRecepcionOC> => {
-  const out: DBRow = {};
-  if (rec.ordenCompraId !== undefined) out.orden_compra_id = rec.ordenCompraId;
-  if (rec.userId !== undefined) out.user_id = rec.userId;
-  if (rec.fechaRecepcion !== undefined) out.fecha_recepcion = rec.fechaRecepcion;
-  if (rec.observaciones !== undefined) out.observaciones = rec.observaciones;
-  return out as Partial<DBRecepcionOC>;
-};
-
-export const dbToRecepcionOCItem = (db: DBRow): RecepcionOCItem => ({
-  id: (db.id as string) || '',
-  recepcionId: (db.recepcion_id as string) ?? '',
-  ordenCompraItemId: (db.orden_compra_item_id as string) ?? '',
-  cantidadRecibida: Number(db.cantidad_recibida) || 0,
-  created_at: (db.created_at as string) ?? undefined,
-});
-
-// ====== Validadores para Empleados ======
-export const validateEmpleado = (data: unknown): DBEmpleado => EmpleadoSchema.parse(data);
-
-// ====== Transformadores para Empleados ======
-export const dbToEmpleado = (db: DBRow): Empleado => ({
-  id: (db.id as string) || '',
-  user_id: (db.user_id as string) ?? '',
-  nombre: (db.nombre as string) ?? '',
-  puesto: (db.puesto as string) ?? 'Operario',
-  telefono: (db.telefono as string) ?? '',
-  salario_diario: Number(db.salario_diario) || 0,
-  activo: (db.activo as boolean) ?? true,
-  created_at: (db.created_at as string) ?? '',
-});
-
-export const empleadoToDb = (emp: UpdateEmpleado): Partial<DBEmpleado> => {
-  const out: DBRow = {};
-  if (emp.nombre !== undefined) out.nombre = emp.nombre;
-  if (emp.puesto !== undefined) out.puesto = emp.puesto;
-  if (emp.telefono !== undefined) out.telefono = emp.telefono;
-  if (emp.salario_diario !== undefined) out.salario_diario = emp.salario_diario;
-  if (emp.activo !== undefined) out.activo = emp.activo;
-  return out as Partial<DBEmpleado>;
-};
+export const isOperativo = (cat: unknown): cat is typeof CAT_OPERATIVO[number] => typeof cat === 'string' && (CAT_OPERATIVO as readonly string[]).includes(cat);
+export const isAdmin = (cat: unknown): cat is typeof CAT_ADMIN[number] => typeof cat === 'string' && (CAT_ADMIN as readonly string[]).includes(cat);
+export const isPersonal = (cat: unknown): cat is typeof CAT_PERSONAL[number] => typeof cat === 'string' && (CAT_PERSONAL as readonly string[]).includes(cat);

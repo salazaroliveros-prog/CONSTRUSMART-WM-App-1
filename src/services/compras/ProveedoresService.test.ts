@@ -57,6 +57,6 @@ describe('ProveedoresService', () => {
     expect(result.nombre).toBe('Test');
     expect(result.contacto).toBeUndefined();
     expect(result.telefono).toBeUndefined();
-    expect(result.activo).toBe(true);
+    expect(result.activo).toBeUndefined();
   });
 });

@@ -19,8 +19,12 @@ const ComprasScreen = lazy(() => import('@/features/compras/components/ComprasSc
 const EmpleadosScreen = lazy(() => import('@/features/seguimiento/components/EmpleadosScreen'));
 const AprobacionScreen = lazy(() => import('@/components/screens/AprobacionScreen'));
 
-// Módulos avanzados conectados
-const DashboardFinanciero = lazy(() => import('@/components/DashboardFinanciero'));
+// Vistas standalone para módulos de soporte / configuración
+const CajaChicaScreen = lazy(() => import('@/components/screens/CajaChicaScreen'));
+const TransaccionesRecurrentesScreen = lazy(() => import('@/components/screens/TransaccionesRecurrentesScreen'));
+const OcrDocumentosScreen = lazy(() => import('@/components/screens/OcrDocumentosScreen'));
+
+// Módulos avanzados conectados (solo como sub-paneles dentro de Presupuesto)
 const TrazabilidadMaterialesPanel = lazy(() => import('@/components/TrazabilidadMaterialesPanel'));
 const ChecklistCalidadPanel = lazy(() => import('@/components/ChecklistCalidadPanel'));
 const ConciliacionBancariaPanel = lazy(() => import('@/components/ConciliacionBancariaPanel'));
@@ -45,12 +49,14 @@ const viewMappings: Record<ViewType, React.LazyExoticComponent<React.ComponentTy
   compras: ComprasScreen,
   empleados: EmpleadosScreen,
   aprobaciones: AprobacionScreen,
-  dashboard_financiero: DashboardFinanciero,
+  conciliacion: ConciliacionBancariaPanel,
   trazabilidad: TrazabilidadMaterialesPanel,
   calidad: ChecklistCalidadPanel,
-  conciliacion: ConciliacionBancariaPanel,
   apu_predictor: PanelAPUPredictor,
   reportes: ReportesAutomaticosPanel,
+  caja_chica: CajaChicaScreen,
+  transacciones_recurrentes: TransaccionesRecurrentesScreen,
+  ocr_documentos: OcrDocumentosScreen,
 };
 
 const AppLayout: React.FC = () => {
