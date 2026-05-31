@@ -374,6 +374,8 @@ CREATE TABLE IF NOT EXISTS public.transacciones (
 -- 3.15. materiales_proyecto
 CREATE TABLE IF NOT EXISTS public.materiales_proyecto (
   id               uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id          uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  presupuesto_id   uuid REFERENCES public.presupuestos(id) ON DELETE CASCADE,
   proyecto_id      uuid NOT NULL REFERENCES public.proyectos(id) ON DELETE CASCADE,
   nombre           text NOT NULL,
   descripcion      text,
@@ -768,17 +770,23 @@ CREATE POLICY "empleados_delete" ON public.empleados
 -- POLÍTICAS: materiales_proyecto
 CREATE POLICY "materiales_proyecto_select" ON public.materiales_proyecto
   FOR SELECT USING (
-    proyecto_id IN (SELECT id FROM public.proyectos WHERE user_id = auth.uid())
+    auth.uid() = user_id OR
+    proyecto_id IN (SELECT id FROM public.proyectos WHERE user_id = auth.uid()) OR
+    presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())
   );
 
 CREATE POLICY "materiales_proyecto_insert" ON public.materiales_proyecto
   FOR INSERT WITH CHECK (
-    proyecto_id IN (SELECT id FROM public.proyectos WHERE user_id = auth.uid())
+    auth.uid() = user_id OR
+    proyecto_id IN (SELECT id FROM public.proyectos WHERE user_id = auth.uid()) OR
+    presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())
   );
 
 CREATE POLICY "materiales_proyecto_update" ON public.materiales_proyecto
   FOR UPDATE USING (
-    proyecto_id IN (SELECT id FROM public.proyectos WHERE user_id = auth.uid())
+    auth.uid() = user_id OR
+    proyecto_id IN (SELECT id FROM public.proyectos WHERE user_id = auth.uid()) OR
+    presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())
   );
 
 -- POLÍTICAS: movimientos_materiales
