@@ -353,10 +353,11 @@ CREATE TABLE IF NOT EXISTS public.empleados (
   updated_at     timestamptz DEFAULT now()
 );
 
--- 3.14. transacciones (⭐ CORREGIDA: ahora tiene presupuesto_id)
+-- 3.14. transacciones
 CREATE TABLE IF NOT EXISTS public.transacciones (
   id               uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id          uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  proyecto_id      uuid REFERENCES public.proyectos(id) ON DELETE SET NULL,
   presupuesto_id   uuid REFERENCES public.presupuestos(id) ON DELETE SET NULL,
   empleado_id      uuid REFERENCES public.empleados(id) ON DELETE SET NULL,
   tipo             text NOT NULL CHECK (tipo IN ('ingreso', 'gasto')),
@@ -448,6 +449,7 @@ CREATE TABLE IF NOT EXISTS public.actividades (
 -- 3.20. checklist_items
 CREATE TABLE IF NOT EXISTS public.checklist_items (
   id               uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id          uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   presupuesto_id   uuid NOT NULL REFERENCES public.presupuestos(id) ON DELETE CASCADE,
   fase             text NOT NULL CHECK (fase IN ('planeación','ejecución','pausa','finalizado')),
   item             text NOT NULL,
@@ -471,6 +473,7 @@ CREATE TABLE IF NOT EXISTS public.presupuesto_conciliaciones (
 -- 3.22. partidas_conciliacion
 CREATE TABLE IF NOT EXISTS public.partidas_conciliacion (
   id               uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id          uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   conciliacion_id  uuid NOT NULL REFERENCES public.presupuesto_conciliaciones(id) ON DELETE CASCADE,
   concepto         text,
   valor            numeric,
@@ -834,13 +837,15 @@ CREATE POLICY "proveedores_delete" ON public.proveedores
 CREATE POLICY "bitacora_avance_select" ON public.bitacora_avance
   FOR SELECT USING (
     auth.uid() = user_id OR
-    presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())
+    presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()) OR
+    proyecto_id IN (SELECT id FROM public.proyectos WHERE user_id = auth.uid())
   );
 
 CREATE POLICY "bitacora_avance_insert" ON public.bitacora_avance
   FOR INSERT WITH CHECK (
     auth.uid() = user_id OR
-    presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid())
+    presupuesto_id IN (SELECT id FROM public.presupuestos WHERE user_id = auth.uid()) OR
+    proyecto_id IN (SELECT id FROM public.proyectos WHERE user_id = auth.uid())
   );
 
 -- POLÍTICAS: actividades
