@@ -76,14 +76,16 @@ const ProyectosScreen: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error('Debes iniciar sesión primero'); return; }
 
-      const proyectos = [
+      // La UI de Proyectos lee de la tabla PRESUPUESTOS, no proyectos
+      // Insertamos en presupuestos con todos los campos que espera la UI
+      const presupuestosData = [
         {
           user_id: user.id,
-          nombre: 'CONSTRUCCIÓN RESIDENCIAL VISTA AL LAGO',
+          proyecto: 'CONSTRUCCIÓN RESIDENCIAL VISTA AL LAGO',
           cliente: 'Carlos Méndez',
-          tipo: 'Residencial',
-          estado: 'Planeación',
-          presupuesto_total: 250000,
+          tipologia: 'residencial',
+          fase: 'planeación',
+          total: 250000,
           avance_fisico: 0,
           avance_financiero: 0,
           ingresos: 0,
@@ -91,16 +93,18 @@ const ProyectosScreen: React.FC = () => {
           pendiente_aportar: 250000,
           fecha_inicio: '2026-06-15',
           fecha_fin: '2026-12-30',
-          fase: 'planeación',
-          total: 250000,
+          factor_indirectos: 15,
+          factor_administrativos: 10,
+          factor_imprevistos: 5,
+          factor_utilidad: 10,
         },
         {
           user_id: user.id,
-          nombre: 'OFICINAS COMERCIALES ZONA 10',
+          proyecto: 'OFICINAS COMERCIALES ZONA 10',
           cliente: 'Empresa Constructora XYZ',
-          tipo: 'Comercial',
-          estado: 'Ejecución',
-          presupuesto_total: 500000,
+          tipologia: 'comercial',
+          fase: 'ejecución',
+          total: 500000,
           avance_fisico: 70,
           avance_financiero: 60,
           ingresos: 300000,
@@ -108,16 +112,18 @@ const ProyectosScreen: React.FC = () => {
           pendiente_aportar: 200000,
           fecha_inicio: '2026-01-10',
           fecha_fin: '2026-09-30',
-          fase: 'ejecución',
-          total: 500000,
+          factor_indirectos: 15,
+          factor_administrativos: 10,
+          factor_imprevistos: 5,
+          factor_utilidad: 10,
         },
         {
           user_id: user.id,
-          nombre: 'CENTRO COMERCIAL SAN MIGUEL',
+          proyecto: 'CENTRO COMERCIAL SAN MIGUEL',
           cliente: 'Inversiones del Sur',
-          tipo: 'Comercial',
-          estado: 'Parado',
-          presupuesto_total: 800000,
+          tipologia: 'comercial',
+          fase: 'pausa',
+          total: 800000,
           avance_fisico: 80,
           avance_financiero: 82,
           ingresos: 656000,
@@ -125,16 +131,18 @@ const ProyectosScreen: React.FC = () => {
           pendiente_aportar: 144000,
           fecha_inicio: '2025-11-01',
           fecha_fin: '2026-08-15',
-          fase: 'pausa',
-          total: 800000,
+          factor_indirectos: 15,
+          factor_administrativos: 10,
+          factor_imprevistos: 5,
+          factor_utilidad: 10,
         },
         {
           user_id: user.id,
-          nombre: 'BODEGA INDUSTRIAL ZONA 14',
+          proyecto: 'BODEGA INDUSTRIAL ZONA 14',
           cliente: 'Logística Express',
-          tipo: 'Industrial',
-          estado: 'Finalizado',
-          presupuesto_total: 350000,
+          tipologia: 'industrial',
+          fase: 'finalizado',
+          total: 350000,
           avance_fisico: 100,
           avance_financiero: 100,
           ingresos: 350000,
@@ -142,24 +150,23 @@ const ProyectosScreen: React.FC = () => {
           pendiente_aportar: 0,
           fecha_inicio: '2025-06-01',
           fecha_fin: '2026-02-28',
-          fase: 'finalizado',
-          total: 350000,
+          factor_indirectos: 15,
+          factor_administrativos: 10,
+          factor_imprevistos: 5,
+          factor_utilidad: 10,
         },
       ];
 
-      const { error } = await supabase.from('proyectos').insert(proyectos);
+      // Insertar en presupuestos (la tabla que lee la UI)
+      const { error } = await supabase.from('presupuestos').insert(presupuestosData);
       if (error) throw error;
 
-      // Reload projects
-      const { data: refreshed } = await supabase.from('proyectos').select('*');
-      if (refreshed) {
-        // Force page reload to sync context
-        window.location.reload();
-      }
+      // Recargar para sincronizar el contexto
+      window.location.reload();
       toast.success('4 proyectos de prueba cargados correctamente');
     } catch (err) {
       console.error('Seed error:', err);
-      toast.error('Error al cargar datos de prueba');
+      toast.error('Error al cargar datos de prueba: ' + (err as Error).message);
     } finally {
       setSeeding(false);
     }
