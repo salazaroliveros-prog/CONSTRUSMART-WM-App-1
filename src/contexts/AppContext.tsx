@@ -32,6 +32,7 @@ import {
 import {
   loadCachedData, saveCachedData, clearUserCache,
   addPendingMutation, getPendingCount, getPendingMutations, processPendingMutations, clearPendingMutations,
+  checkOnline,
   type PendingMutation,
 } from '@/services/offline';
 import { crearNotificacion } from '@/utils/notificaciones';
@@ -298,7 +299,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
              }
            }
          }
-         if (anyCache) toast.info('Modo offline — mostrando datos guardados');
+         const online = await checkOnline();
+         if (!online) {
+           setIsOnline(false);
+           if (anyCache) {
+             toast.info('Modo offline — mostrando datos guardados');
+           } else {
+             toast.info('Modo offline — no hay datos guardados en caché');
+           }
+         } else {
+           console.warn('Supabase reachable but data load failed:', e);
+           toast.error('No se pudo cargar datos de Supabase. Verifica la conexión o las políticas de RLS.');
+         }
        } finally {
          loadingRef.current = false;
        }
