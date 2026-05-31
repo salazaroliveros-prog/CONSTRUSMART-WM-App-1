@@ -83,16 +83,19 @@ const Sidebar: React.FC = () => {
       <>
         <button
           onClick={() => setMobileOpen(o => !o)}
-          className="fixed bottom-5 right-5 z-50 w-13 h-13 rounded-full bg-gradient-to-br from-primary to-blue-700 text-white shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-200"
+          className="fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-primary to-blue-700 text-white shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-200"
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-sidebar"
           aria-label="Menú"
         >
           {mobileOpen ? <ChevronRight className="w-5 h-5" /> : (
             <div className="flex flex-col gap-[3px]">
-              <span className="w-4.5 h-[2px] bg-white rounded-full transition-transform duration-200" />
-              <span className="w-4.5 h-[2px] bg-white rounded-full transition-opacity duration-200" />
-              <span className="w-4.5 h-[2px] bg-white rounded-full transition-transform duration-200" />
+              <span className="block w-5 h-0.5 bg-white rounded-full transition-transform duration-200" />
+              <span className="block w-5 h-0.5 bg-white rounded-full transition-opacity duration-200" />
+              <span className="block w-5 h-0.5 bg-white rounded-full transition-transform duration-200" />
             </div>
           )}
+            <span className="sr-only">Abrir menú</span>
         </button>
         {mobileOpen && (
           <div
@@ -104,6 +107,7 @@ const Sidebar: React.FC = () => {
           className={`fixed top-0 left-0 z-50 h-full bg-background border-r border-border shadow-2xl transition-transform duration-300 ease-out ${
             mobileOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
+            id="mobile-sidebar"
           style={{ width: 220 }}
         >
           <div className="flex flex-col h-full p-3">
@@ -147,18 +151,19 @@ const Sidebar: React.FC = () => {
       {/* Toggle button */}
       <button
         onClick={() => setCollapsed(c => !c)}
-        className="absolute -right-3 top-14 z-10 w-6 h-6 rounded-full bg-background border border-border shadow flex items-center justify-center hover:bg-accent transition-transform hover:scale-110 active:scale-95"
+          className="fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-primary to-blue-700 text-white shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-200"
         title={collapsed ? 'Expandir' : 'Colapsar'}
       >
         {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
       </button>
 
       {/* Logo */}
-      <div className={`flex items-center gap-2 border-b border-border sidebar-transition ${
-        collapsed ? 'justify-center px-2 py-3' : 'px-3 py-3'
-      }`}>
+              <span className="block w-5 h-0.5 bg-white rounded-full transition-transform duration-200" />
+              <span className="block w-5 h-0.5 bg-white rounded-full transition-opacity duration-200" />
+              <span className="block w-5 h-0.5 bg-white rounded-full transition-transform duration-200" />
         <div className="w-8 h-8 shrink-0 rounded-lg bg-gradient-to-br from-primary to-blue-700 flex items-center justify-center shadow-sm">
           <img src="/logo.png" alt="" className="w-6 h-6 object-contain" />
+          <span className="sr-only">Abrir menú</span>
         </div>
         <div className={`overflow-hidden sidebar-transition ${
           collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'
@@ -170,6 +175,7 @@ const Sidebar: React.FC = () => {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto p-1.5 space-y-0.5 mt-1 stagger-children">
+          id="mobile-sidebar"
         {modules.map((m, i) => (
           <div
             key={m.id}
