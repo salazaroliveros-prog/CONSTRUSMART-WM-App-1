@@ -23,10 +23,10 @@ DROP TRIGGER IF EXISTS trg_presupuestos_updated_at ON public.presupuestos;
 DROP TRIGGER IF EXISTS trg_proveedores_updated_at ON public.proveedores;
 DROP TRIGGER IF EXISTS trg_ordenes_compra_updated_at ON public.ordenes_compra;
 
--- Eliminar funciones
-DROP FUNCTION IF EXISTS public.fn_auto_movimiento_recepcion();
-DROP FUNCTION IF EXISTS public.fn_set_updated_at();
-DROP FUNCTION IF EXISTS public.user_owns_equipo(uuid);
+-- Eliminar funciones con CASCADE para resolver dependencias de objetos (Triggers, etc.)
+DROP FUNCTION IF EXISTS public.fn_auto_movimiento_recepcion() CASCADE;
+DROP FUNCTION IF EXISTS public.fn_set_updated_at() CASCADE;
+DROP FUNCTION IF EXISTS public.user_owns_equipo(uuid) CASCADE;
 
 -- Eliminar políticas RLS
 DROP POLICY IF EXISTS "clientes_select" ON public.clientes;
@@ -236,7 +236,8 @@ CREATE TABLE IF NOT EXISTS public.renglones (
   costoManoObra   numeric DEFAULT 0,
   costoHerramienta numeric DEFAULT 0,
   tipologia       text DEFAULT 'general',
-  created_at      timestamptz DEFAULT now()
+  created_at      timestamptz DEFAULT now(),
+  updated_at      timestamptz DEFAULT now()
 );
 
 -- 3.5. renglon_usage (registro de uso de renglones)
