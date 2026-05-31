@@ -74,11 +74,14 @@ const SeguimientoScreen: React.FC = () => {
    
    
   const stats = useMemo(() => {
+    const filtrados = selectedProyecto ? presupuestos.filter(p => p.id === selectedProyecto) : presupuestos;
+    const ejec = filtrados.filter(p => p.fase === 'ejecución');
+    const planea = filtrados.filter(p => p.fase === 'planeación');
     const ingresos = transaccionesFiltradas.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.costoTotal, 0);
     const gastos = transaccionesFiltradas.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
-    const avancePromedio = ejecucion.length > 0 ? ejecucion.reduce((s, p) => s + (p.avanceFisico || 0), 0) / ejecucion.length : 0;
-    return { ingresos, gastos, totalPresupuestado: presupuestosFiltrados.reduce((s, p) => s + (p.total || 0), 0), avancePromedio, activos: ejecucion.length + planeacion.length, balance: ingresos - gastos };
-  }, [presupuestosFiltrados, transaccionesFiltradas, ejecucion.length, planeacion.length]);
+    const avancePromedio = ejec.length > 0 ? ejec.reduce((s, p) => s + (p.avanceFisico || 0), 0) / ejec.length : 0;
+    return { ingresos, gastos, totalPresupuestado: filtrados.reduce((s, p) => s + (p.total || 0), 0), avancePromedio, activos: ejec.length + planea.length, balance: ingresos - gastos };
+  }, [presupuestos, selectedProyecto, transaccionesFiltradas]);
 
   const flujoMensual = useMemo(() => {
     const data: Record<string, { mes: string; ingresos: number; gastos: number }> = {};
@@ -94,11 +97,13 @@ const SeguimientoScreen: React.FC = () => {
 
    
   const avanceProyectos = useMemo(() => {
-    if (ejecucion.length === 0) return [{ name: 'Sin datos', fisico: 0, financiero: 0 }];
-    return ejecucion.slice(0, 10).map(p => ({
+    const filtrados = selectedProyecto ? presupuestos.filter(p => p.id === selectedProyecto) : presupuestos;
+    const ejec = filtrados.filter(p => p.fase === 'ejecución');
+    if (ejec.length === 0) return [{ name: 'Sin datos', fisico: 0, financiero: 0 }];
+    return ejec.slice(0, 10).map(p => ({
       name: p.proyecto.slice(0, 14), fisico: p.avanceFisico ?? 0, financiero: p.avanceFinanciero ?? 0,
     }));
-  }, [ejecucion.length]);
+  }, [presupuestos, selectedProyecto]);
 
   const gastosPorCategoria = useMemo(() => {
     const cats: Record<string, number> = {};
@@ -107,31 +112,33 @@ const SeguimientoScreen: React.FC = () => {
   }, [transaccionesFiltradas]);
 
    
-   
-   const faseDistribucion = useMemo(() => {
+  const faseDistribucion = useMemo(() => {
+    const filtrados = selectedProyecto ? presupuestos.filter(p => p.id === selectedProyecto) : presupuestos;
     const map: Record<string, number> = {};
-    presupuestosFiltrados.forEach(p => { map[p.fase] = (map[p.fase] || 0) + 1; });
+    filtrados.forEach(p => { map[p.fase] = (map[p.fase] || 0) + 1; });
     return Object.entries(map).map(([name, value]) => ({ name, value }));
-  }, [presupuestosFiltrados.length]);
+  }, [presupuestos, selectedProyecto]);
 
   // Presupuesto vs Real por proyecto
    
   const presupuestoVsReal = useMemo(() => {
-    return presupuestosFiltrados.slice(0, 10).map(p => {
+    const filtrados = selectedProyecto ? presupuestos.filter(p => p.id === selectedProyecto) : presupuestos;
+    return filtrados.slice(0, 10).map(p => {
       const real = transaccionesFiltradas.filter(t => t.proyectoId === p.id && t.tipo === 'gasto').reduce((s, t) => s + t.costoTotal, 0);
       return { name: p.proyecto.slice(0, 12), presupuesto: p.total || 0, real };
     });
-  }, [presupuestosFiltradas, transaccionesFiltradas]);
+  }, [presupuestos, selectedProyecto, transaccionesFiltradas]);
 
   // Ingresos por proyecto
   const ingresosPorProyecto = useMemo(() => {
+    const filtrados = selectedProyecto ? presupuestos.filter(p => p.id === selectedProyecto) : presupuestos;
     const map: Record<string, number> = {};
     transaccionesFiltradas.filter(t => t.tipo === 'ingreso').forEach(t => {
-      const key = presupuestosFiltrados.find(p => p.id === t.proyectoId)?.proyecto || 'Admin';
+      const key = filtrados.find(p => p.id === t.proyectoId)?.proyecto || 'Admin';
       map[key] = (map[key] || 0) + t.costoTotal;
     });
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-  }, [presupuestosFiltrados, transaccionesFiltradas]);
+  }, [presupuestos, selectedProyecto, transaccionesFiltradas]);
 
   // Margen mensual
   const margenMensual = useMemo(() => {
