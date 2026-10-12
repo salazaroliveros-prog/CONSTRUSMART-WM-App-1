@@ -84,7 +84,6 @@ interface AuthContextType {
   authError: string | null;
   signIn: (email: string, password: string) => Promise<boolean>;
   signUp: (email: string, password: string, nombre: string) => Promise<boolean>;
-  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<boolean>;
   user: User;
@@ -557,13 +556,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const result = await AuthService.signUpWithEmail(email, password, nombre);
     if (!result.success) { setAuthError(result.error ?? 'Error de registro'); return false; }
     return true;
-  }, []);
-
-  const signInWithGoogle = useCallback(async () => {
-    const result = await AuthService.signInWithGoogle();
-    if (!result.success) {
-      toast.error(result.error ?? 'Error al iniciar sesión con Google');
-    }
   }, []);
 
   const resetPassword = useCallback(async (email: string): Promise<boolean> => {
@@ -1509,14 +1501,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // NO incluye los arrays de datos CRUD
    
   const authContextValue = useMemo(() => ({
-    view, setView, session, loading, authError, signIn, signUp, signInWithGoogle, signOut, resetPassword, user,
+    view, setView, session, loading, authError, signIn, signUp, signOut, resetPassword, user,
     sidebarOpen, toggleSidebar,
     darkMode, toggleDarkMode,
     isOnline, pendingCount,
   }), [
     view, session, loading, authError, user,
     sidebarOpen, toggleSidebar, darkMode, toggleDarkMode, isOnline, pendingCount,
-    signIn, signUp, signInWithGoogle, signOut, resetPassword,
+    signIn, signUp, signOut, resetPassword,
   ]);
 
   // ===== DATA CONTEXT VALUE (DINÁMICO) =====

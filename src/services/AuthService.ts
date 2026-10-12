@@ -28,17 +28,6 @@ export const AuthService = {
     return { success: !error, error: error?.message };
   },
 
-  async signInWithGoogle(): Promise<{ success: boolean; error?: string }> {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/`,
-        skipBrowserRedirect: false,
-      },
-    });
-    return { success: !error, error: error?.message };
-  },
-
   async resetPassword(email: string): Promise<{ success: boolean; error?: string }> {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
