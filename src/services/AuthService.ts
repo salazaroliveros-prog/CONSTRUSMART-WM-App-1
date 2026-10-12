@@ -29,7 +29,13 @@ export const AuthService = {
   },
 
   async signInWithGoogle(): Promise<{ success: boolean; error?: string }> {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+        skipBrowserRedirect: false,
+      },
+    });
     return { success: !error, error: error?.message };
   },
 
