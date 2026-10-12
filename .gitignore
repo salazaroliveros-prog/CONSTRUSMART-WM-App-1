@@ -31,7 +31,6 @@ dev-dist
 .env.test.local
 .env.production.local
 .vercel
-.env*
 
 # Binaries and temp files
 code
