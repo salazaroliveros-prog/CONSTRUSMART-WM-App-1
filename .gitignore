@@ -38,3 +38,4 @@ cli
 init
 login
 *.tsbuildinfo
+skills-lock.json
