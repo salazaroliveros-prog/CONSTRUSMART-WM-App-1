@@ -11,44 +11,25 @@
 -- =====================================================================
 
 -- Eliminar funciones primero (sin dependencias)
-DROP FUNCTION IF EXISTS public.fn_auto_movimiento_recepcion() CASCADE;
 DROP FUNCTION IF EXISTS public.user_owns_equipo(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.fn_set_updated_at() CASCADE;
 
 -- Eliminar triggers (solo si existen)
-DROP TRIGGER IF EXISTS trg_auto_movimiento_recepcion ON public.recepcion_oc_items;
-DROP TRIGGER IF EXISTS trg_ordenes_compra_updated_at ON public.ordenes_compra;
 DROP TRIGGER IF EXISTS trg_notificaciones_updated_at ON public.notificaciones;
-DROP TRIGGER IF EXISTS trg_transacciones_recurrentes_updated_at ON public.transacciones_recurrentes;
-DROP TRIGGER IF EXISTS trg_movimientos_caja_updated_at ON public.movimientos_caja;
-DROP TRIGGER IF EXISTS trg_caja_proyecto_updated_at ON public.caja_proyecto;
-DROP TRIGGER IF EXISTS trg_conciliaciones_updated_at ON public.conciliaciones;
+DROP TRIGGER IF EXISTS trg_transacciones_updated_at ON public.transacciones;
 DROP TRIGGER IF EXISTS trg_actividades_updated_at ON public.actividades;
-DROP TRIGGER IF EXISTS trg_cambios_presupuesto_updated_at ON public.cambios_presupuesto;
 DROP TRIGGER IF EXISTS trg_presupuestos_updated_at ON public.presupuestos;
 DROP TRIGGER IF EXISTS trg_materiales_proyecto_updated_at ON public.materiales_proyecto;
-DROP TRIGGER IF EXISTS trg_subrenglones_updated_at ON public.subrenglones;
 DROP TRIGGER IF EXISTS trg_renglones_updated_at ON public.renglones;
 DROP TRIGGER IF EXISTS trg_proveedores_updated_at ON public.proveedores;
 DROP TRIGGER IF EXISTS trg_empleados_updated_at ON public.empleados;
 DROP TRIGGER IF EXISTS trg_equipos_updated_at ON public.equipos;
-DROP TRIGGER IF EXISTS trg_transacciones_updated_at ON public.transacciones;
 DROP TRIGGER IF EXISTS trg_clientes_updated_at ON public.clientes;
 DROP TRIGGER IF EXISTS trg_proyectos_updated_at ON public.proyectos;
 DROP TRIGGER IF EXISTS trg_equipo_miembros_updated_at ON public.equipo_miembros;
 
 -- Eliminar tablas (orden inverso de dependencias)
-DROP TABLE IF EXISTS public.recepcion_oc_items CASCADE;
-DROP TABLE IF EXISTS public.recepcion_oc CASCADE;
-DROP TABLE IF EXISTS public.orden_compra_items CASCADE;
-DROP TABLE IF EXISTS public.ordenes_compra CASCADE;
 DROP TABLE IF EXISTS public.movimientos_materiales CASCADE;
-DROP TABLE IF EXISTS public.subrenglon_equipos CASCADE;
-DROP TABLE IF EXISTS public.subrenglon_mano_obra CASCADE;
-DROP TABLE IF EXISTS public.subrenglon_materiales CASCADE;
-DROP TABLE IF EXISTS public.subrenglones CASCADE;
-DROP TABLE IF EXISTS public.renglon_precios_historial CASCADE;
-DROP TABLE IF EXISTS public.renglon_usage CASCADE;
 DROP TABLE IF EXISTS public.materiales_proyecto CASCADE;
 DROP TABLE IF EXISTS public.equipo_miembros CASCADE;
 DROP TABLE IF EXISTS public.equipos CASCADE;
@@ -60,17 +41,7 @@ DROP TABLE IF EXISTS public.proyectos CASCADE;
 DROP TABLE IF EXISTS public.clientes CASCADE;
 DROP TABLE IF EXISTS public.transacciones CASCADE;
 DROP TABLE IF EXISTS public.actividades CASCADE;
-DROP TABLE IF EXISTS public.bitacora_avance CASCADE;
-DROP TABLE IF EXISTS public.checklist_items CASCADE;
-DROP TABLE IF EXISTS public.conciliaciones CASCADE;
-DROP TABLE IF EXISTS public.partidas_conciliacion CASCADE;
-DROP TABLE IF EXISTS public.caja_proyecto CASCADE;
-DROP TABLE IF EXISTS public.movimientos_caja CASCADE;
-DROP TABLE IF EXISTS public.transacciones_recurrentes CASCADE;
 DROP TABLE IF EXISTS public.notificaciones CASCADE;
-DROP TABLE IF EXISTS public.ocr_documentos CASCADE;
-DROP TABLE IF EXISTS public.device_tokens CASCADE;
-DROP TABLE IF EXISTS public.audit_log CASCADE;
 
 -- =====================================================================
 -- FASE 2: EXTENSIONES
